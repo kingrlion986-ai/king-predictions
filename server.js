@@ -2,7 +2,7 @@ app.get("/predict", (req, res) => {
   const team1 = req.query.team1 || "PSG";
   const team2 = req.query.team2 || "OM";
 
-  // 📊 mini base de données (stats simplifiées)
+  // 📊 base de stats simple
   const teams = {
     PSG: { attack: 85, defense: 80 },
     OM: { attack: 70, defense: 65 },
@@ -12,11 +12,11 @@ app.get("/predict", (req, res) => {
     Arsenal: { attack: 82, defense: 78 }
   };
 
-  // ⚽ récupération des stats
+  // ⚽ récupération stats
   const t1 = teams[team1] || { attack: 75, defense: 75 };
   const t2 = teams[team2] || { attack: 75, defense: 75 };
 
-  // 🤖 logique IA simple
+  // 🤖 IA simple
   const t1Power = t1.attack + (100 - t2.defense);
   const t2Power = t2.attack + (100 - t1.defense);
 
@@ -26,7 +26,7 @@ app.get("/predict", (req, res) => {
   const t2Prob = Math.round((t2Power / total) * 100);
   const draw = Math.max(10, 100 - (t1Prob + t2Prob));
 
-  // ⚽ score estimé intelligent
+  // ⚽ score estimé
   const score1 = Math.round(t1Power / 35);
   const score2 = Math.round(t2Power / 35);
 
