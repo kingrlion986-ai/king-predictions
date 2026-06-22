@@ -4,17 +4,27 @@ const cors = require("cors");
 const app = express();
 app.use(cors());
 
+/* =======================
+   HOME
+======================= */
 app.get("/", (req, res) => {
 res.send("KING PREDICTIONS ONLINE ⚽");
 });
 
+/* =======================
+   MATCHS
+======================= */
 app.get("/matches", (req, res) => {
 res.json([
 { domicile: "PSG", extérieur: "OM", heure: "20:00" }
 ]);
 });
 
+/* =======================
+   PREDICTION API
+======================= */
 app.get("/predict", (req, res) => {
+
 const team1 = req.query.team1 || "PSG";
 const team2 = req.query.team2 || "OM";
 
@@ -61,14 +71,14 @@ const over25 =
 (score1 + score2) > 2
 ? "Over 2.5"
 : "Under 2.5";
-  
-  res.json({
+
+res.json({
 match: `${team1} vs ${team2}`,
 winner,
 confidence,
 probabilities: {
 [team1]: t1Prob,
-draw: draw,
+draw,
 [team2]: t2Prob
 },
 score_guess: `${score1}-${score2}`,
@@ -76,73 +86,86 @@ btts,
 over25
 });
 
-  <!DOCTYPE html>  <html>
-  <head>
-    <title>King Predictions</title>
-    <style>
-      body{
-        font-family: Arial;
-        background:#111;
-        color:white;
-        text-align:center;
-        padding:40px;
-      }  .card{
-    background:#222;
-    padding:20px;
-    border-radius:12px;
-    max-width:500px;
-    margin:auto;
-  }
+});
 
-  input{
-    padding:10px;
-    margin:5px;
-  }
-
-  button{
-    padding:10px 20px;
-    cursor:pointer;
-  }
+/* =======================
+   UI WEB
+======================= */
+app.get("/ui", (req, res) => {
+res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+<title>King Predictions</title>
+<style>
+body{
+font-family: Arial;
+background:#111;
+color:white;
+text-align:center;
+padding:40px;
+}
+.card{
+background:#222;
+padding:20px;
+border-radius:12px;
+max-width:500px;
+margin:auto;
+}
+input{
+padding:10px;
+margin:5px;
+}
+button{
+padding:10px 20px;
+cursor:pointer;
+}
 </style>
+</head>
 
-  </head>
-  <body><div class="card">
-  <h1>⚽ KING PREDICTIONS</h1>
+<body>
+<div class="card">
+<h1>⚽ KING PREDICTIONS</h1>
 
-  <input id="team1" placeholder="Equipe 1" value="PSG">
-  <input id="team2" placeholder="Equipe 2" value="OM">
+<input id="team1" placeholder="Equipe 1" value="PSG">
+<input id="team2" placeholder="Equipe 2" value="OM">
 
-  <br><br>
+<br><br>
 
-  <button onclick="predict()">
-    Voir la prédiction
-  </button>
+<button onclick="predict()">Voir la prédiction</button>
 
-  <div id="result"></div>
+<div id="result"></div>
 </div>
 
 <script>
-  async function predict(){
-    const team1 = document.getElementById("team1").value;
-    const team2 = document.getElementById("team2").value;
+async function predict(){
 
-    const rep = await fetch(
-      '/predict?team1=' + team1 + '&team2=' + team2
-    );
+const team1 = document.getElementById("team1").value;
+const team2 = document.getElementById("team2").value;
 
-    const data = await rep.json();
+const rep = await fetch('/predict?team1=' + team1 + '&team2=' + team2);
+const data = await rep.json();
 
-    document.getElementById("result").innerHTML =
-    "<h3>"+data.match+"</h3>" +
-    "<p>Pronostic : " + data.score_guess + "</p>" +
-    "<pre>"+JSON.stringify(data.probabilities,null,2)+"</pre>";
-  }
+document.getElementById("result").innerHTML =
+"<h3>"+data.match+"</h3>" +
+"<p>Vainqueur probable : "+data.winner+"</p>" +
+"<p>Confiance : "+data.confidence+"</p>" +
+"<p>Score prévu : "+data.score_guess+"</p>" +
+"<p>BTTS : "+data.btts+"</p>" +
+"<p>"+data.over25+"</p>" +
+"<pre>"+JSON.stringify(data.probabilities, null, 2)+"</pre>";
+
+}
 </script>
 
-  </body>
-  </html>
-  `);
+</body>
+</html>
+`);
 });
+
+/* =======================
+   START SERVER
+======================= */
 app.listen(process.env.PORT || 3000, () => {
 console.log("SERVER OK");
 });
