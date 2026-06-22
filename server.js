@@ -8,14 +8,19 @@ const app = express();
 app.use(cors());
 
 /* =======================
+   CACHE MÉMOIRE (MATCHS SUIVIS)
+======================= */
+let trackedMatches = [];
+
+/* =======================
    HOME
 ======================= */
 app.get("/", (req, res) => {
-  res.send("KING PREDICTIONS LIVE BET365 STYLE ⚽🔥");
+  res.send("KING PREDICTIONS AUTO SYSTEM ⚽🔥");
 });
 
 /* =======================
-   MATCHS DU JOUR
+   MATCHS DU JOUR (AUTO TRACKING)
 ======================= */
 app.get("/matches", async (req, res) => {
   try {
@@ -30,11 +35,29 @@ app.get("/matches", async (req, res) => {
 
     const data = await response.json();
 
-    const matches = data.response.slice(0, 10).map(m => ({
-      home: m.teams.home.name,
-      away: m.teams.away.name,
-      time: m.fixture.date
-    }));
+    const matches = data.response.slice(0, 10).map(m => {
+      const home = m.teams.home.name;
+      const away = m.teams.away.name;
+
+      // ➜ auto ajout dans tracking
+      const exists = trackedMatches.find(
+        x => x.home === home && x.away === away
+      );
+
+      if (!exists) {
+        trackedMatches.push({
+          home,
+          away,
+          status: "pre-match"
+        });
+      }
+
+      return {
+        home,
+        away,
+        time: m.fixture.date
+      };
+    });
 
     res.json(matches);
 
@@ -44,55 +67,67 @@ app.get("/matches", async (req, res) => {
 });
 
 /* =======================
-   PREDICTION PRE-MATCH (FIXE)
+   AUTO PRÉDICTION (SANS INPUT OBLIGATOIRE)
 ======================= */
-app.get("/predict", async (req, res) => {
+function generateStats(name) {
+  const id = name.charCodeAt(0);
+  return {
+    attack: 70 + (id % 25),
+    defense: 65 + (id % 20)
+  };
+}
 
-  const team1 = req.query.team1 || "PSG";
-  const team2 = req.query.team2 || "OM";
+/* =======================
+   PRÉDICTION AUTO POUR MATCHS TRACKÉS
+======================= */
+app.get("/auto-predict", (req, res) => {
 
-  const id1 = team1.charCodeAt(0);
-  const id2 = team2.charCodeAt(0);
+  const results = trackedMatches.map(m => {
 
-  const attack1 = 70 + (id1 % 20);
-  const attack2 = 70 + (id2 % 20);
+    const t1 = generateStats(m.home);
+    const t2 = generateStats(m.away);
 
-  const defense1 = 60 + (id1 % 25);
-  const defense2 = 60 + (id2 % 25);
+    const power1 = t1.attack + (100 - t2.defense);
+    const power2 = t2.attack + (100 - t1.defense);
 
-  const power1 = attack1 + (100 - defense2);
-  const power2 = attack2 + (100 - defense1);
+    const total = power1 + power2;
 
-  const total = power1 + power2;
+    const p1 = Math.round((power1 / total) * 100);
+    const p2 = Math.round((power2 / total) * 100);
+    const draw = Math.max(8, 100 - (p1 + p2));
 
-  const p1 = Math.round((power1 / total) * 100);
-  const p2 = Math.round((power2 / total) * 100);
-  const draw = Math.max(8, 100 - (p1 + p2));
+    const s1 = Math.round(power1 / 65);
+    const s2 = Math.round(power2 / 65);
 
-  const g1 = Math.round(power1 / 65);
-  const g2 = Math.round(power2 / 65);
+    let status = "balanced";
+    if (p1 > 60) status = `${m.home} strong 🔥`;
+    if (p2 > 60) status = `${m.away} strong 🔥`;
 
-  const winner =
-    g1 > g2 ? team1 :
-    g2 > g1 ? team2 :
-    "Draw";
+    m.prediction = {
+      winner:
+        s1 > s2 ? m.home :
+        s2 > s1 ? m.away :
+        "Draw",
+      score: `${s1}-${s2}`,
+      probabilities: {
+        [m.home]: p1,
+        draw,
+        [m.away]: p2
+      },
+      status
+    };
 
-  res.json({
-    match: `${team1} vs ${team2}`,
-    winner,
-    probabilities: {
-      [team1]: p1,
-      draw,
-      [team2]: p2
-    },
-    score_guess: `${g1}-${g2}`,
-    btts: g1 > 0 && g2 > 0 ? "Yes" : "No",
-    over25: (g1 + g2 > 2) ? "Over 2.5" : "Under 2.5"
+    return {
+      match: `${m.home} vs ${m.away}`,
+      ...m.prediction
+    };
   });
+
+  res.json(results);
 });
 
 /* =======================
-   LIVE SYSTEM (REAL TIME)
+   LIVE SYSTEM (AUTO LINK WITH TRACKING)
 ======================= */
 app.get("/live", async (req, res) => {
   try {
@@ -112,10 +147,8 @@ app.get("/live", async (req, res) => {
 
       const gh = m.goals.home ?? 0;
       const ga = m.goals.away ?? 0;
-
       const minute = m.fixture.status.elapsed ?? 0;
 
-      // 🔥 LIVE POWER
       const ph = 80 + gh * 10 + minute * 0.2;
       const pa = 80 + ga * 10 + minute * 0.2;
 
@@ -124,41 +157,32 @@ app.get("/live", async (req, res) => {
       const pHome = Math.round((ph / total) * 100);
       const pAway = Math.round((pa / total) * 100);
 
-      const xgHome = +(ph / 90).toFixed(2);
-      const xgAway = +(pa / 90).toFixed(2);
+      const projH = Math.round(ph / 90);
+      const projA = Math.round(pa / 90);
 
-      const projHome = Math.round(xgHome);
-      const projAway = Math.round(xgAway);
+      // ➜ update tracking si match existe
+      const tracked = trackedMatches.find(
+        x => x.home === home && x.away === away
+      );
 
-      const momentum = pHome - pAway;
-
-      let status = "Balanced";
-      if (momentum > 15) status = `${home} dominant 🔥`;
-      if (momentum < -15) status = `${away} dominant 🔥`;
-
-      const winner =
-        projHome > projAway ? home :
-        projAway > projHome ? away :
-        "Draw";
+      if (tracked) {
+        tracked.status = "live";
+        tracked.liveScore = `${gh}-${ga}`;
+      }
 
       return {
         match: `${home} vs ${away}`,
-        score_live: `${gh}-${ga}`,
+        score: `${gh}-${ga}`,
         minute,
-
         probabilities: {
           [home]: pHome,
           [away]: pAway
         },
-
-        xG: {
-          [home]: xgHome,
-          [away]: xgAway
-        },
-
-        projected_score: `${projHome}-${projAway}`,
-        winner_prediction: winner,
-        momentum_status: status
+        projected_score: `${projH}-${projA}`,
+        winner_prediction:
+          projH > projA ? home :
+          projA > projH ? away :
+          "Draw"
       };
     });
 
@@ -170,43 +194,50 @@ app.get("/live", async (req, res) => {
 });
 
 /* =======================
-   SIMPLE UI DASHBOARD
+   UI (AUTO SYSTEM DASHBOARD)
 ======================= */
 app.get("/ui", (req, res) => {
   res.send(`
 <!DOCTYPE html>
 <html>
 <head>
-<title>King Predictions LIVE</title>
+<title>Auto Prediction System</title>
 <style>
 body{font-family:Arial;background:#111;color:white;text-align:center;}
-.card{background:#222;padding:20px;margin:20px;border-radius:10px;}
-button{padding:10px 20px;margin-top:10px;}
+.card{background:#222;padding:15px;margin:10px;border-radius:10px;}
+button{padding:10px 20px;margin:10px;}
 </style>
 </head>
 <body>
 
-<h1>⚽ KING PREDICTIONS LIVE</h1>
+<h1>⚽ AUTO PREDICTION SYSTEM</h1>
 
-<button onclick="loadLive()">Load Live</button>
+<button onclick="loadMatches()">Load Matches</button>
+<button onclick="loadAuto()">Auto Predictions</button>
+<button onclick="loadLive()">Live</button>
 
 <div id="data"></div>
 
 <script>
-async function loadLive(){
-  const res = await fetch('/live');
-  const data = await res.json();
-
+async function loadMatches(){
+  const r = await fetch('/matches');
+  const d = await r.json();
   document.getElementById('data').innerHTML =
-    data.map(m => `
-      <div class="card">
-        <h3>${m.match}</h3>
-        <p>Score: ${m.score_live} (min ${m.minute})</p>
-        <p>Winner: ${m.winner_prediction}</p>
-        <p>Status: ${m.momentum_status}</p>
-        <p>Projected: ${m.projected_score}</p>
-      </div>
-    `).join('');
+    d.map(m => "<div class='card'>"+m.home+" vs "+m.away+"</div>").join('');
+}
+
+async function loadAuto(){
+  const r = await fetch('/auto-predict');
+  const d = await r.json();
+  document.getElementById('data').innerHTML =
+    d.map(m => "<div class='card'><h3>"+m.match+"</h3><p>"+m.score+"</p><p>"+m.winner+"</p></div>").join('');
+}
+
+async function loadLive(){
+  const r = await fetch('/live');
+  const d = await r.json();
+  document.getElementById('data').innerHTML =
+    d.map(m => "<div class='card'><h3>"+m.match+"</h3><p>"+m.score+"</p><p>"+m.minute+" min</p></div>").join('');
 }
 </script>
 
@@ -219,5 +250,5 @@ async function loadLive(){
    START SERVER
 ======================= */
 app.listen(3000, () => {
-  console.log("KING LIVE SYSTEM RUNNING ⚽🔥");
+  console.log("AUTO SYSTEM RUNNING ⚽🔥");
 });
