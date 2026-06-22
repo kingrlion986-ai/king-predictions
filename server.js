@@ -1,6 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 
+const API_KEY = "1af4475682dbed9ec01ea830ec7187d1";
+
 const app = express();
 app.use(cors());
 
