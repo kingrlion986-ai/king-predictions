@@ -42,18 +42,39 @@ const draw = Math.max(10, 100 - (t1Prob + t2Prob));
 const score1 = Math.round(t1Power / 35);
 const score2 = Math.round(t2Power / 35);
 
-res.json({
+const winner =
+score1 > score2 ? team1 :
+score2 > score1 ? team2 :
+"Nul";
+
+const confidence =
+winner === "Nul"
+? "50%"
+: Math.max(t1Prob, t2Prob) + "%";
+
+const btts =
+score1 > 0 && score2 > 0
+? "Oui"
+: "Non";
+
+const over25 =
+(score1 + score2) > 2
+? "Over 2.5"
+: "Under 2.5";
+  
+  res.json({
 match: `${team1} vs ${team2}`,
+winner,
+confidence,
 probabilities: {
 [team1]: t1Prob,
 draw: draw,
 [team2]: t2Prob
 },
 score_guess: `${score1}-${score2}`,
+btts,
+over25
 });
-});
-app.get("/ui", (req, res) => {
-res.send(`
 
   <!DOCTYPE html>  <html>
   <head>
