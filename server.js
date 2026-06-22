@@ -43,13 +43,13 @@ const score1 = Math.round(t1Power / 35);
 const score2 = Math.round(t2Power / 35);
 
 res.json({
-match: "${team1} vs ${team2}",
+match: `${team1} vs ${team2}`,
 probabilities: {
 [team1]: t1Prob,
 draw: draw,
 [team2]: t2Prob
 },
-score_guess: "${score1}-${score2}"
+score_guess: `${score1}-${score2}`,
 });
 });
 
