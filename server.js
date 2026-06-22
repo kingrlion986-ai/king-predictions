@@ -52,7 +52,76 @@ draw: draw,
 score_guess: `${score1}-${score2}`,
 });
 });
+app.get("/ui", (req, res) => {
+res.send(`
 
+  <!DOCTYPE html>  <html>
+  <head>
+    <title>King Predictions</title>
+    <style>
+      body{
+        font-family: Arial;
+        background:#111;
+        color:white;
+        text-align:center;
+        padding:40px;
+      }  .card{
+    background:#222;
+    padding:20px;
+    border-radius:12px;
+    max-width:500px;
+    margin:auto;
+  }
+
+  input{
+    padding:10px;
+    margin:5px;
+  }
+
+  button{
+    padding:10px 20px;
+    cursor:pointer;
+  }
+</style>
+
+  </head>
+  <body><div class="card">
+  <h1>⚽ KING PREDICTIONS</h1>
+
+  <input id="team1" placeholder="Equipe 1" value="PSG">
+  <input id="team2" placeholder="Equipe 2" value="OM">
+
+  <br><br>
+
+  <button onclick="predict()">
+    Voir la prédiction
+  </button>
+
+  <div id="result"></div>
+</div>
+
+<script>
+  async function predict(){
+    const team1 = document.getElementById("team1").value;
+    const team2 = document.getElementById("team2").value;
+
+    const rep = await fetch(
+      '/predict?team1=' + team1 + '&team2=' + team2
+    );
+
+    const data = await rep.json();
+
+    document.getElementById("result").innerHTML =
+    "<h3>"+data.match+"</h3>" +
+    "<p>Pronostic : " + data.score_guess + "</p>" +
+    "<pre>"+JSON.stringify(data.probabilities,null,2)+"</pre>";
+  }
+</script>
+
+  </body>
+  </html>
+  `);
+});
 app.listen(process.env.PORT || 3000, () => {
 console.log("SERVER OK");
 });
