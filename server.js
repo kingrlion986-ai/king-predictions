@@ -17,15 +17,12 @@ app.get("/", (req, res) => {
 });
 
 /* =======================
-   MATCHS + DEBUG
+   MATCHS (STABLE + SAFE)
 ======================= */
 app.get("/matches", async (req, res) => {
   try {
-
-    console.log("🔑 API KEY EXISTS =", !!API_KEY);
-
     const response = await fetch(
-      "https://v3.football.api-sports.io/fixtures?status=NS",
+      "https://v3.football.api-sports.io/fixtures?next=50",
       {
         headers: {
           "x-apisports-key": API_KEY
@@ -35,14 +32,16 @@ app.get("/matches", async (req, res) => {
 
     const data = await response.json();
 
-    console.log("📡 API RESPONSE:", data);
-
     const matches = (data.response || []).map(m => {
       const home = m.teams.home.name;
       const away = m.teams.away.name;
 
       if (!trackedMatches.find(x => x.home === home && x.away === away)) {
-        trackedMatches.push({ home, away, status: "pre-match" });
+        trackedMatches.push({
+          home,
+          away,
+          status: "pre-match"
+        });
       }
 
       return {
@@ -52,12 +51,21 @@ app.get("/matches", async (req, res) => {
       };
     });
 
-    console.log("⚽ MATCHES FOUND:", matches.length);
+    // sécurité anti vide
+    if (!matches.length) {
+      return res.json([
+        {
+          home: "No matches available",
+          away: "Try later",
+          time: new Date().toISOString()
+        }
+      ]);
+    }
 
     res.json(matches);
 
   } catch (err) {
-    console.log("❌ ERROR:", err);
+    console.log(err);
     res.status(500).json({ error: "matches error" });
   }
 });
@@ -115,7 +123,6 @@ app.get("/auto-predict", (req, res) => {
 ======================= */
 app.get("/live", async (req, res) => {
   try {
-
     const response = await fetch(
       "https://v3.football.api-sports.io/fixtures?live=all",
       {
@@ -127,18 +134,16 @@ app.get("/live", async (req, res) => {
 
     const data = await response.json();
 
-    const result = (data.response || []).map(m => {
-      return {
-        match: `${m.teams.home.name} vs ${m.teams.away.name}`,
-        score: `${m.goals.home ?? 0}-${m.goals.away ?? 0}`,
-        minute: m.fixture.status.elapsed ?? 0
-      };
-    });
+    const result = (data.response || []).map(m => ({
+      match: `${m.teams.home.name} vs ${m.teams.away.name}`,
+      score: `${m.goals.home ?? 0}-${m.goals.away ?? 0}`,
+      minute: m.fixture.status.elapsed ?? 0
+    }));
 
     res.json(result);
 
   } catch (err) {
-    console.log("❌ LIVE ERROR:", err);
+    console.log(err);
     res.status(500).json({ error: "live error" });
   }
 });
