@@ -10,12 +10,26 @@ app.use(cors());
 let trackedMatches = [];
 
 /* =======================
-   AUTO FETCH MATCHES (IMPORTANT V2)
+   HOME
 ======================= */
-async function loadMatches() {
+app.get("/", (req, res) => {
+  res.send("KING PREDICTIONS AUTO SYSTEM ⚽🔥");
+});
+
+/* =======================
+   SAFE MATCH LOADER
+======================= */
+app.get("/matches", async (req, res) => {
   try {
-    const res = await fetch(
-      "https://v3.football.api-sports.io/fixtures?next=20",
+
+    if (!API_KEY) {
+      return res.json([
+        { home: "API KEY MANQUANTE", away: "Configure Render", time: new Date().toISOString() }
+      ]);
+    }
+
+    const response = await fetch(
+      "https://v3.football.api-sports.io/fixtures?next=10",
       {
         headers: {
           "x-rapidapi-key": API_KEY,
@@ -24,7 +38,18 @@ async function loadMatches() {
       }
     );
 
-    const data = await res.json();
+    const data = await response.json();
+
+    if (data.errors) {
+      return res.json([
+        {
+          home: "API ERROR",
+          away: "Vérifie ta clé API",
+          time: new Date().toISOString()
+        }
+      ]);
+    }
+
     const list = data.response || [];
 
     trackedMatches = list.map(m => ({
@@ -33,44 +58,30 @@ async function loadMatches() {
       time: m.fixture.date
     }));
 
-    console.log("MATCHS UPDATED:", trackedMatches.length);
+    if (trackedMatches.length === 0) {
+      trackedMatches = [
+        { home: "Man City", away: "Arsenal", time: new Date().toISOString() },
+        { home: "Real Madrid", away: "Barcelona", time: new Date().toISOString() }
+      ];
+    }
+
+    res.json(trackedMatches);
 
   } catch (err) {
-    console.log("AUTO LOAD ERROR:", err);
+    console.log("MATCH ERROR:", err);
 
-    // fallback sécurisé
-    trackedMatches = [
-      { home: "Man City", away: "Arsenal", time: new Date().toISOString() },
-      { home: "Real Madrid", away: "Barcelona", time: new Date().toISOString() }
-    ];
+    res.json([
+      { home: "SERVER ERROR", away: "Try later", time: new Date().toISOString() }
+    ]);
   }
-}
-
-/* load au démarrage */
-loadMatches();
-
-/* refresh auto toutes les 5 min */
-setInterval(loadMatches, 5 * 60 * 1000);
-
-/* =======================
-   HOME
-======================= */
-app.get("/", (req, res) => {
-  res.send("KING PREDICTIONS V2 ⚽🔥");
 });
 
 /* =======================
-   MATCHS (JUST DISPLAY)
-======================= */
-app.get("/matches", (req, res) => {
-  res.json(trackedMatches);
-});
-
-/* =======================
-   PREDICTIONS (AUTO READY)
+   PREDICTION ENGINE
 ======================= */
 function stats(name) {
   const id = (name || "").charCodeAt(0) || 50;
+
   return {
     attack: 70 + (id % 25),
     defense: 65 + (id % 20)
@@ -80,7 +91,9 @@ function stats(name) {
 app.get("/auto-predict", (req, res) => {
 
   if (!trackedMatches.length) {
-    return res.json([{ match: "Loading...", score: "0-0", winner: "N/A" }]);
+    return res.json([
+      { match: "No data", score: "0-0", winner: "N/A" }
+    ]);
   }
 
   const results = trackedMatches.map(m => {
@@ -103,7 +116,7 @@ app.get("/auto-predict", (req, res) => {
       match: `${m.home} vs ${m.away}`,
       score: `${s1}-${s2}`,
       winner: s1 > s2 ? m.home : s2 > s1 ? m.away : "Draw",
-      probability: {
+      probabilities: {
         home: homeP,
         away: awayP
       }
@@ -114,10 +127,11 @@ app.get("/auto-predict", (req, res) => {
 });
 
 /* =======================
-   LIVE
+   LIVE MATCHES
 ======================= */
 app.get("/live", async (req, res) => {
   try {
+
     const response = await fetch(
       "https://v3.football.api-sports.io/fixtures?live=all",
       {
@@ -136,15 +150,21 @@ app.get("/live", async (req, res) => {
       minute: m.fixture.status.elapsed ?? 0
     }));
 
-    res.json(result.length ? result : [{ match: "No live match", score: "0-0", minute: 0 }]);
+    res.json(result.length ? result : [
+      { match: "No live match", score: "0-0", minute: 0 }
+    ]);
 
   } catch (err) {
-    res.json([{ match: "System fallback", score: "0-0", minute: 0 }]);
+    console.log("LIVE ERROR:", err);
+
+    res.json([
+      { match: "System fallback", score: "0-0", minute: 0 }
+    ]);
   }
 });
 
 /* =======================
-   UI (SIMPLE & STABLE)
+   UI FIXED
 ======================= */
 app.get("/ui", (req, res) => {
   res.send(`
@@ -164,21 +184,21 @@ button{padding:12px 18px;margin:10px;border:none;border-radius:8px;cursor:pointe
 
 <body>
 
-<div class="header">SYSTÈME DE PRÉDICTION AUTOMATIQUE V2</div>
+<div class="header">SYSTÈME DE PRÉDICTION AUTOMATIQUE</div>
 
 <div class="card">
 <h2 class="free">FREE</h2>
-<p>Matchs + prédiction simple</p>
+<p>Match + prédiction simple</p>
 </div>
 
 <div class="card">
 <h2 class="vip">VIP</h2>
-<p>Scores exacts + analyses avancées</p>
+<p>Scores exacts + analyse avancée</p>
 </div>
 
-<button onclick="loadMatches()">Matches</button>
-<button onclick="loadPred()">Predictions</button>
-<button onclick="loadLive()">Live</button>
+<button onclick="loadMatches()">Charger les correspondances</button>
+<button onclick="loadPred()">Prédictions automatiques</button>
+<button onclick="loadLive()">En direct</button>
 
 <div id="data"></div>
 
@@ -215,4 +235,4 @@ async function loadLive(){
 /* =======================
    START
 ======================= */
-app.listen(3000, () => console.log("V2 SYSTEM RUNNING ⚽🔥"));
+app.listen(3000, () => console.log("AUTO SYSTEM RUNNING ⚽🔥"));
