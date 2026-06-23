@@ -1,16 +1,12 @@
 const express = require("express");
 const cors = require("cors");
-const fetch = (...args) =>
-  import('node-fetch').then(({ default: fetch }) => fetch(...args));
-
-const API_KEY = "a032b98e63f13e8e40fc0cc461aa2f30";
 
 const app = express();
 app.use(cors());
 
-/* =======================
-   CACHE MÉMOIRE
-======================= */
+// ⚠️ Mets ta clé API ici
+const API_KEY = "a032b98e63f13e8e40fc0cc461aa2f30";
+
 let trackedMatches = [];
 
 /* =======================
@@ -172,7 +168,7 @@ app.get("/live", async (req, res) => {
 });
 
 /* =======================
-   UI PROPRE
+   UI
 ======================= */
 app.get("/ui", (req, res) => {
   res.send(`
@@ -192,7 +188,6 @@ body{
 }
 
 h1{color:#facc15;}
-
 .subtitle{color:#cbd5e1;}
 
 .card{
@@ -214,7 +209,6 @@ button{
   font-weight:bold;
 }
 </style>
-
 </head>
 
 <body>
@@ -270,7 +264,7 @@ async function loadLive(){
 });
 
 /* =======================
-   SERVER
+   SERVER START
 ======================= */
 const PORT = process.env.PORT || 3000;
 
