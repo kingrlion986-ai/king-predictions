@@ -29,7 +29,10 @@ app.get("/matches", async (req, res) => {
     const response = await fetch(
       `https://v3.football.api-sports.io/fixtures?date=${today}`,
       {
-        headers: { "x-apisports-key": API_KEY }
+        headers: {
+  "x-apisports-key": API_KEY,
+  "x-rapidapi-host": "v3.football.api-sports.io"
+         }
       }
     );
 
