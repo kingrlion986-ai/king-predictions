@@ -13,19 +13,27 @@ let trackedMatches = [];
    HOME
 ======================= */
 app.get("/", (req, res) => {
-  res.send("KING PREDICTIONS AUTO SYSTEM ⚽🔥");
+  res.send("SYSTÈME DE PRÉDICTION AUTOMATIQUE ⚽🔥");
 });
 
 /* =======================
-   SAFE MATCH LOADER
+   FALLBACK MATCHES (TOUJOURS DISPONIBLE)
+======================= */
+const fallbackMatches = [
+  { home: "Manchester City", away: "Arsenal", time: new Date().toISOString() },
+  { home: "Real Madrid", away: "Barcelona", time: new Date().toISOString() },
+  { home: "PSG", away: "Marseille", time: new Date().toISOString() }
+];
+
+/* =======================
+   MATCHS (ROBUSTE)
 ======================= */
 app.get("/matches", async (req, res) => {
   try {
 
     if (!API_KEY) {
-      return res.json([
-        { home: "API KEY MANQUANTE", away: "Configure Render", time: new Date().toISOString() }
-      ]);
+      trackedMatches = fallbackMatches;
+      return res.json(fallbackMatches);
     }
 
     const response = await fetch(
@@ -40,44 +48,29 @@ app.get("/matches", async (req, res) => {
 
     const data = await response.json();
 
-    if (data.errors) {
-      return res.json([
-        {
-          home: "API ERROR",
-          away: "Vérifie ta clé API",
-          time: new Date().toISOString()
-        }
-      ]);
+    if (!data.response || data.response.length === 0) {
+      trackedMatches = fallbackMatches;
+      return res.json(fallbackMatches);
     }
 
-    const list = data.response || [];
-
-    trackedMatches = list.map(m => ({
+    trackedMatches = data.response.map(m => ({
       home: m.teams.home.name,
       away: m.teams.away.name,
       time: m.fixture.date
     }));
 
-    if (trackedMatches.length === 0) {
-      trackedMatches = [
-        { home: "Man City", away: "Arsenal", time: new Date().toISOString() },
-        { home: "Real Madrid", away: "Barcelona", time: new Date().toISOString() }
-      ];
-    }
-
-    res.json(trackedMatches);
+    return res.json(trackedMatches);
 
   } catch (err) {
     console.log("MATCH ERROR:", err);
 
-    res.json([
-      { home: "SERVER ERROR", away: "Try later", time: new Date().toISOString() }
-    ]);
+    trackedMatches = fallbackMatches;
+    return res.json(fallbackMatches);
   }
 });
 
 /* =======================
-   PREDICTION ENGINE
+   AUTO PREDICTION (TOUJOURS ACTIF)
 ======================= */
 function stats(name) {
   const id = (name || "").charCodeAt(0) || 50;
@@ -90,13 +83,9 @@ function stats(name) {
 
 app.get("/auto-predict", (req, res) => {
 
-  if (!trackedMatches.length) {
-    return res.json([
-      { match: "No data", score: "0-0", winner: "N/A" }
-    ]);
-  }
+  const base = trackedMatches.length ? trackedMatches : fallbackMatches;
 
-  const results = trackedMatches.map(m => {
+  const results = base.map(m => {
 
     const t1 = stats(m.home);
     const t2 = stats(m.away);
@@ -127,10 +116,14 @@ app.get("/auto-predict", (req, res) => {
 });
 
 /* =======================
-   LIVE MATCHES
+   LIVE (SAFE MODE)
 ======================= */
 app.get("/live", async (req, res) => {
   try {
+
+    if (!API_KEY) {
+      return res.json([{ match: "No live match", score: "0-0", minute: 0 }]);
+    }
 
     const response = await fetch(
       "https://v3.football.api-sports.io/fixtures?live=all",
@@ -150,16 +143,11 @@ app.get("/live", async (req, res) => {
       minute: m.fixture.status.elapsed ?? 0
     }));
 
-    res.json(result.length ? result : [
-      { match: "No live match", score: "0-0", minute: 0 }
-    ]);
+    res.json(result.length ? result : [{ match: "No live match", score: "0-0", minute: 0 }]);
 
   } catch (err) {
     console.log("LIVE ERROR:", err);
-
-    res.json([
-      { match: "System fallback", score: "0-0", minute: 0 }
-    ]);
+    res.json([{ match: "System fallback", score: "0-0", minute: 0 }]);
   }
 });
 
@@ -193,7 +181,7 @@ button{padding:12px 18px;margin:10px;border:none;border-radius:8px;cursor:pointe
 
 <div class="card">
 <h2 class="vip">VIP</h2>
-<p>Scores exacts + analyse avancée</p>
+<p>Scores exacts + analyses avancées</p>
 </div>
 
 <button onclick="loadMatches()">Charger les correspondances</button>
