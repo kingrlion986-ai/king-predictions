@@ -24,17 +24,51 @@ app.get("/", (req, res) => {
 ======================= */
 app.get("/matches", async (req, res) => {
   try {
-    const today = new Date().toLocaleDateString('en-CA');
-
     const response = await fetch(
-      `https://v3.football.api-sports.io/fixtures?date=${today}`,
+      `https://v3.football.api-sports.io/fixtures?next=10`,
       {
         headers: {
-  "x-rapidapi-key": API_KEY,
-  "x-rapidapi-host": "v3.football.api-sports.io"
+          "x-rapidapi-key": API_KEY,
+          "x-rapidapi-host": "v3.football.api-sports.io"
         }
       }
     );
+
+    const data = await response.json();
+
+const matches = data.response.map(m => {
+  return {
+    home: m.teams.home.name,
+    away: m.teams.away.name,
+    time: m.fixture.date
+  };
+});
+
+res.json(matches);
+
+} catch (err) {
+  console.log(err);
+  res.status(500).json({ error: "matches error" });
+}
+});
+     
+    const data = await response.json();
+
+    const matches = data.response.map(m => {
+      return {
+        home: m.teams.home.name,
+        away: m.teams.away.name,
+        time: m.fixture.date
+      };
+    });
+
+    res.json(matches);
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: "matches error" });
+  }
+});
 
     const data = await response.json();
 
