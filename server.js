@@ -206,11 +206,36 @@ app.get("/ui", (req, res) => {
 body{font-family:Arial;background:#111;color:white;text-align:center;}
 .card{background:#222;padding:15px;margin:10px;border-radius:10px;}
 button{padding:10px 20px;margin:10px;}
+
+.free{
+color:#22c55e;
+}
+
+.vip{
+color:#facc15;
+}
 </style>
 </head>
+
 <body>
 
-<h1>⚽ AUTO PREDICTION SYSTEM</h1>
+<h1>👑 KING PREDICTIONS</h1>
+
+<div class="card">
+  <h2 class="free">🟢 FREE</h2>
+  <p>1 match recommandé par jour</p>
+  <p>✅ Victoire conseillée</p>
+  <p>✅ Cote estimée</p>
+</div>
+
+<div class="card">
+  <h2 class="vip">🟡 VIP 🔒</h2>
+  <p>🔒 Scores exacts</p>
+  <p>🔒 HT/FT</p>
+  <p>🔒 Over/Under</p>
+  <p>🔒 BTTS</p>
+  <p>🔒 3 matchs premium par jour</p>
+</div>
 
 <button onclick="loadMatches()">Load Matches</button>
 <button onclick="loadAuto()">Auto Predictions</button>
