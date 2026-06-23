@@ -1,158 +1,125 @@
 const express = require("express");
 const cors = require("cors");
-const fetch = require("node-fetch");
-
-const API_KEY = process.env.API_KEY;
 
 const app = express();
 app.use(cors());
 
-let trackedMatches = [];
+/* =======================
+   DATA (TEAMS FIXES)
+======================= */
+const teams = [
+  "Manchester City", "Arsenal", "Real Madrid",
+  "Barcelona", "PSG", "Bayern Munich",
+  "Liverpool", "Chelsea", "Juventus", "AC Milan"
+];
+
+/* =======================
+   STATS ENGINE
+======================= */
+function stats(team) {
+  const seed = team.charCodeAt(0);
+  return {
+    attack: 70 + (seed % 30),
+    defense: 60 + (seed % 25)
+  };
+}
 
 /* =======================
    HOME
 ======================= */
 app.get("/", (req, res) => {
-  res.send("SYSTÈME DE PRÉDICTION AUTOMATIQUE ⚽🔥");
+  res.send("KING PREDICTIONS V2 PRO ⚽🔥");
 });
 
 /* =======================
-   FALLBACK MATCHES (TOUJOURS DISPONIBLE)
+   MATCHS (AUTO GENERATION)
 ======================= */
-const fallbackMatches = [
-  { home: "Manchester City", away: "Arsenal", time: new Date().toISOString() },
-  { home: "Real Madrid", away: "Barcelona", time: new Date().toISOString() },
-  { home: "PSG", away: "Marseille", time: new Date().toISOString() }
-];
+app.get("/matches", (req, res) => {
+  let matches = [];
 
-/* =======================
-   MATCHS (ROBUSTE)
-======================= */
-app.get("/matches", async (req, res) => {
-  try {
+  for (let i = 0; i < 6; i++) {
+    let home = teams[Math.floor(Math.random() * teams.length)];
+    let away = teams[Math.floor(Math.random() * teams.length)];
 
-    if (!API_KEY) {
-      trackedMatches = fallbackMatches;
-      return res.json(fallbackMatches);
+    while (home === away) {
+      away = teams[Math.floor(Math.random() * teams.length)];
     }
 
-    const response = await fetch(
-      "https://v3.football.api-sports.io/fixtures?next=10",
-      {
-        headers: {
-          "x-rapidapi-key": API_KEY,
-          "x-rapidapi-host": "v3.football.api-sports.io"
-        }
-      }
-    );
-
-    const data = await response.json();
-
-    if (!data.response || data.response.length === 0) {
-      trackedMatches = fallbackMatches;
-      return res.json(fallbackMatches);
-    }
-
-    trackedMatches = data.response.map(m => ({
-      home: m.teams.home.name,
-      away: m.teams.away.name,
-      time: m.fixture.date
-    }));
-
-    return res.json(trackedMatches);
-
-  } catch (err) {
-    console.log("MATCH ERROR:", err);
-
-    trackedMatches = fallbackMatches;
-    return res.json(fallbackMatches);
+    matches.push({
+      home,
+      away,
+      time: new Date(Date.now() + i * 3600000).toISOString()
+    });
   }
+
+  res.json(matches);
 });
 
 /* =======================
-   AUTO PREDICTION (TOUJOURS ACTIF)
+   AUTO PREDICTION ENGINE
 ======================= */
-function stats(name) {
-  const id = (name || "").charCodeAt(0) || 50;
-
-  return {
-    attack: 70 + (id % 25),
-    defense: 65 + (id % 20)
-  };
-}
-
 app.get("/auto-predict", (req, res) => {
+  let results = [];
 
-  const base = trackedMatches.length ? trackedMatches : fallbackMatches;
+  for (let i = 0; i < 6; i++) {
+    let home = teams[Math.floor(Math.random() * teams.length)];
+    let away = teams[Math.floor(Math.random() * teams.length)];
 
-  const results = base.map(m => {
+    const t1 = stats(home);
+    const t2 = stats(away);
 
-    const t1 = stats(m.home);
-    const t2 = stats(m.away);
+    const power1 = t1.attack + (100 - t2.defense);
+    const power2 = t2.attack + (100 - t1.defense);
 
-    const p1 = t1.attack + (100 - t2.defense);
-    const p2 = t2.attack + (100 - t1.defense);
+    const total = power1 + power2;
 
-    const total = p1 + p2 || 1;
+    const p1 = Math.round((power1 / total) * 100);
+    const p2 = Math.round((power2 / total) * 100);
 
-    const homeP = Math.round((p1 / total) * 100);
-    const awayP = Math.round((p2 / total) * 100);
+    const score1 = Math.round(power1 / 75);
+    const score2 = Math.round(power2 / 75);
 
-    const s1 = Math.round(p1 / 70);
-    const s2 = Math.round(p2 / 70);
+    let winner =
+      score1 > score2 ? home :
+      score2 > score1 ? away :
+      "Draw";
 
-    return {
-      match: `${m.home} vs ${m.away}`,
-      score: `${s1}-${s2}`,
-      winner: s1 > s2 ? m.home : s2 > s1 ? m.away : "Draw",
+    results.push({
+      match: `${home} vs ${away}`,
+      score: `${score1}-${score2}`,
+      winner,
       probabilities: {
-        home: homeP,
-        away: awayP
+        home: p1,
+        away: p2
       }
-    };
-  });
+    });
+  }
 
   res.json(results);
 });
 
 /* =======================
-   LIVE (SAFE MODE)
+   LIVE SIMULATION
 ======================= */
-app.get("/live", async (req, res) => {
-  try {
+app.get("/live", (req, res) => {
+  let live = [];
 
-    if (!API_KEY) {
-      return res.json([{ match: "No live match", score: "0-0", minute: 0 }]);
-    }
+  for (let i = 0; i < 3; i++) {
+    let home = teams[Math.floor(Math.random() * teams.length)];
+    let away = teams[Math.floor(Math.random() * teams.length)];
 
-    const response = await fetch(
-      "https://v3.football.api-sports.io/fixtures?live=all",
-      {
-        headers: {
-          "x-rapidapi-key": API_KEY,
-          "x-rapidapi-host": "v3.football.api-sports.io"
-        }
-      }
-    );
-
-    const data = await response.json();
-
-    const result = (data.response || []).map(m => ({
-      match: `${m.teams.home.name} vs ${m.teams.away.name}`,
-      score: `${m.goals.home ?? 0}-${m.goals.away ?? 0}`,
-      minute: m.fixture.status.elapsed ?? 0
-    }));
-
-    res.json(result.length ? result : [{ match: "No live match", score: "0-0", minute: 0 }]);
-
-  } catch (err) {
-    console.log("LIVE ERROR:", err);
-    res.json([{ match: "System fallback", score: "0-0", minute: 0 }]);
+    live.push({
+      match: `${home} vs ${away}`,
+      score: `${Math.floor(Math.random() * 4)}-${Math.floor(Math.random() * 4)}`,
+      minute: Math.floor(Math.random() * 90)
+    });
   }
+
+  res.json(live);
 });
 
 /* =======================
-   UI FIXED
+   UI DASHBOARD (PRO)
 ======================= */
 app.get("/ui", (req, res) => {
   res.send(`
@@ -161,58 +128,93 @@ app.get("/ui", (req, res) => {
 <head>
 <title>SYSTÈME DE PRÉDICTION AUTOMATIQUE</title>
 <style>
-body{font-family:Arial;background:#0f0f0f;color:white;text-align:center;}
-.header{padding:20px;font-size:22px;color:#00ff88;}
-.card{background:#1f1f1f;margin:10px auto;padding:15px;width:85%;border-radius:10px;}
-button{padding:12px 18px;margin:10px;border:none;border-radius:8px;cursor:pointer;}
-.free{color:#22c55e;}
-.vip{color:#facc15;}
+body {
+  font-family: Arial;
+  background: #0f0f0f;
+  color: white;
+  text-align: center;
+  margin: 0;
+}
+
+.header {
+  background: #111;
+  padding: 20px;
+  font-size: 22px;
+  font-weight: bold;
+  color: #00ff88;
+}
+
+button {
+  padding: 12px 18px;
+  margin: 10px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.btn1 { background: #3b82f6; color: white; }
+.btn2 { background: #22c55e; color: white; }
+.btn3 { background: #f59e0b; color: white; }
+
+.card {
+  background: #1f1f1f;
+  margin: 10px auto;
+  padding: 15px;
+  width: 85%;
+  border-radius: 10px;
+}
 </style>
 </head>
 
 <body>
 
-<div class="header">SYSTÈME DE PRÉDICTION AUTOMATIQUE</div>
-
-<div class="card">
-<h2 class="free">FREE</h2>
-<p>Match + prédiction simple</p>
+<div class="header">
+SYSTÈME DE PRÉDICTION AUTOMATIQUE
 </div>
 
 <div class="card">
-<h2 class="vip">VIP</h2>
-<p>Scores exacts + analyses avancées</p>
+<h3>🟢 FREE</h3>
+<p>1 match recommandé</p>
+<p>Victoire conseillée</p>
 </div>
 
-<button onclick="loadMatches()">Charger les correspondances</button>
-<button onclick="loadPred()">Prédictions automatiques</button>
-<button onclick="loadLive()">En direct</button>
+<div class="card">
+<h3>🟡 VIP 🔒</h3>
+<p>Scores exacts</p>
+<p>HT/FT + BTTS</p>
+<p>Coupons multiples</p>
+</div>
+
+<button class="btn1" onclick="loadMatches()">Charger les correspondances</button>
+<button class="btn2" onclick="loadPred()">Prédictions automatiques</button>
+<button class="btn3" onclick="loadLive()">En direct</button>
 
 <div id="data"></div>
 
 <script>
-
 async function loadMatches(){
- const r = await fetch('/matches');
- const d = await r.json();
- document.getElementById('data').innerHTML =
- d.map(m => `<div class='card'>${m.home} vs ${m.away}</div>`).join('');
+  const r = await fetch('/matches');
+  const d = await r.json();
+
+  document.getElementById('data').innerHTML =
+    d.map(m => `<div class='card'>${m.home} vs ${m.away}<br>${m.time}</div>`).join('');
 }
 
 async function loadPred(){
- const r = await fetch('/auto-predict');
- const d = await r.json();
- document.getElementById('data').innerHTML =
- d.map(m => `<div class='card'><b>${m.match}</b><br>${m.score}<br>${m.winner}</div>`).join('');
+  const r = await fetch('/auto-predict');
+  const d = await r.json();
+
+  document.getElementById('data').innerHTML =
+    d.map(m => `<div class='card'><b>${m.match}</b><br>${m.score}<br>Winner: ${m.winner}</div>`).join('');
 }
 
 async function loadLive(){
- const r = await fetch('/live');
- const d = await r.json();
- document.getElementById('data').innerHTML =
- d.map(m => `<div class='card'>${m.match}<br>${m.score} (${m.minute} min)</div>`).join('');
-}
+  const r = await fetch('/live');
+  const d = await r.json();
 
+  document.getElementById('data').innerHTML =
+    d.map(m => `<div class='card'><b>${m.match}</b><br>${m.score}<br>${m.minute} min</div>`).join('');
+}
 </script>
 
 </body>
@@ -223,4 +225,6 @@ async function loadLive(){
 /* =======================
    START
 ======================= */
-app.listen(3000, () => console.log("AUTO SYSTEM RUNNING ⚽🔥"));
+app.listen(3000, () => {
+  console.log("V2 PRO RUNNING ⚽🔥");
+});
