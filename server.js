@@ -17,47 +17,43 @@ app.get("/", (req, res) => {
 });
 
 /* =======================
-   MATCHS (FIX FINAL API HEADERS)
+   MATCHS (ROBUSTE + FALLBACK)
 ======================= */
 app.get("/matches", async (req, res) => {
   try {
-    const response = await fetch(
-      "https://v3.football.api-sports.io/fixtures?next=20",
-      {
-        headers: {
-          "x-rapidapi-key": API_KEY,
-          "x-rapidapi-host": "v3.football.api-sports.io"
-        }
+    const url = "https://v3.football.api-sports.io/fixtures?live=all";
+
+    const response = await fetch(url, {
+      headers: {
+        "x-rapidapi-key": API_KEY,
+        "x-rapidapi-host": "v3.football.api-sports.io"
       }
-    );
+    });
 
     const data = await response.json();
 
-    console.log("API STATUS:", data.errors || "OK");
+    const list = data.response || [];
 
-    const matches = (data.response || []).map(m => {
+    const matches = list.map(m => {
       const home = m.teams.home.name;
       const away = m.teams.away.name;
 
       if (!trackedMatches.find(x => x.home === home && x.away === away)) {
-        trackedMatches.push({
-          home,
-          away,
-          status: "pre-match"
-        });
+        trackedMatches.push({ home, away, status: "tracked" });
       }
 
       return {
         home,
         away,
-        time: m.fixture.date
+        time: m.fixture.date || null
       };
     });
 
-    if (!matches.length) {
+    // 🔥 si vide → fallback intelligent
+    if (matches.length === 0) {
       return res.json([
         {
-          home: "Aucun match disponible",
+          home: "Aucun match en direct",
           away: "Réessayez plus tard",
           time: new Date().toISOString()
         }
@@ -76,7 +72,7 @@ app.get("/matches", async (req, res) => {
    AUTO PREDICTION
 ======================= */
 function generateStats(name) {
-  const id = name.charCodeAt(0);
+  const id = (name || "").charCodeAt(0) || 50;
   return {
     attack: 70 + (id % 25),
     defense: 65 + (id % 20)
@@ -121,7 +117,7 @@ app.get("/auto-predict", (req, res) => {
 });
 
 /* =======================
-   LIVE MATCHES
+   LIVE
 ======================= */
 app.get("/live", async (req, res) => {
   try {
@@ -152,7 +148,7 @@ app.get("/live", async (req, res) => {
 });
 
 /* =======================
-   START SERVER
+   START
 ======================= */
 app.listen(3000, () => {
   console.log("AUTO SYSTEM RUNNING ⚽🔥");
