@@ -32,7 +32,6 @@ app.get("/matches", async (req, res) => {
     );
 
     const data = await response.json();
-
     const list = data.response || [];
 
     let matches = list.map(m => {
@@ -50,7 +49,6 @@ app.get("/matches", async (req, res) => {
       };
     });
 
-    // 🔥 FALLBACK TOTAL (jamais vide)
     if (matches.length === 0) {
       matches = [
         { home: "Manchester City", away: "Arsenal", time: new Date().toISOString() },
@@ -119,7 +117,7 @@ app.get("/auto-predict", (req, res) => {
 });
 
 /* =======================
-   LIVE (SAFE MODE)
+   LIVE
 ======================= */
 app.get("/live", async (req, res) => {
   try {
@@ -141,7 +139,6 @@ app.get("/live", async (req, res) => {
       minute: m.fixture.status.elapsed ?? 0
     }));
 
-    // 🔥 fallback si vide
     if (result.length === 0) {
       return res.json([
         { match: "No live match", score: "0-0", minute: 0 }
@@ -160,8 +157,139 @@ app.get("/live", async (req, res) => {
 });
 
 /* =======================
+   UI (FREE + VIP + DASHBOARD)
+======================= */
+app.get("/ui", (req, res) => {
+  res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+<title>SYSTÈME DE PRÉDICTION AUTOMATIQUE</title>
+
+<style>
+body {
+  font-family: Arial;
+  background: #0f0f0f;
+  color: white;
+  text-align: center;
+  margin: 0;
+}
+
+.header {
+  background: #111;
+  padding: 20px;
+  font-size: 22px;
+  font-weight: bold;
+  color: #00ff88;
+}
+
+.container {
+  margin-top: 20px;
+}
+
+button {
+  padding: 12px 20px;
+  margin: 10px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+.btn1 { background: #3b82f6; color: white; }
+.btn2 { background: #22c55e; color: white; }
+.btn3 { background: #f59e0b; color: white; }
+
+.card {
+  background: #1f1f1f;
+  margin: 10px auto;
+  padding: 15px;
+  width: 85%;
+  border-radius: 10px;
+}
+
+.free { color: #22c55e; }
+.vip { color: #facc15; }
+</style>
+</head>
+
+<body>
+
+<div class="header">
+  SYSTÈME DE PRÉDICTION AUTOMATIQUE
+</div>
+
+<!-- FREE / VIP SECTION -->
+<div class="card">
+  <h2 class="free">🟢 FREE</h2>
+  <p>1 match recommandé par jour</p>
+  <p>✅ Victoire conseillée</p>
+  <p>✅ Analyse basique</p>
+</div>
+
+<div class="card">
+  <h2 class="vip">🟡 VIP 🔒</h2>
+  <p>🔒 Scores exacts</p>
+  <p>🔒 HT / FT</p>
+  <p>🔒 Over / Under</p>
+  <p>🔒 BTTS</p>
+  <p>🔒 3+ matchs premium</p>
+</div>
+
+<div class="container">
+
+  <button class="btn1" onclick="loadMatches()">Charger les correspondances</button>
+  <button class="btn2" onclick="loadPredictions()">Prédictions automatiques</button>
+  <button class="btn3" onclick="loadLive()">En direct</button>
+
+  <div id="data"></div>
+
+</div>
+
+<script>
+
+async function loadMatches(){
+  const res = await fetch('/matches');
+  const data = await res.json();
+
+  document.getElementById('data').innerHTML =
+    data.map(m =>
+      "<div class='card'><b>" + m.home + " vs " + m.away + "</b><br>" + m.time + "</div>"
+    ).join('');
+}
+
+async function loadPredictions(){
+  const res = await fetch('/auto-predict');
+  const data = await res.json();
+
+  document.getElementById('data').innerHTML =
+    data.map(m =>
+      "<div class='card'><b>" + m.match + "</b><br>Score: " + m.score + "<br>Winner: " + m.winner + "</div>"
+    ).join('');
+}
+
+async function loadLive(){
+  const res = await fetch('/live');
+  const data = await res.json();
+
+  document.getElementById('data').innerHTML =
+    data.map(m =>
+      "<div class='card'><b>" + m.match + "</b><br>" + m.score + " (" + m.minute + " min)</div>"
+    ).join('');
+}
+
+</script>
+
+</body>
+</html>
+  `);
+});
+
+/* =======================
    START
 ======================= */
 app.listen(3000, () => {
   console.log("AUTO SYSTEM RUNNING ⚽🔥");
+});
+`);
 });
