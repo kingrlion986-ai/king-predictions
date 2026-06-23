@@ -17,10 +17,13 @@ app.get("/", (req, res) => {
 });
 
 /* =======================
-   MATCHS (STABLE)
+   MATCHS + DEBUG
 ======================= */
 app.get("/matches", async (req, res) => {
   try {
+
+    console.log("🔑 API KEY EXISTS =", !!API_KEY);
+
     const response = await fetch(
       "https://v3.football.api-sports.io/fixtures?status=NS",
       {
@@ -31,6 +34,8 @@ app.get("/matches", async (req, res) => {
     );
 
     const data = await response.json();
+
+    console.log("📡 API RESPONSE:", data);
 
     const matches = (data.response || []).map(m => {
       const home = m.teams.home.name;
@@ -47,10 +52,12 @@ app.get("/matches", async (req, res) => {
       };
     });
 
+    console.log("⚽ MATCHES FOUND:", matches.length);
+
     res.json(matches);
 
   } catch (err) {
-    console.log(err);
+    console.log("❌ ERROR:", err);
     res.status(500).json({ error: "matches error" });
   }
 });
@@ -108,6 +115,7 @@ app.get("/auto-predict", (req, res) => {
 ======================= */
 app.get("/live", async (req, res) => {
   try {
+
     const response = await fetch(
       "https://v3.football.api-sports.io/fixtures?live=all",
       {
@@ -130,16 +138,9 @@ app.get("/live", async (req, res) => {
     res.json(result);
 
   } catch (err) {
-    console.log(err);
+    console.log("❌ LIVE ERROR:", err);
     res.status(500).json({ error: "live error" });
   }
-});
-
-/* =======================
-   UI
-======================= */
-app.get("/ui", (req, res) => {
-  res.send("KING PREDICTIONS UI READY ⚽🔥");
 });
 
 /* =======================
