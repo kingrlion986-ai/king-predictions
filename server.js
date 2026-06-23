@@ -4,25 +4,10 @@ const cors = require("cors");
 const app = express();
 app.use(cors());
 
-/* =======================
-   DATA (TEAMS FIXES)
-======================= */
 const teams = [
-  "Manchester City", "Arsenal", "Real Madrid",
-  "Barcelona", "PSG", "Bayern Munich",
-  "Liverpool", "Chelsea", "Juventus", "AC Milan"
+  "Manchester City","Arsenal","Real Madrid","Barcelona",
+  "PSG","Bayern Munich","Liverpool","Chelsea"
 ];
-
-/* =======================
-   STATS ENGINE
-======================= */
-function stats(team) {
-  const seed = team.charCodeAt(0);
-  return {
-    attack: 70 + (seed % 30),
-    defense: 60 + (seed % 25)
-  };
-}
 
 /* =======================
    HOME
@@ -32,23 +17,23 @@ app.get("/", (req, res) => {
 });
 
 /* =======================
-   MATCHS (AUTO GENERATION)
+   MATCHS SAFE
 ======================= */
 app.get("/matches", (req, res) => {
-  let matches = [];
+  const matches = [];
 
-  for (let i = 0; i < 6; i++) {
-    let home = teams[Math.floor(Math.random() * teams.length)];
+  for (let i = 0; i < 5; i++) {
+    const home = teams[Math.floor(Math.random() * teams.length)];
     let away = teams[Math.floor(Math.random() * teams.length)];
 
-    while (home === away) {
+    while (away === home) {
       away = teams[Math.floor(Math.random() * teams.length)];
     }
 
     matches.push({
       home,
       away,
-      time: new Date(Date.now() + i * 3600000).toISOString()
+      time: new Date().toISOString()
     });
   }
 
@@ -56,42 +41,46 @@ app.get("/matches", (req, res) => {
 });
 
 /* =======================
-   AUTO PREDICTION ENGINE
+   PREDICTION SAFE
 ======================= */
-app.get("/auto-predict", (req, res) => {
-  let results = [];
+function stats(t) {
+  const n = t.charCodeAt(0);
+  return {
+    a: 60 + (n % 30),
+    d: 55 + (n % 25)
+  };
+}
 
-  for (let i = 0; i < 6; i++) {
-    let home = teams[Math.floor(Math.random() * teams.length)];
+app.get("/auto-predict", (req, res) => {
+  const results = [];
+
+  for (let i = 0; i < 5; i++) {
+    const home = teams[Math.floor(Math.random() * teams.length)];
     let away = teams[Math.floor(Math.random() * teams.length)];
 
-    const t1 = stats(home);
-    const t2 = stats(away);
+    while (away === home) {
+      away = teams[Math.floor(Math.random() * teams.length)];
+    }
 
-    const power1 = t1.attack + (100 - t2.defense);
-    const power2 = t2.attack + (100 - t1.defense);
+    const h = stats(home);
+    const a = stats(away);
 
-    const total = power1 + power2;
+    const p1 = h.a + (100 - a.d);
+    const p2 = a.a + (100 - h.d);
 
-    const p1 = Math.round((power1 / total) * 100);
-    const p2 = Math.round((power2 / total) * 100);
+    const total = p1 + p2;
 
-    const score1 = Math.round(power1 / 75);
-    const score2 = Math.round(power2 / 75);
+    const ph = Math.round((p1 / total) * 100);
+    const pa = Math.round((p2 / total) * 100);
 
-    let winner =
-      score1 > score2 ? home :
-      score2 > score1 ? away :
-      "Draw";
+    const s1 = Math.round(p1 / 70);
+    const s2 = Math.round(p2 / 70);
 
     results.push({
       match: `${home} vs ${away}`,
-      score: `${score1}-${score2}`,
-      winner,
-      probabilities: {
-        home: p1,
-        away: p2
-      }
+      score: `${s1}-${s2}`,
+      winner: s1 > s2 ? home : away,
+      probabilities: { home: ph, away: pa }
     });
   }
 
@@ -99,95 +88,47 @@ app.get("/auto-predict", (req, res) => {
 });
 
 /* =======================
-   LIVE SIMULATION
+   LIVE SAFE
 ======================= */
 app.get("/live", (req, res) => {
-  let live = [];
-
-  for (let i = 0; i < 3; i++) {
-    let home = teams[Math.floor(Math.random() * teams.length)];
-    let away = teams[Math.floor(Math.random() * teams.length)];
-
-    live.push({
-      match: `${home} vs ${away}`,
-      score: `${Math.floor(Math.random() * 4)}-${Math.floor(Math.random() * 4)}`,
-      minute: Math.floor(Math.random() * 90)
-    });
-  }
-
-  res.json(live);
+  res.json([
+    { match: "Live Match 1", score: "1-0", minute: 45 },
+    { match: "Live Match 2", score: "0-0", minute: 30 }
+  ]);
 });
 
 /* =======================
-   UI DASHBOARD (PRO)
+   UI SAFE (NO CRASH)
 ======================= */
 app.get("/ui", (req, res) => {
   res.send(`
 <!DOCTYPE html>
 <html>
 <head>
-<title>SYSTÈME DE PRÉDICTION AUTOMATIQUE</title>
+<title>Prediction System</title>
 <style>
-body {
-  font-family: Arial;
-  background: #0f0f0f;
-  color: white;
-  text-align: center;
-  margin: 0;
-}
-
-.header {
-  background: #111;
-  padding: 20px;
-  font-size: 22px;
-  font-weight: bold;
-  color: #00ff88;
-}
-
-button {
-  padding: 12px 18px;
-  margin: 10px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.btn1 { background: #3b82f6; color: white; }
-.btn2 { background: #22c55e; color: white; }
-.btn3 { background: #f59e0b; color: white; }
-
-.card {
-  background: #1f1f1f;
-  margin: 10px auto;
-  padding: 15px;
-  width: 85%;
-  border-radius: 10px;
-}
+body{background:#111;color:white;text-align:center;font-family:Arial}
+.card{background:#222;margin:10px;padding:10px;border-radius:10px}
+button{padding:10px;margin:5px}
 </style>
 </head>
-
 <body>
 
-<div class="header">
-SYSTÈME DE PRÉDICTION AUTOMATIQUE
+<h1>SYSTÈME DE PRÉDICTION AUTOMATIQUE</h1>
+
+<div class="card">
+<p>🟢 FREE</p>
+<p>1 match conseillé</p>
 </div>
 
 <div class="card">
-<h3>🟢 FREE</h3>
-<p>1 match recommandé</p>
-<p>Victoire conseillée</p>
+<p>🟡 VIP</p>
+<p>Scores exacts + coupons</p>
 </div>
 
-<div class="card">
-<h3>🟡 VIP 🔒</h3>
-<p>Scores exacts</p>
-<p>HT/FT + BTTS</p>
-<p>Coupons multiples</p>
-</div>
-
-<button class="btn1" onclick="loadMatches()">Charger les correspondances</button>
-<button class="btn2" onclick="loadPred()">Prédictions automatiques</button>
-<button class="btn3" onclick="loadLive()">En direct</button>
+<button onclick="loadMatches()">Charger les correspondances</button>
+<button onclick="loadPred()">Prédictions automatiques</button>
+<button onclick="loadLive()">En direct</button>
 
 <div id="data"></div>
 
@@ -195,25 +136,22 @@ SYSTÈME DE PRÉDICTION AUTOMATIQUE
 async function loadMatches(){
   const r = await fetch('/matches');
   const d = await r.json();
-
   document.getElementById('data').innerHTML =
-    d.map(m => `<div class='card'>${m.home} vs ${m.away}<br>${m.time}</div>`).join('');
+    d.map(m=>"<div class='card'>"+m.home+" vs "+m.away+"</div>").join('');
 }
 
 async function loadPred(){
   const r = await fetch('/auto-predict');
   const d = await r.json();
-
   document.getElementById('data').innerHTML =
-    d.map(m => `<div class='card'><b>${m.match}</b><br>${m.score}<br>Winner: ${m.winner}</div>`).join('');
+    d.map(m=>"<div class='card'><b>"+m.match+"</b><br>"+m.score+"</div>").join('');
 }
 
 async function loadLive(){
   const r = await fetch('/live');
   const d = await r.json();
-
   document.getElementById('data').innerHTML =
-    d.map(m => `<div class='card'><b>${m.match}</b><br>${m.score}<br>${m.minute} min</div>`).join('');
+    d.map(m=>"<div class='card'>"+m.match+" "+m.score+"</div>").join('');
 }
 </script>
 
@@ -225,6 +163,5 @@ async function loadLive(){
 /* =======================
    START
 ======================= */
-app.listen(3000, () => {
-  console.log("V2 PRO RUNNING ⚽🔥");
-});
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log("RUNNING SAFE V2"));
