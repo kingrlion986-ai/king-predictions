@@ -17,12 +17,12 @@ app.get("/", (req, res) => {
 });
 
 /* =======================
-   MATCHS (STABLE + SAFE)
+   MATCHS (FIABLE)
 ======================= */
 app.get("/matches", async (req, res) => {
   try {
     const response = await fetch(
-      "https://v3.football.api-sports.io/fixtures?next=50",
+      "https://v3.football.api-sports.io/fixtures?date=2026-06-23",
       {
         headers: {
           "x-apisports-key": API_KEY
@@ -51,12 +51,11 @@ app.get("/matches", async (req, res) => {
       };
     });
 
-    // sécurité anti vide
     if (!matches.length) {
       return res.json([
         {
-          home: "No matches available",
-          away: "Try later",
+          home: "Aucun match aujourd’hui",
+          away: "Réessayer plus tard",
           time: new Date().toISOString()
         }
       ]);
@@ -119,7 +118,7 @@ app.get("/auto-predict", (req, res) => {
 });
 
 /* =======================
-   LIVE
+   LIVE MATCHES
 ======================= */
 app.get("/live", async (req, res) => {
   try {
@@ -149,7 +148,7 @@ app.get("/live", async (req, res) => {
 });
 
 /* =======================
-   START
+   START SERVER
 ======================= */
 app.listen(3000, () => {
   console.log("AUTO SYSTEM RUNNING ⚽🔥");
