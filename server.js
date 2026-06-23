@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const fetch = require("node-fetch");
 
-const API_KEY = "a032b98e63f13e8e40fc0cc461aa2f30";
+const API_KEY = process.env.API_KEY;
 
 const app = express();
 app.use(cors());
