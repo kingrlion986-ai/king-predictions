@@ -7,9 +7,6 @@ const API_KEY = process.env.API_KEY;
 const app = express();
 app.use(cors());
 
-/* =======================
-   CACHE MÉMOIRE
-======================= */
 let trackedMatches = [];
 
 /* =======================
@@ -20,12 +17,12 @@ app.get("/", (req, res) => {
 });
 
 /* =======================
-   MATCHS
+   MATCHS (STABLE)
 ======================= */
 app.get("/matches", async (req, res) => {
   try {
     const response = await fetch(
-      "https://v3.football.api-sports.io/fixtures?next=10",
+      "https://v3.football.api-sports.io/fixtures?status=NS",
       {
         headers: {
           "x-apisports-key": API_KEY
@@ -39,16 +36,8 @@ app.get("/matches", async (req, res) => {
       const home = m.teams.home.name;
       const away = m.teams.away.name;
 
-      const exists = trackedMatches.find(
-        x => x.home === home && x.away === away
-      );
-
-      if (!exists) {
-        trackedMatches.push({
-          home,
-          away,
-          status: "pre-match"
-        });
+      if (!trackedMatches.find(x => x.home === home && x.away === away)) {
+        trackedMatches.push({ home, away, status: "pre-match" });
       }
 
       return {
@@ -67,7 +56,7 @@ app.get("/matches", async (req, res) => {
 });
 
 /* =======================
-   AUTO PRÉDICTION
+   AUTO PREDICTION
 ======================= */
 function generateStats(name) {
   const id = name.charCodeAt(0);
@@ -131,18 +120,10 @@ app.get("/live", async (req, res) => {
     const data = await response.json();
 
     const result = (data.response || []).map(m => {
-      const home = m.teams.home.name;
-      const away = m.teams.away.name;
-
-      const gh = m.goals.home ?? 0;
-      const ga = m.goals.away ?? 0;
-
-      const minute = m.fixture.status.elapsed ?? 0;
-
       return {
-        match: `${home} vs ${away}`,
-        score: `${gh}-${ga}`,
-        minute
+        match: `${m.teams.home.name} vs ${m.teams.away.name}`,
+        score: `${m.goals.home ?? 0}-${m.goals.away ?? 0}`,
+        minute: m.fixture.status.elapsed ?? 0
       };
     });
 
@@ -158,66 +139,7 @@ app.get("/live", async (req, res) => {
    UI
 ======================= */
 app.get("/ui", (req, res) => {
-  res.send(`
-<!DOCTYPE html>
-<html>
-<head>
-<title>King Predictions</title>
-<style>
-body{font-family:Arial;background:#111;color:white;text-align:center;}
-.card{background:#222;padding:15px;margin:10px;border-radius:10px;}
-button{padding:10px 20px;margin:10px;}
-.free{color:#22c55e;}
-.vip{color:#facc15;}
-</style>
-</head>
-
-<body>
-
-<h1>👑 KING PREDICTIONS</h1>
-
-<div class="card">
-  <h2 class="free">🟢 FREE</h2>
-  <p>1 match recommandé par jour</p>
-</div>
-
-<div class="card">
-  <h2 class="vip">🟡 VIP 🔒</h2>
-  <p>Scores exacts + analyses avancées</p>
-</div>
-
-<button onclick="loadMatches()">Matches</button>
-<button onclick="loadAuto()">Predictions</button>
-<button onclick="loadLive()">Live</button>
-
-<div id="data"></div>
-
-<script>
-async function loadMatches(){
-  const r = await fetch('/matches');
-  const d = await r.json();
-  document.getElementById('data').innerHTML =
-    d.map(m => "<div class='card'>"+m.home+" vs "+m.away+"</div>").join('');
-}
-
-async function loadAuto(){
-  const r = await fetch('/auto-predict');
-  const d = await r.json();
-  document.getElementById('data').innerHTML =
-    d.map(m => "<div class='card'><h3>"+m.match+"</h3><p>"+m.score+"</p><p>"+m.winner+"</p></div>").join('');
-}
-
-async function loadLive(){
-  const r = await fetch('/live');
-  const d = await r.json();
-  document.getElementById('data').innerHTML =
-    d.map(m => "<div class='card'><h3>"+m.match+"</h3><p>"+m.score+"</p><p>"+m.minute+" min</p></div>").join('');
-}
-</script>
-
-</body>
-</html>
-  `);
+  res.send("KING PREDICTIONS UI READY ⚽🔥");
 });
 
 /* =======================
