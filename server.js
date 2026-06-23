@@ -8,7 +8,7 @@ const app = express();
 app.use(cors());
 
 /* =======================
-   CACHE MÉMOIRE (MATCHS SUIVIS)
+   CACHE MÉMOIRE
 ======================= */
 let trackedMatches = [];
 
@@ -20,63 +20,25 @@ app.get("/", (req, res) => {
 });
 
 /* =======================
-   MATCHS DU JOUR (AUTO TRACKING)
+   MATCHS
 ======================= */
 app.get("/matches", async (req, res) => {
   try {
     const response = await fetch(
-      `https://v3.football.api-sports.io/fixtures?next=10`,
+      "https://v3.football.api-sports.io/fixtures?next=10",
       {
         headers: {
-          "x-rapidapi-key": API_KEY,
-          "x-rapidapi-host": "v3.football.api-sports.io"
+          "x-apisports-key": API_KEY
         }
       }
     );
 
     const data = await response.json();
 
-const matches = data.response.map(m => {
-  return {
-    home: m.teams.home.name,
-    away: m.teams.away.name,
-    time: m.fixture.date
-  };
-});
-
-res.json(matches);
-
-} catch (err) {
-  console.log(err);
-  res.status(500).json({ error: "matches error" });
-}
-});
-     
-    const data = await response.json();
-
-    const matches = data.response.map(m => {
-      return {
-        home: m.teams.home.name,
-        away: m.teams.away.name,
-        time: m.fixture.date
-      };
-    });
-
-    res.json(matches);
-
-  } catch (err) {
-    console.log(err);
-    res.status(500).json({ error: "matches error" });
-  }
-});
-
-    const data = await response.json();
-
-    const matches = data.response.slice(0, 10).map(m => {
+    const matches = (data.response || []).map(m => {
       const home = m.teams.home.name;
       const away = m.teams.away.name;
 
-      // ➜ auto ajout dans tracking
       const exists = trackedMatches.find(
         x => x.home === home && x.away === away
       );
@@ -99,12 +61,13 @@ res.json(matches);
     res.json(matches);
 
   } catch (err) {
+    console.log(err);
     res.status(500).json({ error: "matches error" });
   }
 });
 
 /* =======================
-   AUTO PRÉDICTION (SANS INPUT OBLIGATOIRE)
+   AUTO PRÉDICTION
 ======================= */
 function generateStats(name) {
   const id = name.charCodeAt(0);
@@ -114,9 +77,6 @@ function generateStats(name) {
   };
 }
 
-/* =======================
-   PRÉDICTION AUTO POUR MATCHS TRACKÉS
-======================= */
 app.get("/auto-predict", (req, res) => {
 
   const results = trackedMatches.map(m => {
@@ -127,7 +87,7 @@ app.get("/auto-predict", (req, res) => {
     const power1 = t1.attack + (100 - t2.defense);
     const power2 = t2.attack + (100 - t1.defense);
 
-    const total = power1 + power2;
+    const total = power1 + power2 || 1;
 
     const p1 = Math.round((power1 / total) * 100);
     const p2 = Math.round((power2 / total) * 100);
@@ -136,11 +96,8 @@ app.get("/auto-predict", (req, res) => {
     const s1 = Math.round(power1 / 65);
     const s2 = Math.round(power2 / 65);
 
-    let status = "balanced";
-    if (p1 > 60) status = `${m.home} strong 🔥`;
-    if (p2 > 60) status = `${m.away} strong 🔥`;
-
-    m.prediction = {
+    return {
+      match: `${m.home} vs ${m.away}`,
       winner:
         s1 > s2 ? m.home :
         s2 > s1 ? m.away :
@@ -150,13 +107,7 @@ app.get("/auto-predict", (req, res) => {
         [m.home]: p1,
         draw,
         [m.away]: p2
-      },
-      status
-    };
-
-    return {
-      match: `${m.home} vs ${m.away}`,
-      ...m.prediction
+      }
     };
   });
 
@@ -164,93 +115,60 @@ app.get("/auto-predict", (req, res) => {
 });
 
 /* =======================
-   LIVE SYSTEM (AUTO LINK WITH TRACKING)
+   LIVE
 ======================= */
 app.get("/live", async (req, res) => {
   try {
     const response = await fetch(
-      `https://v3.football.api-sports.io/fixtures?live=all`,
+      "https://v3.football.api-sports.io/fixtures?live=all",
       {
-        headers: { "x-apisports-key": API_KEY }
+        headers: {
+          "x-apisports-key": API_KEY
+        }
       }
     );
 
     const data = await response.json();
 
-    const result = data.response.map(m => {
-
+    const result = (data.response || []).map(m => {
       const home = m.teams.home.name;
       const away = m.teams.away.name;
 
       const gh = m.goals.home ?? 0;
       const ga = m.goals.away ?? 0;
+
       const minute = m.fixture.status.elapsed ?? 0;
-
-      const ph = 80 + gh * 10 + minute * 0.2;
-      const pa = 80 + ga * 10 + minute * 0.2;
-
-      const total = ph + pa || 1;
-
-      const pHome = Math.round((ph / total) * 100);
-      const pAway = Math.round((pa / total) * 100);
-
-      const projH = Math.round(ph / 90);
-      const projA = Math.round(pa / 90);
-
-      // ➜ update tracking si match existe
-      const tracked = trackedMatches.find(
-        x => x.home === home && x.away === away
-      );
-
-      if (tracked) {
-        tracked.status = "live";
-        tracked.liveScore = `${gh}-${ga}`;
-      }
 
       return {
         match: `${home} vs ${away}`,
         score: `${gh}-${ga}`,
-        minute,
-        probabilities: {
-          [home]: pHome,
-          [away]: pAway
-        },
-        projected_score: `${projH}-${projA}`,
-        winner_prediction:
-          projH > projA ? home :
-          projA > projH ? away :
-          "Draw"
+        minute
       };
     });
 
     res.json(result);
 
   } catch (err) {
+    console.log(err);
     res.status(500).json({ error: "live error" });
   }
 });
 
 /* =======================
-   UI (AUTO SYSTEM DASHBOARD)
+   UI
 ======================= */
 app.get("/ui", (req, res) => {
   res.send(`
 <!DOCTYPE html>
 <html>
 <head>
-<title>Auto Prediction System</title>
+<title>King Predictions</title>
 <style>
 body{font-family:Arial;background:#111;color:white;text-align:center;}
 .card{background:#222;padding:15px;margin:10px;border-radius:10px;}
 button{padding:10px 20px;margin:10px;}
-
-.free{
-color:#22c55e;
-}
-
-.vip{
-color:#facc15;
-}
+.free{color:#22c55e;}
+.vip{color:#facc15;}
 </style>
 </head>
 
@@ -261,21 +179,15 @@ color:#facc15;
 <div class="card">
   <h2 class="free">🟢 FREE</h2>
   <p>1 match recommandé par jour</p>
-  <p>✅ Victoire conseillée</p>
-  <p>✅ Cote estimée</p>
 </div>
 
 <div class="card">
   <h2 class="vip">🟡 VIP 🔒</h2>
-  <p>🔒 Scores exacts</p>
-  <p>🔒 HT/FT</p>
-  <p>🔒 Over/Under</p>
-  <p>🔒 BTTS</p>
-  <p>🔒 3 matchs premium par jour</p>
+  <p>Scores exacts + analyses avancées</p>
 </div>
 
-<button onclick="loadMatches()">Load Matches</button>
-<button onclick="loadAuto()">Auto Predictions</button>
+<button onclick="loadMatches()">Matches</button>
+<button onclick="loadAuto()">Predictions</button>
 <button onclick="loadLive()">Live</button>
 
 <div id="data"></div>
@@ -309,7 +221,7 @@ async function loadLive(){
 });
 
 /* =======================
-   START SERVER
+   START
 ======================= */
 app.listen(3000, () => {
   console.log("AUTO SYSTEM RUNNING ⚽🔥");
