@@ -1,13 +1,31 @@
 const express = require("express");
 const cors = require("cors");
-const fetch = require("node-fetch");
-
-const API_KEY = process.env.API_KEY;
 
 const app = express();
 app.use(cors());
 
+const API_KEY = process.env.API_KEY;
+
 let trackedMatches = [];
+
+/* =======================
+   SAFE FETCH (ANTI CRASH)
+======================= */
+async function safeFetch(url) {
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "x-rapidapi-key": API_KEY || "",
+        "x-rapidapi-host": "v3.football.api-sports.io"
+      }
+    });
+
+    return await res.json();
+  } catch (e) {
+    console.log("FETCH ERROR:", e);
+    return { response: [] };
+  }
+}
 
 /* =======================
    HOME
@@ -17,62 +35,44 @@ app.get("/", (req, res) => {
 });
 
 /* =======================
-   MATCHS (STABLE + GUARANTEED DATA)
+   MATCHS (100% SAFE)
 ======================= */
 app.get("/matches", async (req, res) => {
-  try {
-    const response = await fetch(
-      "https://v3.football.api-sports.io/fixtures?league=39&season=2025",
-      {
-        headers: {
-          "x-rapidapi-key": API_KEY,
-          "x-rapidapi-host": "v3.football.api-sports.io"
-        }
-      }
-    );
+  const data = await safeFetch(
+    "https://v3.football.api-sports.io/fixtures?next=20"
+  );
 
-    const data = await response.json();
-    const list = data.response || [];
+  const list = data.response || [];
 
-    let matches = list.map(m => {
-      const home = m.teams.home.name;
-      const away = m.teams.away.name;
+  let matches = list.map(m => {
+    const home = m?.teams?.home?.name || "Unknown";
+    const away = m?.teams?.away?.name || "Unknown";
 
-      if (!trackedMatches.find(x => x.home === home && x.away === away)) {
-        trackedMatches.push({ home, away, status: "tracked" });
-      }
-
-      return {
-        home,
-        away,
-        time: m.fixture.date
-      };
-    });
-
-    if (matches.length === 0) {
-      matches = [
-        { home: "Manchester City", away: "Arsenal", time: new Date().toISOString() },
-        { home: "Real Madrid", away: "Barcelona", time: new Date().toISOString() },
-        { home: "PSG", away: "Marseille", time: new Date().toISOString() }
-      ];
+    if (!trackedMatches.find(x => x.home === home && x.away === away)) {
+      trackedMatches.push({ home, away, status: "tracked" });
     }
 
-    res.json(matches);
+    return {
+      home,
+      away,
+      time: m?.fixture?.date || null
+    };
+  });
 
-  } catch (err) {
-    console.log("MATCHS ERROR:", err);
-
-    res.json([
-      { home: "Manchester City", away: "Arsenal", time: new Date().toISOString() }
-    ]);
+  if (matches.length === 0) {
+    matches = [
+      { home: "No data", away: "Try later", time: new Date().toISOString() }
+    ];
   }
+
+  res.json(matches);
 });
 
 /* =======================
-   AUTO PREDICTION
+   AUTO PREDICTION SAFE
 ======================= */
-function generateStats(name) {
-  const id = (name || "").charCodeAt(0) || 50;
+function generateStats(name = "") {
+  const id = name.charCodeAt(0) || 50;
   return {
     attack: 70 + (id % 25),
     defense: 65 + (id % 20)
@@ -80,9 +80,7 @@ function generateStats(name) {
 }
 
 app.get("/auto-predict", (req, res) => {
-
   const results = trackedMatches.map(m => {
-
     const t1 = generateStats(m.home);
     const t2 = generateStats(m.away);
 
@@ -117,47 +115,26 @@ app.get("/auto-predict", (req, res) => {
 });
 
 /* =======================
-   LIVE
+   LIVE SAFE
 ======================= */
 app.get("/live", async (req, res) => {
-  try {
-    const response = await fetch(
-      "https://v3.football.api-sports.io/fixtures?live=all",
-      {
-        headers: {
-          "x-rapidapi-key": API_KEY,
-          "x-rapidapi-host": "v3.football.api-sports.io"
-        }
-      }
-    );
+  const data = await safeFetch(
+    "https://v3.football.api-sports.io/fixtures?live=all"
+  );
 
-    const data = await response.json();
+  const result = (data.response || []).map(m => ({
+    match: `${m?.teams?.home?.name || "?"} vs ${m?.teams?.away?.name || "?"}`,
+    score: `${m?.goals?.home ?? 0}-${m?.goals?.away ?? 0}`,
+    minute: m?.fixture?.status?.elapsed ?? 0
+  }));
 
-    const result = (data.response || []).map(m => ({
-      match: `${m.teams.home.name} vs ${m.teams.away.name}`,
-      score: `${m.goals.home ?? 0}-${m.goals.away ?? 0}`,
-      minute: m.fixture.status.elapsed ?? 0
-    }));
-
-    if (result.length === 0) {
-      return res.json([
-        { match: "No live match", score: "0-0", minute: 0 }
-      ]);
-    }
-
-    res.json(result);
-
-  } catch (err) {
-    console.log("LIVE ERROR:", err);
-
-    res.json([
-      { match: "System fallback", score: "0-0", minute: 0 }
-    ]);
-  }
+  res.json(result.length ? result : [
+    { match: "No live match", score: "0-0", minute: 0 }
+  ]);
 });
 
 /* =======================
-   UI (FREE + VIP + DASHBOARD)
+   UI CLEAN + STABLE
 ======================= */
 app.get("/ui", (req, res) => {
   res.send(`
@@ -165,119 +142,60 @@ app.get("/ui", (req, res) => {
 <html>
 <head>
 <title>SYSTÈME DE PRÉDICTION AUTOMATIQUE</title>
-
 <style>
-body {
-  font-family: Arial;
-  background: #0f0f0f;
-  color: white;
-  text-align: center;
-  margin: 0;
-}
-
-.header {
-  background: #111;
-  padding: 20px;
-  font-size: 22px;
-  font-weight: bold;
-  color: #00ff88;
-}
-
-.container {
-  margin-top: 20px;
-}
-
-button {
-  padding: 12px 20px;
-  margin: 10px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 15px;
-}
-
-.btn1 { background: #3b82f6; color: white; }
-.btn2 { background: #22c55e; color: white; }
-.btn3 { background: #f59e0b; color: white; }
-
-.card {
-  background: #1f1f1f;
-  margin: 10px auto;
-  padding: 15px;
-  width: 85%;
-  border-radius: 10px;
-}
-
-.free { color: #22c55e; }
-.vip { color: #facc15; }
+body{font-family:Arial;background:#0f0f0f;color:white;text-align:center;margin:0}
+.header{background:#111;padding:20px;font-size:22px;color:#00ff88}
+.card{background:#1f1f1f;margin:10px auto;padding:15px;width:85%;border-radius:10px}
+button{padding:12px 18px;margin:10px;border:0;border-radius:8px;cursor:pointer}
+.btn1{background:#3b82f6;color:white}
+.btn2{background:#22c55e;color:white}
+.btn3{background:#f59e0b;color:white}
 </style>
 </head>
 
 <body>
 
-<div class="header">
-  SYSTÈME DE PRÉDICTION AUTOMATIQUE
-</div>
+<div class="header">SYSTÈME DE PRÉDICTION AUTOMATIQUE</div>
 
-<!-- FREE / VIP SECTION -->
 <div class="card">
-  <h2 class="free">🟢 FREE</h2>
-  <p>1 match recommandé par jour</p>
-  <p>✅ Victoire conseillée</p>
-  <p>✅ Analyse basique</p>
+<h3>🟢 FREE</h3>
+<p>1 match recommandé par jour</p>
+<p>✔ Victoire conseillée</p>
 </div>
 
 <div class="card">
-  <h2 class="vip">🟡 VIP 🔒</h2>
-  <p>🔒 Scores exacts</p>
-  <p>🔒 HT / FT</p>
-  <p>🔒 Over / Under</p>
-  <p>🔒 BTTS</p>
-  <p>🔒 3+ matchs premium</p>
+<h3>🟡 VIP 🔒</h3>
+<p>✔ Scores exacts</p>
+<p>✔ BTTS / Over / HTFT</p>
 </div>
 
-<div class="container">
+<button class="btn1" onclick="loadMatches()">Charger les correspondances</button>
+<button class="btn2" onclick="loadPredictions()">Prédictions automatiques</button>
+<button class="btn3" onclick="loadLive()">En direct</button>
 
-  <button class="btn1" onclick="loadMatches()">Charger les correspondances</button>
-  <button class="btn2" onclick="loadPredictions()">Prédictions automatiques</button>
-  <button class="btn3" onclick="loadLive()">En direct</button>
-
-  <div id="data"></div>
-
-</div>
+<div id="data"></div>
 
 <script>
-
 async function loadMatches(){
-  const res = await fetch('/matches');
-  const data = await res.json();
-
+  const r = await fetch('/matches');
+  const d = await r.json();
   document.getElementById('data').innerHTML =
-    data.map(m =>
-      "<div class='card'><b>" + m.home + " vs " + m.away + "</b><br>" + m.time + "</div>"
-    ).join('');
+    d.map(m=>\`<div class='card'>\${m.home} vs \${m.away}</div>\`).join('');
 }
 
 async function loadPredictions(){
-  const res = await fetch('/auto-predict');
-  const data = await res.json();
-
+  const r = await fetch('/auto-predict');
+  const d = await r.json();
   document.getElementById('data').innerHTML =
-    data.map(m =>
-      "<div class='card'><b>" + m.match + "</b><br>Score: " + m.score + "<br>Winner: " + m.winner + "</div>"
-    ).join('');
+    d.map(m=>\`<div class='card'><b>\${m.match}</b><br>\${m.score}<br>\${m.winner}</div>\`).join('');
 }
 
 async function loadLive(){
-  const res = await fetch('/live');
-  const data = await res.json();
-
+  const r = await fetch('/live');
+  const d = await r.json();
   document.getElementById('data').innerHTML =
-    data.map(m =>
-      "<div class='card'><b>" + m.match + "</b><br>" + m.score + " (" + m.minute + " min)</div>"
-    ).join('');
+    d.map(m=>\`<div class='card'>\${m.match}<br>\${m.score} (\${m.minute})</div>\`).join('');
 }
-
 </script>
 
 </body>
@@ -286,10 +204,9 @@ async function loadLive(){
 });
 
 /* =======================
-   START
+   START (RENDER SAFE)
 ======================= */
-app.listen(3000, () => {
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
   console.log("AUTO SYSTEM RUNNING ⚽🔥");
-});
-`);
 });
