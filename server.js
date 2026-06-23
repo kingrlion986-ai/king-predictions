@@ -24,7 +24,7 @@ app.get("/", (req, res) => {
 ======================= */
 app.get("/matches", async (req, res) => {
   try {
-    const today = new Date().toISOString().split("T")[0];
+    const today = new Date().toLocaleDateString('en-CA');
 
     const response = await fetch(
       `https://v3.football.api-sports.io/fixtures?date=${today}`,
