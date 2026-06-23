@@ -17,12 +17,12 @@ app.get("/", (req, res) => {
 });
 
 /* =======================
-   MATCHS (FIABLE)
+   MATCHS (STABLE + REAL DATA)
 ======================= */
 app.get("/matches", async (req, res) => {
   try {
     const response = await fetch(
-      "https://v3.football.api-sports.io/fixtures?date=2026-06-23",
+      "https://v3.football.api-sports.io/fixtures?next=20",
       {
         headers: {
           "x-apisports-key": API_KEY
@@ -54,8 +54,8 @@ app.get("/matches", async (req, res) => {
     if (!matches.length) {
       return res.json([
         {
-          home: "Aucun match aujourd’hui",
-          away: "Réessayer plus tard",
+          home: "Aucun match disponible",
+          away: "Réessayez plus tard",
           time: new Date().toISOString()
         }
       ]);
