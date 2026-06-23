@@ -4,83 +4,108 @@ const cors = require("cors");
 const app = express();
 app.use(cors());
 
+/* =======================
+   TEAMS DATABASE
+======================= */
 const teams = [
   "Manchester City","Arsenal","Real Madrid","Barcelona",
-  "PSG","Bayern Munich","Liverpool","Chelsea"
+  "PSG","Bayern Munich","Liverpool","Chelsea",
+  "Juventus","AC Milan"
 ];
+
+/* =======================
+   TEAM FORM SYSTEM (SIMULÉ MAIS STABLE)
+======================= */
+function teamData(name) {
+  const seed = name.charCodeAt(0);
+
+  return {
+    attack: 65 + (seed % 35),
+    defense: 60 + (seed % 30),
+    form: 50 + (seed % 50) // forme équipe
+  };
+}
 
 /* =======================
    HOME
 ======================= */
 app.get("/", (req, res) => {
-  res.send("KING PREDICTIONS V2 PRO ⚽🔥");
+  res.send("KING PREDICTIONS V3 PRO ⚽🔥");
 });
 
 /* =======================
-   MATCHS SAFE
+   MATCH GENERATOR
 ======================= */
-app.get("/matches", (req, res) => {
-  const matches = [];
+function generateMatch() {
+  let home = teams[Math.floor(Math.random() * teams.length)];
+  let away = teams[Math.floor(Math.random() * teams.length)];
 
-  for (let i = 0; i < 5; i++) {
-    const home = teams[Math.floor(Math.random() * teams.length)];
-    let away = teams[Math.floor(Math.random() * teams.length)];
-
-    while (away === home) {
-      away = teams[Math.floor(Math.random() * teams.length)];
-    }
-
-    matches.push({
-      home,
-      away,
-      time: new Date().toISOString()
-    });
+  while (home === away) {
+    away = teams[Math.floor(Math.random() * teams.length)];
   }
 
-  res.json(matches);
+  return { home, away };
+}
+
+/* =======================
+   FREE MATCH (1 ONLY)
+======================= */
+app.get("/free", (req, res) => {
+  const { home, away } = generateMatch();
+
+  const t1 = teamData(home);
+  const t2 = teamData(away);
+
+  const power1 = t1.attack + t1.form + (100 - t2.defense);
+  const power2 = t2.attack + t2.form + (100 - t1.defense);
+
+  const total = power1 + power2;
+
+  const p1 = Math.round((power1 / total) * 100);
+  const p2 = Math.round((power2 / total) * 100);
+
+  const score1 = Math.round(power1 / 80);
+  const score2 = Math.round(power2 / 80);
+
+  res.json({
+    match: `${home} vs ${away}`,
+    prediction: `${score1}-${score2}`,
+    winner: score1 > score2 ? home : away,
+    confidence: Math.max(p1, p2)
+  });
 });
 
 /* =======================
-   PREDICTION SAFE
+   VIP MATCHES (MULTI)
 ======================= */
-function stats(t) {
-  const n = t.charCodeAt(0);
-  return {
-    a: 60 + (n % 30),
-    d: 55 + (n % 25)
-  };
-}
+app.get("/vip", (req, res) => {
 
-app.get("/auto-predict", (req, res) => {
-  const results = [];
+  let results = [];
 
   for (let i = 0; i < 5; i++) {
-    const home = teams[Math.floor(Math.random() * teams.length)];
-    let away = teams[Math.floor(Math.random() * teams.length)];
 
-    while (away === home) {
-      away = teams[Math.floor(Math.random() * teams.length)];
-    }
+    const { home, away } = generateMatch();
 
-    const h = stats(home);
-    const a = stats(away);
+    const t1 = teamData(home);
+    const t2 = teamData(away);
 
-    const p1 = h.a + (100 - a.d);
-    const p2 = a.a + (100 - h.d);
+    const power1 = t1.attack + t1.form + (100 - t2.defense);
+    const power2 = t2.attack + t2.form + (100 - t1.defense);
 
-    const total = p1 + p2;
+    const total = power1 + power2;
 
-    const ph = Math.round((p1 / total) * 100);
-    const pa = Math.round((p2 / total) * 100);
+    const p1 = Math.round((power1 / total) * 100);
+    const p2 = Math.round((power2 / total) * 100);
 
-    const s1 = Math.round(p1 / 70);
-    const s2 = Math.round(p2 / 70);
+    const score1 = Math.round(power1 / 75);
+    const score2 = Math.round(power2 / 75);
 
     results.push({
       match: `${home} vs ${away}`,
-      score: `${s1}-${s2}`,
-      winner: s1 > s2 ? home : away,
-      probabilities: { home: ph, away: pa }
+      score: `${score1}-${score2}`,
+      winner: score1 > score2 ? home : away,
+      btts: Math.random() > 0.5 ? "YES" : "NO",
+      over25: Math.random() > 0.5 ? "YES" : "NO"
     });
   }
 
@@ -88,71 +113,155 @@ app.get("/auto-predict", (req, res) => {
 });
 
 /* =======================
-   LIVE SAFE
+   MATCH LIST (UI BUTTON)
 ======================= */
-app.get("/live", (req, res) => {
-  res.json([
-    { match: "Live Match 1", score: "1-0", minute: 45 },
-    { match: "Live Match 2", score: "0-0", minute: 30 }
-  ]);
+app.get("/matches", (req, res) => {
+  let list = [];
+
+  for (let i = 0; i < 5; i++) {
+    const { home, away } = generateMatch();
+
+    list.push({
+      home,
+      away,
+      time: new Date(Date.now() + i * 3600000).toISOString()
+    });
+  }
+
+  res.json(list);
 });
 
 /* =======================
-   UI SAFE (NO CRASH)
+   LIVE SIMULATION
+======================= */
+app.get("/live", (req, res) => {
+  let live = [];
+
+  for (let i = 0; i < 3; i++) {
+    const { home, away } = generateMatch();
+
+    live.push({
+      match: `${home} vs ${away}`,
+      score: `${Math.floor(Math.random() * 3)}-${Math.floor(Math.random() * 3)}`,
+      minute: Math.floor(Math.random() * 90)
+    });
+  }
+
+  res.json(live);
+});
+
+/* =======================
+   UI DASHBOARD V3
 ======================= */
 app.get("/ui", (req, res) => {
   res.send(`
 <!DOCTYPE html>
 <html>
 <head>
-<title>Prediction System</title>
+<title>SYSTÈME V3 PRO</title>
+
 <style>
-body{background:#111;color:white;text-align:center;font-family:Arial}
-.card{background:#222;margin:10px;padding:10px;border-radius:10px}
-button{padding:10px;margin:5px}
+body{
+  font-family: Arial;
+  background:#0f0f0f;
+  color:white;
+  text-align:center;
+}
+
+.header{
+  background:#111;
+  padding:20px;
+  font-size:22px;
+  color:#00ff88;
+  font-weight:bold;
+}
+
+.card{
+  background:#1f1f1f;
+  margin:10px auto;
+  padding:15px;
+  width:85%;
+  border-radius:10px;
+}
+
+button{
+  padding:12px;
+  margin:8px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+.free{color:#22c55e}
+.vip{color:#facc15}
 </style>
 </head>
+
 <body>
 
-<h1>SYSTÈME DE PRÉDICTION AUTOMATIQUE</h1>
-
-<div class="card">
-<p>🟢 FREE</p>
-<p>1 match conseillé</p>
+<div class="header">
+SYSTÈME DE PRÉDICTION AUTOMATIQUE V3
 </div>
 
 <div class="card">
-<p>🟡 VIP</p>
-<p>Scores exacts + coupons</p>
+<h3 class="free">🟢 FREE</h3>
+<p>1 match du jour + conseil</p>
+</div>
+
+<div class="card">
+<h3 class="vip">🟡 VIP</h3>
+<p>Scores exacts + BTTS + Over 2.5</p>
 </div>
 
 <button onclick="loadMatches()">Charger les correspondances</button>
-<button onclick="loadPred()">Prédictions automatiques</button>
+<button onclick="loadFree()">FREE</button>
+<button onclick="loadVip()">VIP</button>
 <button onclick="loadLive()">En direct</button>
 
 <div id="data"></div>
 
 <script>
+
 async function loadMatches(){
   const r = await fetch('/matches');
   const d = await r.json();
   document.getElementById('data').innerHTML =
-    d.map(m=>"<div class='card'>"+m.home+" vs "+m.away+"</div>").join('');
+    d.map(m=>`<div class='card'>${m.home} vs ${m.away}</div>`).join('');
 }
 
-async function loadPred(){
-  const r = await fetch('/auto-predict');
+async function loadFree(){
+  const r = await fetch('/free');
   const d = await r.json();
   document.getElementById('data').innerHTML =
-    d.map(m=>"<div class='card'><b>"+m.match+"</b><br>"+m.score+"</div>").join('');
+    `<div class='card'>
+      <h3>${d.match}</h3>
+      <p>Score: ${d.prediction}</p>
+      <p>Winner: ${d.winner}</p>
+      <p>Confidence: ${d.confidence}%</p>
+    </div>`;
+}
+
+async function loadVip(){
+  const r = await fetch('/vip');
+  const d = await r.json();
+  document.getElementById('data').innerHTML =
+    d.map(m=>`
+      <div class='card'>
+        <b>${m.match}</b><br>
+        Score: ${m.score}<br>
+        Winner: ${m.winner}<br>
+        BTTS: ${m.btts}<br>
+        Over 2.5: ${m.over25}
+      </div>`).join('');
 }
 
 async function loadLive(){
   const r = await fetch('/live');
   const d = await r.json();
   document.getElementById('data').innerHTML =
-    d.map(m=>"<div class='card'>"+m.match+" "+m.score+"</div>").join('');
+    d.map(m=>`<div class='card'>${m.match}<br>${m.score}<br>${m.minute} min</div>`).join('');
 }
+
 </script>
 
 </body>
@@ -163,5 +272,6 @@ async function loadLive(){
 /* =======================
    START
 ======================= */
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("RUNNING SAFE V2"));
+app.listen(process.env.PORT || 3000, () => {
+  console.log("V3 PRO RUNNING ⚽🔥");
+});
