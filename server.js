@@ -115,18 +115,42 @@ app.get("/vip", (req, res) => {
 /* =======================
    MATCH LIST (UI BUTTON)
 ======================= */
-app.get("/matches", (req, res) => {
-  let list = [];
+app.get("/matches", async (req, res) => {
 
-  for (let i = 0; i < 5; i++) {
-    const { home, away } = generateMatch();
+try {
 
-    list.push({
-      home,
-      away,
-      time: new Date(Date.now() + i * 3600000).toISOString()
-    });
+const fetch = require("node-fetch");
+
+const response = await fetch(
+  "https://v3.football.api-sports.io/fixtures?next=10",
+  {
+    headers: {
+      "x-apisports-key": process.env.API_KEY
+    }
   }
+);
+
+const data = await response.json();
+
+// IMPORTANT : afficher la vraie réponse
+res.json({
+  api_key_exists: !!process.env.API_KEY,
+  results: data.results,
+  errors: data.errors,
+  response_count: data.response ? data.response.length : 0,
+  sample: data.response ? data.response.slice(0, 3) : []
+});
+
+} catch (err) {
+
+res.json({
+  error: err.message,
+  api_key_exists: !!process.env.API_KEY
+});
+
+}
+
+});
 
   res.json(list);
 });
