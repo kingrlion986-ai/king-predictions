@@ -17,7 +17,7 @@ app.get("/", (req, res) => {
 });
 
 /* =======================
-   MATCHS (STABLE + REAL DATA)
+   MATCHS (FIX FINAL API HEADERS)
 ======================= */
 app.get("/matches", async (req, res) => {
   try {
@@ -25,12 +25,15 @@ app.get("/matches", async (req, res) => {
       "https://v3.football.api-sports.io/fixtures?next=20",
       {
         headers: {
-          "x-apisports-key": API_KEY
+          "x-rapidapi-key": API_KEY,
+          "x-rapidapi-host": "v3.football.api-sports.io"
         }
       }
     );
 
     const data = await response.json();
+
+    console.log("API STATUS:", data.errors || "OK");
 
     const matches = (data.response || []).map(m => {
       const home = m.teams.home.name;
@@ -64,7 +67,7 @@ app.get("/matches", async (req, res) => {
     res.json(matches);
 
   } catch (err) {
-    console.log(err);
+    console.log("MATCHS ERROR:", err);
     res.status(500).json({ error: "matches error" });
   }
 });
@@ -126,7 +129,8 @@ app.get("/live", async (req, res) => {
       "https://v3.football.api-sports.io/fixtures?live=all",
       {
         headers: {
-          "x-apisports-key": API_KEY
+          "x-rapidapi-key": API_KEY,
+          "x-rapidapi-host": "v3.football.api-sports.io"
         }
       }
     );
@@ -142,7 +146,7 @@ app.get("/live", async (req, res) => {
     res.json(result);
 
   } catch (err) {
-    console.log(err);
+    console.log("LIVE ERROR:", err);
     res.status(500).json({ error: "live error" });
   }
 });
