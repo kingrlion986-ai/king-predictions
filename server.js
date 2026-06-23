@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
-const fetch = require("node-fetch");
+const fetch = (...args) =>
+  import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
 const API_KEY = "a032b98e63f13e8e40fc0cc461aa2f30";
 
@@ -271,6 +272,8 @@ async function loadLive(){
 /* =======================
    SERVER
 ======================= */
-app.listen(3000, () => {
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
   console.log("AUTO SYSTEM RUNNING ⚽🔥");
 });
