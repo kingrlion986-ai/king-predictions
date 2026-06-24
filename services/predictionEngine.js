@@ -1,6 +1,17 @@
 const { getTeamRecentMatches } = require("./footballApi");
 
 /* =========================
+   CACHE
+========================= */
+const ANALYSIS_CACHE = {
+  teams: {},
+  matches: {}
+};
+
+const TEAM_ANALYSIS_TTL = 15 * 60 * 1000; // 15 min
+const MATCH_ANALYSIS_TTL = 10 * 60 * 1000; // 10 min
+
+/* =========================
    HELPERS
 ========================= */
 function clamp(value, min, max) {
@@ -15,14 +26,27 @@ function safeAvg(total, count) {
   return count ? total / count : 0;
 }
 
+function getMatchCacheKey(match) {
+  return `${match.homeTeam?.id}_${match.awayTeam?.id}_${match.utcDate}`;
+}
+
 /* =========================
    TEAM ANALYSIS
 ========================= */
 async function analyzeTeam(team) {
+  const now = Date.now();
+  const teamCache = ANALYSIS_CACHE.teams[team.id];
+
+  if (teamCache && teamCache.expiresAt > now) {
+    return teamCache.data;
+  }
+
   const recentMatches = await getTeamRecentMatches(team.id, 5);
 
+  let result;
+
   if (!recentMatches.length) {
-    return {
+    result = {
       teamId: team.id,
       teamName: team.name,
       matchesAnalyzed: 0,
@@ -39,83 +63,89 @@ async function analyzeTeam(team) {
       formPoints: 0,
       strength: 50
     };
+  } else {
+    let wins = 0;
+    let draws = 0;
+    let losses = 0;
+    let goalsScored = 0;
+    let goalsConceded = 0;
+    let bttsCount = 0;
+    let over25Count = 0;
+    let cleanSheets = 0;
+
+    for (const match of recentMatches) {
+      const isHome = match.homeTeam?.id === team.id;
+
+      const scored = isHome
+        ? (match.score?.fullTime?.home ?? 0)
+        : (match.score?.fullTime?.away ?? 0);
+
+      const conceded = isHome
+        ? (match.score?.fullTime?.away ?? 0)
+        : (match.score?.fullTime?.home ?? 0);
+
+      goalsScored += scored;
+      goalsConceded += conceded;
+
+      if (scored > conceded) wins++;
+      else if (scored === conceded) draws++;
+      else losses++;
+
+      if (scored > 0 && conceded > 0) bttsCount++;
+      if (scored + conceded > 2) over25Count++;
+      if (conceded === 0) cleanSheets++;
+    }
+
+    const matchesCount = recentMatches.length;
+    const avgScored = safeAvg(goalsScored, matchesCount);
+    const avgConceded = safeAvg(goalsConceded, matchesCount);
+    const bttsRate = safeAvg(bttsCount, matchesCount) * 100;
+    const over25Rate = safeAvg(over25Count, matchesCount) * 100;
+    const formPoints = wins * 3 + draws;
+
+    const formScore = (formPoints / (matchesCount * 3)) * 40;
+    const attackScore = clamp((avgScored / 2.5) * 25, 0, 25);
+    const defenseScore = clamp((1 - avgConceded / 2.5) * 20, 0, 20);
+    const bttsScore = clamp((bttsRate / 100) * 5, 0, 5);
+    const overScore = clamp((over25Rate / 100) * 10, 0, 10);
+
+    const strength = round(
+      formScore + attackScore + defenseScore + bttsScore + overScore,
+      1
+    );
+
+    result = {
+      teamId: team.id,
+      teamName: team.name,
+      matchesAnalyzed: matchesCount,
+      wins,
+      draws,
+      losses,
+      goalsScored,
+      goalsConceded,
+      avgScored: round(avgScored, 2),
+      avgConceded: round(avgConceded, 2),
+      bttsRate: round(bttsRate, 1),
+      over25Rate: round(over25Rate, 1),
+      cleanSheets,
+      formPoints,
+      strength
+    };
   }
 
-  let wins = 0;
-  let draws = 0;
-  let losses = 0;
-  let goalsScored = 0;
-  let goalsConceded = 0;
-  let bttsCount = 0;
-  let over25Count = 0;
-  let cleanSheets = 0;
-
-  for (const match of recentMatches) {
-    const isHome = match.homeTeam?.id === team.id;
-
-    const scored = isHome
-      ? (match.score?.fullTime?.home ?? 0)
-      : (match.score?.fullTime?.away ?? 0);
-
-    const conceded = isHome
-      ? (match.score?.fullTime?.away ?? 0)
-      : (match.score?.fullTime?.home ?? 0);
-
-    goalsScored += scored;
-    goalsConceded += conceded;
-
-    if (scored > conceded) wins++;
-    else if (scored === conceded) draws++;
-    else losses++;
-
-    if (scored > 0 && conceded > 0) bttsCount++;
-    if (scored + conceded > 2) over25Count++;
-    if (conceded === 0) cleanSheets++;
-  }
-
-  const matchesCount = recentMatches.length;
-  const avgScored = safeAvg(goalsScored, matchesCount);
-  const avgConceded = safeAvg(goalsConceded, matchesCount);
-  const bttsRate = safeAvg(bttsCount, matchesCount) * 100;
-  const over25Rate = safeAvg(over25Count, matchesCount) * 100;
-  const formPoints = wins * 3 + draws;
-
-  // score de force sur 100
-  const formScore = (formPoints / (matchesCount * 3)) * 40; // max 40
-  const attackScore = clamp((avgScored / 2.5) * 25, 0, 25); // max 25
-  const defenseScore = clamp((1 - avgConceded / 2.5) * 20, 0, 20); // max 20
-  const bttsScore = clamp((bttsRate / 100) * 5, 0, 5); // max 5
-  const overScore = clamp((over25Rate / 100) * 10, 0, 10); // max 10
-
-  const strength = round(
-    formScore + attackScore + defenseScore + bttsScore + overScore,
-    1
-  );
-
-  return {
-    teamId: team.id,
-    teamName: team.name,
-    matchesAnalyzed: matchesCount,
-    wins,
-    draws,
-    losses,
-    goalsScored,
-    goalsConceded,
-    avgScored: round(avgScored, 2),
-    avgConceded: round(avgConceded, 2),
-    bttsRate: round(bttsRate, 1),
-    over25Rate: round(over25Rate, 1),
-    cleanSheets,
-    formPoints,
-    strength
+  ANALYSIS_CACHE.teams[team.id] = {
+    data: result,
+    expiresAt: now + TEAM_ANALYSIS_TTL
   };
+
+  return result;
 }
 
 /* =========================
    PREDICTIONS
 ========================= */
 function buildWinnerPrediction(homeStats, awayStats) {
-  const homeScore = homeStats.strength + 4; // bonus domicile
+  const homeScore = homeStats.strength + 4;
   const awayScore = awayStats.strength;
   const diff = round(Math.abs(homeScore - awayScore), 1);
 
@@ -240,6 +270,14 @@ function buildHTFTPrediction(homeStats, awayStats, winnerData) {
    MATCH ANALYSIS
 ========================= */
 async function analyzeMatch(match) {
+  const now = Date.now();
+  const cacheKey = getMatchCacheKey(match);
+  const cached = ANALYSIS_CACHE.matches[cacheKey];
+
+  if (cached && cached.expiresAt > now) {
+    return cached.data;
+  }
+
   const homeTeam = match.homeTeam;
   const awayTeam = match.awayTeam;
 
@@ -254,7 +292,7 @@ async function analyzeMatch(match) {
   const score = buildCorrectScore(homeStats, awayStats);
   const htft = buildHTFTPrediction(homeStats, awayStats, winner);
 
-  return {
+  const result = {
     match: `${homeTeam.name} vs ${awayTeam.name}`,
     date: match.utcDate,
     homeTeam: homeTeam.name,
@@ -284,6 +322,13 @@ async function analyzeMatch(match) {
       expectedAwayGoals: score.expectedAwayGoals
     }
   };
+
+  ANALYSIS_CACHE.matches[cacheKey] = {
+    data: result,
+    expiresAt: now + MATCH_ANALYSIS_TTL
+  };
+
+  return result;
 }
 
 module.exports = {
