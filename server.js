@@ -15,12 +15,12 @@ const PORT = process.env.PORT || 3000;
 ========================= */
 const SETTINGS = {
   maxFree: 1,
-  maxVIP_1X2: 2,
-  maxOVER: 2,
-  maxBTTS: 2,
-  maxSCORE: 2,
-  maxCOMBI: 2,
-  maxJACKPOT: 2
+  maxVIP_1X2: 3,
+  maxOVER: 3,
+  maxBTTS: 3,
+  maxSCORE: 3,
+  maxCOMBI: 3,
+  maxJACKPOT: 4
 };
 
 /* =========================
