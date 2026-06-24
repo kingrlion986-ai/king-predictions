@@ -3,52 +3,47 @@ const cors = require("cors");
 
 const app = express();
 app.use(cors());
-app.use(express.json());
 
-const PORT = process.env.PORT || 3000;
-
-/* =======================
-   HOME
-======================= */
-app.get("/", (req, res) => {
-  res.send("KING PREDICTIONS V5 CLEAN ⚽🔥");
-});
-
-/* =======================
-   TEAMS (SAFE FIXES)
-======================= */
 const teams = [
   "Manchester City","Arsenal","Real Madrid","Barcelona",
   "PSG","Bayern Munich","Liverpool","Chelsea",
   "Juventus","AC Milan"
 ];
 
-/* =======================
-   SAFE MATCH GENERATOR
-======================= */
+// STABLE MATCH GENERATOR
 function generateMatch() {
-  let home = teams[Math.floor(Math.random() * teams.length)];
+  const home = teams[Math.floor(Math.random() * teams.length)];
   let away = teams[Math.floor(Math.random() * teams.length)];
-
-  while (home === away) {
+  while (away === home) {
     away = teams[Math.floor(Math.random() * teams.length)];
   }
-
   return { home, away };
 }
 
-/* =======================
-   MATCHES (SAFE)
-======================= */
+// SIMPLE STATS (NO BUG)
+function stats(team) {
+  const seed = team.charCodeAt(0);
+  return {
+    attack: 60 + (seed % 30),
+    defense: 55 + (seed % 25),
+    form: 50 + (seed % 20)
+  };
+}
+
+// HOME
+app.get("/", (req, res) => {
+  res.send("KING PREDICTIONS V4 CLEAN ⚽🔥");
+});
+
+// MATCHES (STABLE)
 app.get("/matches", (req, res) => {
   const list = [];
 
   for (let i = 0; i < 5; i++) {
-    const { home, away } = generateMatch();
-
+    const m = generateMatch();
     list.push({
-      home,
-      away,
+      home: m.home,
+      away: m.away,
       time: new Date(Date.now() + i * 3600000).toISOString()
     });
   }
@@ -56,33 +51,57 @@ app.get("/matches", (req, res) => {
   res.json(list);
 });
 
-/* =======================
-   FREE
-======================= */
+// FREE PREDICTION
 app.get("/free", (req, res) => {
-  const { home, away } = generateMatch();
+  const m = generateMatch();
+
+  const t1 = stats(m.home);
+  const t2 = stats(m.away);
+
+  const power1 = t1.attack + t1.form + (100 - t2.defense);
+  const power2 = t2.attack + t2.form + (100 - t1.defense);
+
+  const total = power1 + power2;
+
+  const p1 = Math.round((power1 / total) * 100);
+  const p2 = Math.round((power2 / total) * 100);
+
+  const s1 = Math.round(power1 / 80);
+  const s2 = Math.round(power2 / 80);
 
   res.json({
-    match: `${home} vs ${away}`,
-    prediction: "2-1",
-    winner: home,
-    confidence: 72
+    match: `${m.home} vs ${m.away}`,
+    score: `${s1}-${s2}`,
+    winner: s1 > s2 ? m.home : m.away,
+    confidence: Math.max(p1, p2)
   });
 });
 
-/* =======================
-   VIP
-======================= */
+// VIP
 app.get("/vip", (req, res) => {
   const results = [];
 
   for (let i = 0; i < 5; i++) {
-    const { home, away } = generateMatch();
+    const m = generateMatch();
+
+    const t1 = stats(m.home);
+    const t2 = stats(m.away);
+
+    const power1 = t1.attack + t1.form + (100 - t2.defense);
+    const power2 = t2.attack + t2.form + (100 - t1.defense);
+
+    const total = power1 + power2;
+
+    const p1 = Math.round((power1 / total) * 100);
+    const p2 = Math.round((power2 / total) * 100);
+
+    const s1 = Math.round(power1 / 75);
+    const s2 = Math.round(power2 / 75);
 
     results.push({
-      match: `${home} vs ${away}`,
-      score: "2-1",
-      winner: home,
+      match: `${m.home} vs ${m.away}`,
+      score: `${s1}-${s2}`,
+      winner: s1 > s2 ? m.home : m.away,
       btts: Math.random() > 0.5 ? "YES" : "NO",
       over25: Math.random() > 0.5 ? "YES" : "NO"
     });
@@ -91,138 +110,49 @@ app.get("/vip", (req, res) => {
   res.json(results);
 });
 
-/* =======================
-   LIVE
-======================= */
+// LIVE
 app.get("/live", (req, res) => {
   const live = [];
 
   for (let i = 0; i < 3; i++) {
-    const { home, away } = generateMatch();
+    const m = generateMatch();
 
     live.push({
-      match: `${home} vs ${away}`,
-      score: "1-0",
-      minute: 45
+      match: `${m.home} vs ${m.away}`,
+      score: `${Math.floor(Math.random() * 3)}-${Math.floor(Math.random() * 3)}`,
+      minute: Math.floor(Math.random() * 90)
     });
   }
 
   res.json(live);
 });
 
-/* =======================
-   UI (FIXED + SAFE)
-======================= */
+// UI SIMPLE ET STABLE
 app.get("/ui", (req, res) => {
   res.send(`
-<!DOCTYPE html>
-<html>
-<head>
-<title>KING PREDICTIONS</title>
+  <html>
+  <body style="background:#111;color:white;text-align:center;font-family:Arial">
+    <h1>KING PREDICTIONS V4 CLEAN ⚽🔥</h1>
 
-<style>
-body{
-  font-family: Arial;
-  background:#0f0f0f;
-  color:white;
-  text-align:center;
-}
+    <button onclick="load('/matches')">MATCHS</button>
+    <button onclick="load('/free')">FREE</button>
+    <button onclick="load('/vip')">VIP</button>
+    <button onclick="load('/live')">LIVE</button>
 
-.header{
-  padding:20px;
-  font-size:22px;
-  color:#00ff88;
-}
+    <div id="data"></div>
 
-.card{
-  background:#1f1f1f;
-  margin:10px auto;
-  padding:15px;
-  width:80%;
-  border-radius:10px;
-}
-
-button{
-  padding:10px;
-  margin:5px;
-  border-radius:8px;
-  cursor:pointer;
-}
-</style>
-</head>
-
-<body>
-
-<div class="header">
-KING PREDICTIONS V5 CLEAN ⚽🔥
-</div>
-
-<button onclick="loadMatches()">Matches</button>
-<button onclick="loadFree()">Free</button>
-<button onclick="loadVip()">VIP</button>
-<button onclick="loadLive()">Live</button>
-
-<div id="data"></div>
-
-<script>
-
-async function loadMatches(){
-  const r = await fetch('/matches');
-  const d = await r.json();
-
-  document.getElementById('data').innerHTML =
-    d.map(m => `<div class='card'>${m.home} vs ${m.away}</div>`).join('');
-}
-
-async function loadFree(){
-  const r = await fetch('/free');
-  const d = await r.json();
-
-  document.getElementById('data').innerHTML =
-    `<div class='card'>
-      <h3>${d.match}</h3>
-      <p>${d.prediction}</p>
-      <p>${d.winner}</p>
-      <p>${d.confidence}%</p>
-    </div>`;
-}
-
-async function loadVip(){
-  const r = await fetch('/vip');
-  const d = await r.json();
-
-  document.getElementById('data').innerHTML =
-    d.map(m => `<div class='card'>
-      ${m.match}<br>
-      ${m.score}<br>
-      ${m.winner}<br>
-      BTTS: ${m.btts}<br>
-      Over2.5: ${m.over25}
-    </div>`).join('');
-}
-
-async function loadLive(){
-  const r = await fetch('/live');
-  const d = await r.json();
-
-  document.getElementById('data').innerHTML =
-    d.map(m => `<div class='card'>
-      ${m.match}<br>
-      ${m.score}<br>
-      ${m.minute} min
-    </div>`).join('');
-}
-
-</script>
-
-</body>
-</html>
+    <script>
+      async function load(url){
+        const r = await fetch(url);
+        const d = await r.json();
+        document.getElementById('data').innerHTML =
+          '<pre>' + JSON.stringify(d, null, 2) + '</pre>';
+      }
+    </script>
+  </body>
+  </html>
   `);
 });
 
-/* =======================
-   START SAFE
-======================= */
-app.listen(PORT, () => {
-  console.log("KING PREDICTIONS V5 CLEAN RUNNING ⚽🔥");
-});
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log("V4 CLEAN RUNNING ⚽🔥"));
