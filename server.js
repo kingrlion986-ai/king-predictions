@@ -1,22 +1,14 @@
 const express = require("express");
 const cors = require("cors");
-const fetch = require("node-fetch");
+
+const { getMatches } = require("./services/footballApi");
+const { analyzeMatch } = require("./services/predictionEngine");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
-const API_KEY = process.env.API_KEY;
-const BASE_URL = "https://api.football-data.org/v4";
-
-function getStrength(teamName) {
-  let sum = 0;
-  for (let i = 0; i < teamName.length; i++) {
-    sum += teamName.charCodeAt(i);
-  }
-  return sum % 100;
-}
 
 /* =========================
    SETTINGS LIMITS
@@ -32,205 +24,234 @@ const SETTINGS = {
 };
 
 /* =========================
-   REAL API FETCH
-========================= */
-async function getMatches() {
-  try {
-    const res = await fetch(BASE_URL + "/matches", {
-      headers: { "X-Auth-Token": API_KEY }
-    });
-
-    const data = await res.json();
-    return data.matches || [];
-  } catch (err) {
-    console.log("API ERROR:", err.message);
-    return [];
-  }
-}
-
-/* =========================
    FREE (1 MATCH)
 ========================= */
 app.get("/free", async (req, res) => {
-  const matches = await getMatches();
-  if (!matches.length) return res.json({ error: "No matches" });
+  try {
+    const matches = await getMatches();
+    if (!matches.length) {
+      return res.json({ error: "No matches" });
+    }
 
-  const m = matches[0];
+    const match = matches[0];
+    const analysis = await analyzeMatch(match);
 
-  res.json({
-  match: `${m.homeTeam.name} vs ${m.awayTeam.name}`,
-  prediction: "1X2",
-  pick: m.homeTeam.name,
-  confidence: 70
-
-  });
+    res.json({
+      match: analysis.match,
+      prediction: "1X2",
+      pick: analysis.predictions.winner,
+      confidence: analysis.predictions.winnerConfidence,
+      stats: {
+        homeStrength: analysis.teamStats.home.strength,
+        awayStrength: analysis.teamStats.away.strength
+      }
+    });
+  } catch (err) {
+    console.log("FREE ERROR:", err.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 /* =========================
-   VIP 1X2 (3 MATCHES)
+   VIP 1X2
 ========================= */
 app.get("/vip/1x2", async (req, res) => {
-  const matches = await getMatches();
+  try {
+    const matches = await getMatches();
+    const selected = matches.slice(0, SETTINGS.maxVIP_1X2);
 
-  const result = matches
-    .slice(0, SETTINGS.maxVIP_1X2)
-    .map(m => {
+    const analyses = await Promise.all(selected.map(analyzeMatch));
 
-      const homeStrength = getStrength(m.homeTeam.name);
-      const awayStrength = getStrength(m.awayTeam.name);
+    const result = analyses
+      .map(a => ({
+        match: a.match,
+        pick: a.predictions.winner,
+        confidence: a.predictions.winnerConfidence,
+        homeStrength: a.teamStats.home.strength,
+        awayStrength: a.teamStats.away.strength,
+        form: {
+          home: `${a.teamStats.home.wins}W-${a.teamStats.home.draws}D-${a.teamStats.home.losses}L`,
+          away: `${a.teamStats.away.wins}W-${a.teamStats.away.draws}D-${a.teamStats.away.losses}L`
+        }
+      }))
+      .sort((a, b) => b.confidence - a.confidence);
 
-      const pick =
-        homeStrength > awayStrength
-          ? m.homeTeam.name
-          : m.awayTeam.name;
-
-      const confidence = Math.min(
-        Math.abs(homeStrength - awayStrength) + 55,
-        95
-      );
-
-      return {
-        match: `${m.homeTeam.name} vs ${m.awayTeam.name}`,
-        pick,
-        confidence
-      };
-    })
-    .sort((a, b) => b.confidence - a.confidence);
-
-  res.json(result);
+    res.json(result);
+  } catch (err) {
+    console.log("VIP 1X2 ERROR:", err.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 /* =========================
    OVER / UNDER
 ========================= */
 app.get("/vip/over25", async (req, res) => {
-  const matches = await getMatches();
+  try {
+    const matches = await getMatches();
+    const selected = matches.slice(0, SETTINGS.maxOVER);
 
-  const result = matches
-    .slice(0, SETTINGS.maxOVER)
-    .map(m => {
+    const analyses = await Promise.all(selected.map(analyzeMatch));
 
-      const home = getStrength(m.homeTeam.name);
-      const away = getStrength(m.awayTeam.name);
+    const result = analyses.map(a => ({
+      match: a.match,
+      market: a.predictions.over25,
+      confidence: a.predictions.over25Confidence,
+      expectedGoals: a.model.expectedGoals,
+      homeOver25Rate: a.teamStats.home.over25Rate,
+      awayOver25Rate: a.teamStats.away.over25Rate
+    }));
 
-      const total = home + away;
-
-      return {
-        match: `${m.homeTeam.name} vs ${m.awayTeam.name}`,
-        market: total > 100 ? "OVER 2.5" : "UNDER 2.5",
-        confidence: Math.min(total, 95)
-      };
-    });
-
-  res.json(result);
+    res.json(result);
+  } catch (err) {
+    console.log("OVER25 ERROR:", err.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 /* =========================
    BTTS (YES / NO)
 ========================= */
 app.get("/vip/btts", async (req, res) => {
-  const matches = await getMatches();
+  try {
+    const matches = await getMatches();
+    const selected = matches.slice(0, SETTINGS.maxBTTS);
 
-  const result = matches
-    .slice(0, SETTINGS.maxBTTS)
-    .map(m => {
+    const analyses = await Promise.all(selected.map(analyzeMatch));
 
-      const home = getStrength(m.homeTeam.name);
-      const away = getStrength(m.awayTeam.name);
+    const result = analyses.map(a => ({
+      match: a.match,
+      pick: a.predictions.btts,
+      confidence: a.predictions.bttsConfidence,
+      homeBTTSRate: a.teamStats.home.bttsRate,
+      awayBTTSRate: a.teamStats.away.bttsRate
+    }));
 
-      const avg = (home + away) / 2;
-
-      return {
-        match: `${m.homeTeam.name} vs ${m.awayTeam.name}`,
-        pick: avg > 45 ? "YES" : "NO",
-        confidence: Math.round(avg)
-      };
-    });
-
-  res.json(result);
+    res.json(result);
+  } catch (err) {
+    console.log("BTTS ERROR:", err.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 /* =========================
-   SCORE EXACT (NO FAKE MATCHES)
+   SCORE EXACT
 ========================= */
 app.get("/vip/score", async (req, res) => {
+  try {
+    const matches = await getMatches();
+    const selected = matches.slice(0, SETTINGS.maxSCORE);
 
-  const matches = await getMatches();
+    const analyses = await Promise.all(selected.map(analyzeMatch));
 
-  const result = matches
-    .slice(0, SETTINGS.maxSCORE)
-    .map(m => {
+    const result = analyses.map(a => ({
+      match: a.match,
+      score: a.predictions.correctScore,
+      expectedHomeGoals: a.model.expectedHomeGoals,
+      expectedAwayGoals: a.model.expectedAwayGoals
+    }));
 
-      const home = getStrength(m.homeTeam.name);
-      const away = getStrength(m.awayTeam.name);
-
-      const h = Math.round(home / 35);
-      const a = Math.round(away / 35);
-
-      return {
-        match: `${m.homeTeam.name} vs ${m.awayTeam.name}`,
-        score: `${h}-${a}`
-      };
-    });
-
-  res.json(result);
+    res.json(result);
+  } catch (err) {
+    console.log("SCORE ERROR:", err.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 /* =========================
    HT/FT
 ========================= */
 app.get("/vip/htft", async (req, res) => {
-  const matches = await getMatches();
+  try {
+    const matches = await getMatches();
+    const selected = matches.slice(0, 3);
 
-  const result = matches.slice(0, 3).map(m => ({
-    match: `${m.homeTeam.name} vs ${m.awayTeam.name}`,
-    pick: "DRAW/HOME"
-  }));
+    const analyses = await Promise.all(selected.map(analyzeMatch));
 
-  res.json(result);
+    const result = analyses.map(a => ({
+      match: a.match,
+      pick: a.predictions.htft,
+      confidence: a.predictions.htftConfidence
+    }));
+
+    res.json(result);
+  } catch (err) {
+    console.log("HTFT ERROR:", err.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 /* =========================
    COMBI
 ========================= */
 app.get("/vip/combos", async (req, res) => {
-  const matches = await getMatches();
+  try {
+    const matches = await getMatches();
+    const selected = matches.slice(0, SETTINGS.maxCOMBI);
 
-  const result = matches.slice(0, SETTINGS.maxCOMBI).map(m => ({
-    match: `${m.homeTeam.name} vs ${m.awayTeam.name}`,
-    pick: "SAFE PICK"
-  }));
+    const analyses = await Promise.all(selected.map(analyzeMatch));
 
-  res.json(result);
+    const result = analyses.map(a => ({
+      match: a.match,
+      pick: `${a.predictions.winner} OR ${a.predictions.over25}`,
+      confidence: Math.round(
+        (a.predictions.winnerConfidence + a.predictions.over25Confidence) / 2
+      )
+    }));
+
+    res.json(result);
+  } catch (err) {
+    console.log("COMBOS ERROR:", err.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 /* =========================
    JACKPOT
 ========================= */
 app.get("/vip/jackpot", async (req, res) => {
-  const matches = await getMatches();
+  try {
+    const matches = await getMatches();
+    const selected = matches.slice(0, SETTINGS.maxJACKPOT);
 
-  const result = matches.slice(0, SETTINGS.maxJACKPOT).map(m => ({
-    match: `${m.homeTeam.name} vs ${m.awayTeam.name}`,
-    pick: "HIGH RISK"
-  }));
+    const analyses = await Promise.all(selected.map(analyzeMatch));
 
-  res.json(result);
+    const result = analyses.map(a => ({
+      match: a.match,
+      winner: a.predictions.winner,
+      btts: a.predictions.btts,
+      over25: a.predictions.over25,
+      score: a.predictions.correctScore
+    }));
+
+    res.json(result);
+  } catch (err) {
+    console.log("JACKPOT ERROR:", err.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 /* =========================
    LIVE
+   (pour l’instant on garde une version simple,
+   mais plus réaliste que du full random)
 ========================= */
 app.get("/live", async (req, res) => {
-  const matches = await getMatches();
+  try {
+    const matches = await getMatches();
 
-  const result = matches.slice(0, 3).map(m => ({
-    match: `${m.homeTeam.name} vs ${m.awayTeam.name}`,
-    score: `${Math.floor(Math.random()*3)}-${Math.floor(Math.random()*3)}`,
-    minute: Math.floor(Math.random()*90)
-  }));
+    const result = matches.slice(0, 3).map(m => ({
+      match: `${m.homeTeam.name} vs ${m.awayTeam.name}`,
+      status: m.status,
+      score: `${m.score?.fullTime?.home ?? 0}-${m.score?.fullTime?.away ?? 0}`,
+      utcDate: m.utcDate
+    }));
 
-  res.json(result);
+    res.json(result);
+  } catch (err) {
+    console.log("LIVE ERROR:", err.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 /* =========================
@@ -241,12 +262,12 @@ app.get("/ui", (req, res) => {
 <!DOCTYPE html>
 <html>
 <head>
-<title>KING PREDICTIONS V15</title>
+<title>KING PREDICTIONS V16</title>
 </head>
 
 <body style="background:#0b0f14;color:white;font-family:Arial;text-align:center">
 
-<h1>KING PREDICTIONS V15 ⚽🔥</h1>
+<h1>KING PREDICTIONS V16 ⚽🔥</h1>
 
 <button onclick="load('/free')">FREE</button>
 <button onclick="load('/vip/1x2')">1X2</button>
@@ -258,7 +279,7 @@ app.get("/ui", (req, res) => {
 <button onclick="load('/vip/jackpot')">JACKPOT</button>
 <button onclick="load('/live')">LIVE</button>
 
-<pre id="data"></pre>
+<pre id="data" style="text-align:left;max-width:900px;margin:20px auto;white-space:pre-wrap;"></pre>
 
 <script>
 async function load(url){
@@ -275,9 +296,9 @@ async function load(url){
 });
 
 app.get("/", (req, res) => {
-  res.send("KING PREDICTIONS V15 ⚽🔥 SERVER OK");
+  res.send("KING PREDICTIONS V16 ⚽🔥 SERVER OK");
 });
 
 app.listen(PORT, () => {
-  console.log("KING PREDICTIONS V15 RUNNING ⚽🔥");
+  console.log("KING PREDICTIONS V16 RUNNING ⚽🔥");
 });
