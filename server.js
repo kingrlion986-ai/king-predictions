@@ -294,6 +294,38 @@ async function loadLive(){
 });
 
 /* =======================
+   TEST API
+======================= */
+app.get("/test-api", async (req, res) => {
+
+  try {
+
+    const fetch = require("node-fetch");
+
+    const response = await fetch(
+      "https://v3.football.api-sports.io/status",
+      {
+        headers: {
+          "x-apisports-key": process.env.API_KEY
+        }
+      }
+    );
+
+    const data = await response.json();
+
+    res.json(data);
+
+  } catch (err) {
+
+    res.json({
+      error: err.message
+    });
+
+  }
+
+});
+
+/* =======================
    START
 ======================= */
 app.listen(process.env.PORT || 3000, () => {
