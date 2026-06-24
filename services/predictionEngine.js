@@ -14,6 +14,28 @@ const MATCH_ANALYSIS_TTL = 10 * 60 * 1000; // 10 min
 /* =========================
    HELPERS
 ========================= */
+function build1X2Probabilities(homeStats, awayStats) {
+  const homePower = homeStats.strength + 4;
+  const awayPower = awayStats.strength;
+
+  const drawPower =
+    20 - Math.min(
+      Math.abs(homePower - awayPower),
+      20
+    );
+
+  const total =
+    homePower +
+    awayPower +
+    drawPower;
+
+  return {
+    home: Math.round((homePower / total) * 100),
+    draw: Math.round((drawPower / total) * 100),
+    away: Math.round((awayPower / total) * 100)
+  };
+}
+
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
@@ -287,12 +309,25 @@ async function analyzeMatch(match) {
   ]);
 
   const winner = buildWinnerPrediction(homeStats, awayStats);
-  const btts = buildBTTSPrediction(homeStats, awayStats);
-  const over25 = buildOver25Prediction(homeStats, awayStats);
-  const score = buildCorrectScore(homeStats, awayStats);
-  const htft = buildHTFTPrediction(homeStats, awayStats, winner);
 
-  const result = {
+const probabilities = build1X2Probabilities(
+  homeStats,
+  awayStats
+);
+
+const btts = buildBTTSPrediction(homeStats, awayStats);
+
+const over25 = buildOver25Prediction(homeStats, awayStats);
+
+const score = buildCorrectScore(homeStats, awayStats);
+
+const htft = buildHTFTPrediction(
+  homeStats,
+  awayStats,
+  winner
+);
+
+const result = {
     match: `${homeTeam.name} vs ${awayTeam.name}`,
     date: match.utcDate,
     homeTeam: homeTeam.name,
@@ -304,16 +339,22 @@ async function analyzeMatch(match) {
     },
 
     predictions: {
-      winner: winner.pick,
-      winnerConfidence: winner.confidence,
-      btts: btts.pick,
-      bttsConfidence: btts.confidence,
-      over25: over25.market,
-      over25Confidence: over25.confidence,
-      correctScore: score.score,
-      htft: htft.pick,
-      htftConfidence: htft.confidence
-    },
+  winner: winner.pick,
+  winnerConfidence: winner.confidence,
+
+  probabilities,
+
+  btts: btts.pick,
+  bttsConfidence: btts.confidence,
+
+  over25: over25.market,
+  over25Confidence: over25.confidence,
+
+  correctScore: score.score,
+
+  htft: htft.pick,
+  htftConfidence: htft.confidence
+},
 
     model: {
       winnerDiff: winner.diff,
