@@ -233,6 +233,45 @@ app.get("/vip/jackpot", async (req, res) => {
 });
 
 /* =========================
+   VIP TOP
+========================= */
+app.get("/vip/top", async (req, res) => {
+  try {
+    const matches = await getMatches();
+
+    const analyses = await Promise.all(
+      matches.map(analyzeMatch)
+    );
+
+    const topMatches = analyses
+      .sort(
+        (a, b) =>
+          b.predictions.winnerConfidence -
+          a.predictions.winnerConfidence
+      )
+      .slice(0, 10)
+      .map(a => ({
+        match: a.match,
+        prediction: a.predictions.winner,
+        confidence: a.predictions.winnerConfidence,
+        probabilities: a.predictions.probabilities,
+        btts: a.predictions.btts,
+        over25: a.predictions.over25,
+        score: a.predictions.correctScore
+      }));
+
+    res.json(topMatches);
+
+  } catch (err) {
+    console.log("VIP TOP ERROR:", err.message);
+
+    res.status(500).json({
+      error: "Internal server error"
+    });
+  }
+});
+
+/* =========================
    LIVE
 ========================= */
 app.get("/live", async (req, res) => {
@@ -276,6 +315,7 @@ app.get("/ui", (req, res) => {
 <button onclick="load('/vip/htft')">HT/FT</button>
 <button onclick="load('/vip/combos')">COMBI</button>
 <button onclick="load('/vip/jackpot')">JACKPOT</button>
+<button onclick="load('/vip/top')">TOP</button>
 <button onclick="load('/live')">LIVE</button>
 
 <pre id="data" style="text-align:left;max-width:900px;margin:20px auto;white-space:pre-wrap;"></pre>
