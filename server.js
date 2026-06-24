@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const fetch = require("node-fetch");
 
 const app = express();
 app.use(cors());
@@ -10,16 +11,14 @@ const API_KEY = process.env.API_KEY;
    HOME
 ======================= */
 app.get("/", (req, res) => {
-  res.send("KING PREDICTIONS V4 CLEAN ⚽🔥");
+  res.send("KING PREDICTIONS V5 PRO ⚽🔥");
 });
 
 /* =======================
-   MATCHES (REAL API)
+   MATCHS RÉELS (API FOOTBALL-DATA)
 ======================= */
 app.get("/matches", async (req, res) => {
   try {
-    const fetch = require("node-fetch");
-
     const response = await fetch(
       "https://api.football-data.org/v4/matches",
       {
@@ -32,41 +31,32 @@ app.get("/matches", async (req, res) => {
     const data = await response.json();
 
     if (!data.matches) {
-      return res.json([
-        {
-          home: "Aucune donnée",
-          away: "API indisponible",
-          time: new Date().toISOString()
-        }
-      ]);
+      return res.json([]);
     }
 
     const matches = data.matches.slice(0, 10).map(m => ({
       home: m.homeTeam.name,
       away: m.awayTeam.name,
+      status: m.status,
       time: m.utcDate
     }));
 
     res.json(matches);
 
   } catch (err) {
-    console.log("MATCH ERROR:", err.message);
-
-    res.json([
-      {
-        home: "API Error",
-        away: "Try later",
-        time: new Date().toISOString()
-      }
-    ]);
+    res.json({
+      error: "API unavailable",
+      message: err.message
+    });
   }
 });
 
 /* =======================
-   TEAM STATS SIMPLE AI
+   MOTEUR DE PRÉDICTION PRO
 ======================= */
-function stats(name) {
-  const seed = (name || "").charCodeAt(0);
+function strength(teamName) {
+  const seed = teamName.charCodeAt(0);
+
   return {
     attack: 60 + (seed % 30),
     defense: 55 + (seed % 25)
@@ -74,90 +64,89 @@ function stats(name) {
 }
 
 /* =======================
-   FREE (1 MATCH)
+   FREE (1 MATCH PROPRE)
 ======================= */
 app.get("/free", async (req, res) => {
+
   try {
-    const fetch = require("node-fetch");
+    const r = await fetch("https://api.football-data.org/v4/matches", {
+      headers: { "X-Auth-Token": API_KEY }
+    });
 
-    const response = await fetch(
-      "https://api.football-data.org/v4/matches",
-      {
-        headers: { "X-Auth-Token": API_KEY }
-      }
-    );
-
-    const data = await response.json();
-    const match = data.matches?.[0];
+    const d = await r.json();
+    const match = d.matches?.[0];
 
     if (!match) {
-      return res.json({
-        error: "No match available"
-      });
+      return res.json({ error: "No match available" });
     }
 
     const home = match.homeTeam.name;
     const away = match.awayTeam.name;
 
-    const t1 = stats(home);
-    const t2 = stats(away);
+    const h = strength(home);
+    const a = strength(away);
 
-    const p1 = t1.attack + (100 - t2.defense);
-    const p2 = t2.attack + (100 - t1.defense);
+    const powerH = h.attack + (100 - a.defense);
+    const powerA = a.attack + (100 - h.defense);
 
-    const total = p1 + p2 || 1;
+    const total = powerH + powerA;
 
-    const score1 = Math.round(p1 / 60);
-    const score2 = Math.round(p2 / 60);
+    const ph = Math.round((powerH / total) * 100);
+    const pa = Math.round((powerA / total) * 100);
+
+    const scoreH = Math.max(0, Math.round(powerH / 85));
+    const scoreA = Math.max(0, Math.round(powerA / 85));
+
+    const winner =
+      scoreH > scoreA ? home :
+      scoreA > scoreH ? away : "DRAW";
 
     res.json({
       match: `${home} vs ${away}`,
-      prediction: `${score1}-${score2}`,
-      winner: score1 > score2 ? home : away,
-      confidence: Math.round((Math.max(p1, p2) / total) * 100)
+      score: `${scoreH}-${scoreA}`,
+      winner,
+      confidence: Math.max(ph, pa)
     });
 
   } catch (err) {
-    res.json({ error: "FREE endpoint error" });
+    res.json({ error: "free system error" });
   }
 });
 
 /* =======================
-   VIP (MULTI MATCHES)
+   VIP (MULTI MATCH CLEAN)
 ======================= */
 app.get("/vip", async (req, res) => {
+
   try {
-    const fetch = require("node-fetch");
+    const r = await fetch("https://api.football-data.org/v4/matches", {
+      headers: { "X-Auth-Token": API_KEY }
+    });
 
-    const response = await fetch(
-      "https://api.football-data.org/v4/matches",
-      {
-        headers: { "X-Auth-Token": API_KEY }
-      }
-    );
+    const d = await r.json();
 
-    const data = await response.json();
+    const results = (d.matches || []).slice(0, 5).map(m => {
 
-    if (!data.matches) {
-      return res.json([]);
-    }
-
-    const results = data.matches.slice(0, 5).map(m => {
       const home = m.homeTeam.name;
       const away = m.awayTeam.name;
 
-      const t1 = stats(home);
-      const t2 = stats(away);
+      const h = strength(home);
+      const a = strength(away);
 
-      const score1 = Math.round((t1.attack + (100 - t2.defense)) / 65);
-      const score2 = Math.round((t2.attack + (100 - t1.defense)) / 65);
+      const powerH = h.attack + (100 - a.defense);
+      const powerA = a.attack + (100 - h.defense);
+
+      const scoreH = Math.round(powerH / 90);
+      const scoreA = Math.round(powerA / 90);
 
       return {
         match: `${home} vs ${away}`,
-        score: `${score1}-${score2}`,
-        winner: score1 > score2 ? home : away,
-        btts: Math.random() > 0.5 ? "YES" : "NO",
-        over25: Math.random() > 0.5 ? "YES" : "NO"
+        score: `${scoreH}-${scoreA}`,
+        winner:
+          scoreH > scoreA ? home :
+          scoreA > scoreH ? away : "DRAW",
+        btts: scoreH > 0 && scoreA > 0 ? "YES" : "NO",
+        over25: (scoreH + scoreA >= 3) ? "YES" : "NO"
       };
     });
 
@@ -169,144 +158,38 @@ app.get("/vip", async (req, res) => {
 });
 
 /* =======================
-   LIVE
+   LIVE (PRO PREVIEW CLEAN)
 ======================= */
-app.get("/live", (req, res) => {
-  res.json([
-    {
-      match: "Live system",
-      score: "0-0",
-      minute: 0
-    }
-  ]);
-});
+app.get("/live", async (req, res) => {
 
-/* =======================
-   UI (STABLE VERSION)
-======================= */
-app.get("/ui", (req, res) => {
-  res.send(`
-<!DOCTYPE html>
-<html>
-<head>
-<title>V4 CLEAN</title>
+  try {
+    const r = await fetch("https://api.football-data.org/v4/matches", {
+      headers: { "X-Auth-Token": API_KEY }
+    });
 
-<style>
-body{
-  font-family: Arial;
-  background:#0f0f0f;
-  color:white;
-  text-align:center;
-}
+    const d = await r.json();
 
-.header{
-  background:#111;
-  padding:20px;
-  font-size:22px;
-  color:#00ff88;
-}
+    const live = (d.matches || [])
+      .filter(m => m.status === "LIVE")
+      .slice(0, 5)
+      .map(m => ({
+        match: `${m.homeTeam.name} vs ${m.awayTeam.name}`,
+        score: `${m.score?.fullTime?.home ?? 0}-${m.score?.fullTime?.away ?? 0}`,
+        status: m.status
+      }));
 
-.card{
-  background:#1f1f1f;
-  margin:10px auto;
-  padding:15px;
-  width:85%;
-  border-radius:10px;
-}
+    res.json(live.length ? live : [{ match: "No live match", score: "0-0", status: "OFF" }]);
 
-button{
-  padding:12px;
-  margin:8px;
-  border:none;
-  border-radius:8px;
-  cursor:pointer;
-}
-
-.free{color:#22c55e}
-.vip{color:#facc15}
-</style>
-</head>
-
-<body>
-
-<div class="header">
-KING PREDICTIONS V4 CLEAN ⚽🔥
-</div>
-
-<div class="card">
-<h3 class="free">FREE</h3>
-<p>1 match conseillé</p>
-</div>
-
-<div class="card">
-<h3 class="vip">VIP</h3>
-<p>Scores exacts + BTTS + Over 2.5</p>
-</div>
-
-<button onclick="loadMatches()">Matchs</button>
-<button onclick="loadFree()">FREE</button>
-<button onclick="loadVip()">VIP</button>
-<button onclick="loadLive()">LIVE</button>
-
-<div id="data"></div>
-
-<script>
-
-async function loadMatches(){
-  const r = await fetch('/matches');
-  const d = await r.json();
-
-  document.getElementById('data').innerHTML =
-    d.map(m => \`<div class='card'>\${m.home} vs \${m.away}<br>\${m.time}</div>\`).join('');
-}
-
-async function loadFree(){
-  const r = await fetch('/free');
-  const d = await r.json();
-
-  document.getElementById('data').innerHTML =
-    \`<div class='card'>
-      <h3>\${d.match}</h3>
-      <p>\${d.prediction}</p>
-      <p>\${d.winner}</p>
-      <p>\${d.confidence}%</p>
-    </div>\`;
-}
-
-async function loadVip(){
-  const r = await fetch('/vip');
-  const d = await r.json();
-
-  document.getElementById('data').innerHTML =
-    d.map(m => \`
-      <div class='card'>
-        <b>\${m.match}</b><br>
-        \${m.score}<br>
-        Winner: \${m.winner}<br>
-        BTTS: \${m.btts}<br>
-        Over2.5: \${m.over25}
-      </div>
-    \`).join('');
-}
-
-async function loadLive(){
-  const r = await fetch('/live');
-  const d = await r.json();
-
-  document.getElementById('data').innerHTML =
-    d.map(m => \`<div class='card'>\${m.match}<br>\${m.score}<br>\${m.minute}</div>\`).join('');
-}
-
-</script>
-
-</body>
-</html>
-  `);
+  } catch (err) {
+    res.json([{ match: "system error", score: "0-0" }]);
+  }
 });
 
 /* =======================
    START SERVER
 ======================= */
-app.listen(process.env.PORT || 3000, () => {
-  console.log("V4 CLEAN RUNNING ⚽🔥");
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log("KING PREDICTIONS V5 PRO RUNNING ⚽🔥");
 });
