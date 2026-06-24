@@ -5,7 +5,7 @@ const app = express();
 app.use(cors());
 
 // =======================
-// TEAMS
+// TEAMS DATABASE
 // =======================
 const teams = [
   "Manchester City","Arsenal","Real Madrid","Barcelona",
@@ -14,7 +14,7 @@ const teams = [
 ];
 
 // =======================
-// MATCH GENERATOR SAFE
+// MATCH GENERATOR
 // =======================
 function generateMatch() {
   const home = teams[Math.floor(Math.random() * teams.length)];
@@ -28,7 +28,7 @@ function generateMatch() {
 }
 
 // =======================
-// STATS SIMPLE MAIS STABLE
+// STATS SYSTEM
 // =======================
 function stats(team) {
   const seed = team.charCodeAt(0);
@@ -44,12 +44,30 @@ function stats(team) {
 // HOME
 // =======================
 app.get("/", (req, res) => {
-  res.send("KING PREDICTIONS V5 CLEAN ⚽🔥");
+  res.send("KING PREDICTIONS V6 ULTRA PRO ⚽🔥");
 });
 
 // =======================
-// FREE (1 SAFE PICK)
-// ❌ PAS SCORE EXACT / PAS HT-FT
+// MATCHES (STABLE FIX)
+// =======================
+app.get("/matches", (req, res) => {
+  const list = [];
+
+  for (let i = 0; i < 5; i++) {
+    const m = generateMatch();
+
+    list.push({
+      home: m.home,
+      away: m.away,
+      time: new Date(Date.now() + i * 3600000).toISOString()
+    });
+  }
+
+  res.json(list);
+});
+
+// =======================
+// FREE (SAFE SINGLE PICK)
 // =======================
 app.get("/free", (req, res) => {
   const m = generateMatch();
@@ -82,42 +100,69 @@ app.get("/free", (req, res) => {
 });
 
 // =======================
-// VIP (ANALYSE MULTI)
+// VIP (STRUCTURED PRO SYSTEM)
+// =======================
+function predict(m) {
+  const t1 = stats(m.home);
+  const t2 = stats(m.away);
+
+  const power1 = t1.attack + t1.form + (100 - t2.defense);
+  const power2 = t2.attack + t2.form + (100 - t1.defense);
+
+  const total = power1 + power2;
+
+  const p1 = Math.round((power1 / total) * 100);
+  const p2 = Math.round((power2 / total) * 100);
+
+  const score1 = Math.round(power1 / 75);
+  const score2 = Math.round(power2 / 75);
+
+  return {
+    match: `${m.home} vs ${m.away}`,
+
+    winner: power1 > power2 ? m.home : m.away,
+
+    btts: (p1 > 55 && p2 > 55) ? "YES" : "NO",
+
+    over25: (score1 + score2 >= 3) ? "OVER 2.5" : "UNDER 2.5",
+
+    htft: (power1 > power2)
+      ? `${m.home}/${m.home}`
+      : `${m.away}/${m.away}`,
+
+    score: `${score1}-${score2}`,
+
+    confidence: Math.max(p1, p2)
+  };
+}
+
+// =======================
+// VIP ENDPOINT
 // =======================
 app.get("/vip", (req, res) => {
-  const results = [];
 
-  for (let i = 0; i < 5; i++) {
-    const m = generateMatch();
-
-    const t1 = stats(m.home);
-    const t2 = stats(m.away);
-
-    const power1 = t1.attack + t1.form + (100 - t2.defense);
-    const power2 = t2.attack + t2.form + (100 - t1.defense);
-
-    const total = power1 + power2;
-
-    const p1 = Math.round((power1 / total) * 100);
-    const p2 = Math.round((power2 / total) * 100);
-
-    const winner = power1 > power2 ? m.home : m.away;
-
-    results.push({
-      match: `${m.home} vs ${m.away}`,
-      winner,
-      confidence: Math.max(p1, p2),
-      btts: Math.random() > 0.5 ? "YES" : "NO",
-      over15: (p1 + p2 > 140) ? "YES" : "NO",
-      over25: (p1 + p2 > 160) ? "YES" : "NO"
-    });
+  // 🟡 3 MATCHS VIP JOUR
+  const vip_today = [];
+  for (let i = 0; i < 3; i++) {
+    vip_today.push(predict(generateMatch()));
   }
 
-  res.json(results);
+  // 💎 JACKPOT (7 à 8 MATCHS)
+  const jackpot = [];
+  const size = 7 + Math.floor(Math.random() * 2);
+
+  for (let i = 0; i < size; i++) {
+    jackpot.push(predict(generateMatch()));
+  }
+
+  res.json({
+    vip_today,
+    jackpot
+  });
 });
 
 // =======================
-// LIVE MATCHES
+// LIVE
 // =======================
 app.get("/live", (req, res) => {
   const live = [];
@@ -136,14 +181,14 @@ app.get("/live", (req, res) => {
 });
 
 // =======================
-// UI CLEAN PRO (FREE / VIP / LIVE ONLY)
+// UI CLEAN (FREE / VIP / LIVE)
 // =======================
 app.get("/ui", (req, res) => {
   res.send(`
 <!DOCTYPE html>
 <html>
 <head>
-<title>KING PREDICTIONS V5 ⚽🔥</title>
+<title>KING PREDICTIONS V6 ⚽🔥</title>
 
 <style>
 body{
@@ -162,7 +207,7 @@ body{
 }
 
 button{
-  padding:12px 20px;
+  padding:12px 18px;
   margin:8px;
   border:none;
   border-radius:8px;
@@ -180,6 +225,7 @@ button{
   padding:12px;
   width:85%;
   border-radius:10px;
+  text-align:left;
 }
 </style>
 </head>
@@ -187,10 +233,9 @@ button{
 <body>
 
 <div class="header">
-KING PREDICTIONS V5 CLEAN ⚽🔥
+KING PREDICTIONS V6 ULTRA PRO ⚽🔥
 </div>
 
-<!-- NAVIGATION SIMPLE -->
 <button class="free" onclick="load('/free')">FREE</button>
 <button class="vip" onclick="load('/vip')">VIP</button>
 <button class="live" onclick="load('/live')">LIVE</button>
@@ -199,16 +244,10 @@ KING PREDICTIONS V5 CLEAN ⚽🔥
 
 <script>
 async function load(url){
-  try{
-    const r = await fetch(url);
-    const d = await r.json();
-
-    document.getElementById('data').innerHTML =
-      "<pre>" + JSON.stringify(d, null, 2) + "</pre>";
-  } catch(e){
-    document.getElementById('data').innerHTML =
-      "<div class='card'>Erreur API</div>";
-  }
+  const r = await fetch(url);
+  const d = await r.json();
+  document.getElementById('data').innerHTML =
+    "<pre>" + JSON.stringify(d, null, 2) + "</pre>";
 }
 </script>
 
@@ -221,4 +260,4 @@ async function load(url){
 // START SERVER
 // =======================
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("V5 CLEAN RUNNING ⚽🔥"));
+app.listen(PORT, () => console.log("V6 ULTRA PRO RUNNING ⚽🔥"));
