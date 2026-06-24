@@ -8,44 +8,43 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.API_KEY;
+const BASE_URL = "https://api.football-data.org/v4";
 
 /* =========================
-   API MATCHES (REAL DATA)
+   SETTINGS LIMITS
+========================= */
+const SETTINGS = {
+  maxFree: 1,
+  maxVIP_1X2: 3,
+  maxOVER: 3,
+  maxBTTS: 5,
+  maxSCORE: 3,
+  maxCOMBI: 5,
+  maxJACKPOT: 8
+};
+
+/* =========================
+   REAL API FETCH
 ========================= */
 async function getMatches() {
-  const res = await fetch(
-    "https://api.football-data.org/v4/matches",
-    {
+  try {
+    const res = await fetch(BASE_URL + "/matches", {
       headers: { "X-Auth-Token": API_KEY }
-    }
-  );
+    });
 
-  const data = await res.json();
-  return data.matches || [];
+    const data = await res.json();
+    return data.matches || [];
+  } catch (err) {
+    console.log("API ERROR:", err.message);
+    return [];
+  }
 }
 
 /* =========================
-   SIMPLE CLEAN PICK ENGINE
-   (NO FAKE MATCH GENERATION)
-========================= */
-function cleanPick(match) {
-  const home = match.homeTeam.name;
-  const away = match.awayTeam.name;
-
-  const confidence = 60 + Math.floor(Math.random() * 25);
-
-  return {
-    match: `${home} vs ${away}`,
-    confidence
-  };
-}
-
-/* =========================
-   FREE (1 MATCH ONLY)
+   FREE (1 MATCH)
 ========================= */
 app.get("/free", async (req, res) => {
   const matches = await getMatches();
-
   if (!matches.length) return res.json({ error: "No matches" });
 
   const m = matches[0];
@@ -64,7 +63,7 @@ app.get("/free", async (req, res) => {
 app.get("/vip/1x2", async (req, res) => {
   const matches = await getMatches();
 
-  const result = matches.slice(0, 3).map(m => ({
+  const result = matches.slice(0, SETTINGS.maxVIP_1X2).map(m => ({
     match: `${m.homeTeam.name} vs ${m.awayTeam.name}`,
     pick: m.homeTeam.name,
     confidence: 65
@@ -74,14 +73,14 @@ app.get("/vip/1x2", async (req, res) => {
 });
 
 /* =========================
-   OVER / UNDER (3 MATCHES)
+   OVER / UNDER
 ========================= */
 app.get("/vip/over25", async (req, res) => {
   const matches = await getMatches();
 
   const markets = ["OVER 2.5", "UNDER 2.5", "OVER 3.5", "UNDER 3.5"];
 
-  const result = matches.slice(0, 3).map(m => ({
+  const result = matches.slice(0, SETTINGS.maxOVER).map(m => ({
     match: `${m.homeTeam.name} vs ${m.awayTeam.name}`,
     market: markets[Math.floor(Math.random() * markets.length)]
   }));
@@ -90,12 +89,12 @@ app.get("/vip/over25", async (req, res) => {
 });
 
 /* =========================
-   BTTS (4-6 MATCHES)
+   BTTS (YES / NO)
 ========================= */
 app.get("/vip/btts", async (req, res) => {
   const matches = await getMatches();
 
-  const result = matches.slice(0, 5).map(m => ({
+  const result = matches.slice(0, SETTINGS.maxBTTS).map(m => ({
     match: `${m.homeTeam.name} vs ${m.awayTeam.name}`,
     pick: Math.random() > 0.5 ? "YES" : "NO"
   }));
@@ -104,12 +103,12 @@ app.get("/vip/btts", async (req, res) => {
 });
 
 /* =========================
-   SCORE EXACT (2-3 MATCHES)
+   SCORE EXACT (NO FAKE MATCHES)
 ========================= */
 app.get("/vip/score", async (req, res) => {
   const matches = await getMatches();
 
-  const result = matches.slice(0, 3).map(m => ({
+  const result = matches.slice(0, SETTINGS.maxSCORE).map(m => ({
     match: `${m.homeTeam.name} vs ${m.awayTeam.name}`,
     score: `${Math.floor(Math.random()*3)}-${Math.floor(Math.random()*3)}`
   }));
@@ -118,7 +117,7 @@ app.get("/vip/score", async (req, res) => {
 });
 
 /* =========================
-   HT/FT (2-3 MATCHES)
+   HT/FT
 ========================= */
 app.get("/vip/htft", async (req, res) => {
   const matches = await getMatches();
@@ -132,12 +131,12 @@ app.get("/vip/htft", async (req, res) => {
 });
 
 /* =========================
-   COMBI (3-5 MATCHES)
+   COMBI
 ========================= */
 app.get("/vip/combos", async (req, res) => {
   const matches = await getMatches();
 
-  const result = matches.slice(0, 4).map(m => ({
+  const result = matches.slice(0, SETTINGS.maxCOMBI).map(m => ({
     match: `${m.homeTeam.name} vs ${m.awayTeam.name}`,
     pick: "SAFE PICK"
   }));
@@ -146,12 +145,12 @@ app.get("/vip/combos", async (req, res) => {
 });
 
 /* =========================
-   JACKPOT (7-8 MATCHES)
+   JACKPOT
 ========================= */
 app.get("/vip/jackpot", async (req, res) => {
   const matches = await getMatches();
 
-  const result = matches.slice(0, 8).map(m => ({
+  const result = matches.slice(0, SETTINGS.maxJACKPOT).map(m => ({
     match: `${m.homeTeam.name} vs ${m.awayTeam.name}`,
     pick: "HIGH RISK"
   }));
