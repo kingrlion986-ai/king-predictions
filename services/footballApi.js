@@ -25,12 +25,28 @@ async function apiGet(endpoint) {
 
 async function getMatches() {
   const data = await apiGet("/matches");
-  return data?.matches || [];
+  const matches = data?.matches || [];
+
+  return matches.filter(m =>
+    m &&
+    m.homeTeam &&
+    m.awayTeam &&
+    m.homeTeam.id &&
+    m.awayTeam.id
+  );
 }
 
 async function getTeamRecentMatches(teamId, limit = 5) {
   const data = await apiGet(`/teams/${teamId}/matches?status=FINISHED&limit=${limit}`);
-  return data?.matches || [];
+  const matches = data?.matches || [];
+
+  return matches.filter(m =>
+    m &&
+    m.homeTeam &&
+    m.awayTeam &&
+    m.score &&
+    m.score.fullTime
+  );
 }
 
 module.exports = {
