@@ -5,7 +5,7 @@ const app = express();
 app.use(cors());
 
 /* =======================
-   TEAMS
+   TEAMS DATABASE
 ======================= */
 const teams = [
   "Manchester City","Arsenal","Real Madrid","Barcelona",
@@ -28,7 +28,7 @@ function generateMatch() {
 }
 
 /* =======================
-   ENGINE PRO
+   ENGINE (STABLE + BUSINESS)
 ======================= */
 function stats(team) {
   const seed = team.charCodeAt(0);
@@ -50,13 +50,13 @@ function predict(home, away) {
 
   const total = power1 + power2;
 
-  const prob = Math.round((power1 / total) * 100);
+  const confidence = Math.round((Math.max(power1, power2) / total) * 100);
 
   const winner = power1 > power2 ? home : away;
 
   return {
     winner,
-    confidence: Math.max(prob, 100 - prob),
+    confidence,
     score: `${Math.round(power1 / 80)}-${Math.round(power2 / 80)}`,
     over25: (power1 + power2 > 125) ? "OVER" : "UNDER",
     btts: (power1 > 110 && power2 > 110) ? "YES" : "NO"
@@ -67,11 +67,11 @@ function predict(home, away) {
    HOME
 ======================= */
 app.get("/", (req, res) => {
-  res.send("KING PREDICTIONS V10 PRO BOOKMAKER ⚽🔥");
+  res.send("KING PREDICTIONS V11 BUSINESS CLEAN ⚽🔥");
 });
 
 /* =======================
-   FREE
+   FREE (SAFE PICK)
 ======================= */
 app.get("/free", (req, res) => {
 
@@ -177,37 +177,75 @@ app.get("/vip/htft", (req, res) => {
 });
 
 /* =======================
-   COMBINED (3 MATCHS MAX)
+   BEST COMBO (3 MATCHS)
 ======================= */
 app.get("/vip/combos", (req, res) => {
 
   let matches = [];
 
   for (let i = 0; i < 3; i++) {
+
     const m = generateMatch();
     const p = predict(m.home, m.away);
 
     matches.push({
       match: `${m.home} vs ${m.away}`,
-      pick: p.winner,
+      prediction: {
+        type: "1X2",
+        pick: p.winner
+      },
       confidence: p.confidence
     });
   }
 
   res.json({
-    section: "COMBINED",
+    section: "BEST_COMBO_TODAY",
     matches
   });
 });
 
 /* =======================
-   LIVE
+   JACKPOT DU JOUR (7-8 MATCHS PRO)
+======================= */
+app.get("/vip/jackpot", (req, res) => {
+
+  let matches = [];
+
+  while (matches.length < 8) {
+
+    const m = generateMatch();
+    const p = predict(m.home, m.away);
+
+    if (p.confidence >= 52) {
+      matches.push({
+        match: `${m.home} vs ${m.away}`,
+        prediction: {
+          type: "1X2",
+          pick: p.winner
+        },
+        score: p.score,
+        confidence: p.confidence,
+        btts: p.btts,
+        over25: p.over25
+      });
+    }
+  }
+
+  res.json({
+    section: "JACKPOT_DU_JOUR",
+    matches
+  });
+});
+
+/* =======================
+   LIVE MATCHES
 ======================= */
 app.get("/live", (req, res) => {
 
   let live = [];
 
   for (let i = 0; i < 3; i++) {
+
     const m = generateMatch();
 
     live.push({
@@ -232,7 +270,7 @@ app.get("/ui", (req, res) => {
 <!DOCTYPE html>
 <html>
 <head>
-<title>KING V10 BOOKMAKER</title>
+<title>KING V11 BUSINESS</title>
 
 <style>
 body{
@@ -286,7 +324,6 @@ button:hover{
 
 pre{
   white-space:pre-wrap;
-  word-wrap:break-word;
 }
 </style>
 </head>
@@ -294,7 +331,7 @@ pre{
 <body>
 
 <div class="header">
-KING PREDICTIONS V10 BOOKMAKER ⚽🔥
+KING PREDICTIONS V11 BUSINESS CLEAN ⚽🔥
 </div>
 
 <div class="menu">
@@ -305,6 +342,7 @@ KING PREDICTIONS V10 BOOKMAKER ⚽🔥
   <button onclick="load('/vip/score')">SCORE</button>
   <button onclick="load('/vip/htft')">HT/FT</button>
   <button onclick="load('/vip/combos')">COMBI</button>
+  <button onclick="load('/vip/jackpot')">JACKPOT 🔥</button>
   <button onclick="load('/live')">LIVE</button>
 </div>
 
@@ -327,10 +365,10 @@ async function load(url){
 });
 
 /* =======================
-   START
+   START SERVER
 ======================= */
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log("KING V10 BOOKMAKER RUNNING ⚽🔥");
+  console.log("KING V11 BUSINESS RUNNING ⚽🔥");
 });
