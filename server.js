@@ -3,6 +3,7 @@ const cors = require("cors");
 
 const app = express();
 app.use(cors());
+app.use(express.json());
 
 /* =======================
    TEAMS DATABASE
@@ -28,22 +29,26 @@ function generateMatch() {
 }
 
 /* =======================
-   ENGINE (STABLE + BUSINESS)
+   STATS ENGINE
 ======================= */
 function stats(team) {
   const seed = team.charCodeAt(0);
-
   return {
-    attack: 60 + (seed % 40),
-    defense: 55 + (seed % 35),
-    form: 50 + (seed % 30)
+    attack: 60 + (seed % 30),
+    defense: 55 + (seed % 25),
+    form: 50 + (seed % 20)
   };
 }
 
-function predict(home, away) {
+/* =======================
+   PREDICTION ENGINE CORE
+======================= */
+function predictMatch(section){
 
-  const t1 = stats(home);
-  const t2 = stats(away);
+  const m = generateMatch();
+
+  const t1 = stats(m.home);
+  const t2 = stats(m.away);
 
   const power1 = t1.attack + t1.form + (100 - t2.defense);
   const power2 = t2.attack + t2.form + (100 - t1.defense);
@@ -52,14 +57,21 @@ function predict(home, away) {
 
   const confidence = Math.round((Math.max(power1, power2) / total) * 100);
 
-  const winner = power1 > power2 ? home : away;
+  const score1 = Math.round(power1 / 80);
+  const score2 = Math.round(power2 / 80);
+
+  let pick = power1 > power2 ? m.home : m.away;
 
   return {
-    winner,
-    confidence,
-    score: `${Math.round(power1 / 80)}-${Math.round(power2 / 80)}`,
-    over25: (power1 + power2 > 125) ? "OVER" : "UNDER",
-    btts: (power1 > 110 && power2 > 110) ? "YES" : "NO"
+    section,
+    match: `${m.home} vs ${m.away}`,
+    prediction: {
+      type: section,
+      pick
+    },
+    score: `${score1}-${score2}`,
+    winner: pick,
+    confidence
   };
 }
 
@@ -67,373 +79,120 @@ function predict(home, away) {
    HOME
 ======================= */
 app.get("/", (req, res) => {
-  res.send("KING PREDICTIONS V11 BUSINESS CLEAN ⚽🔥");
+  res.send("KING PREDICTIONS V14 BUSINESS CLEAN ⚽🔥");
 });
 
 /* =======================
-   FREE (SAFE PICK)
+   FREE (1 MATCH)
 ======================= */
 app.get("/free", (req, res) => {
-
-  const m = generateMatch();
-  const p = predict(m.home, m.away);
-
-  res.json({
-    section: "FREE",
-    match: `${m.home} vs ${m.away}`,
-    prediction: {
-      type: "1X2",
-      pick: p.winner
-    },
-    confidence: p.confidence
-  });
+  res.json(predictMatch("1X2"));
 });
 
 /* =======================
-   VIP 1X2
+   VIP 1X2 (3 MATCHES)
 ======================= */
 app.get("/vip/1x2", (req, res) => {
-
-  const m = generateMatch();
-  const p = predict(m.home, m.away);
-
-  res.json({
-    section: "1X2",
-    match: `${m.home} vs ${m.away}`,
-    pick: p.winner,
-    confidence: p.confidence
-  });
+  const arr = [];
+  for (let i = 0; i < 3; i++) {
+    arr.push(predictMatch("1X2"));
+  }
+  res.json(arr);
 });
 
 /* =======================
-   OVER 2.5
+   OVER 2.5 (3 MATCHES)
 ======================= */
 app.get("/vip/over25", (req, res) => {
-
-  const m = generateMatch();
-  const p = predict(m.home, m.away);
-
-  res.json({
-    section: "OVER_2_5",
-    match: `${m.home} vs ${m.away}`,
-    pick: p.over25,
-    confidence: p.confidence
-  });
+  const arr = [];
+  for (let i = 0; i < 3; i++) {
+    const p = predictMatch("OVER_2_5");
+    p.extra = { market: "Over 2.5 goals" };
+    arr.push(p);
+  }
+  res.json(arr);
 });
 
 /* =======================
-   BTTS
+   BTTS (3 MATCHES)
 ======================= */
 app.get("/vip/btts", (req, res) => {
-
-  const m = generateMatch();
-  const p = predict(m.home, m.away);
-
-  res.json({
-    section: "BTTS",
-    match: `${m.home} vs ${m.away}`,
-    pick: p.btts,
-    confidence: p.confidence
-  });
+  const arr = [];
+  for (let i = 0; i < 3; i++) {
+    const p = predictMatch("BTTS");
+    p.extra = { market: "Both Teams To Score" };
+    arr.push(p);
+  }
+  res.json(arr);
 });
 
 /* =======================
-   SCORE EXACT
+   SCORE EXACT (1 MATCH)
 ======================= */
 app.get("/vip/score", (req, res) => {
-
-  const m = generateMatch();
-  const p = predict(m.home, m.away);
-
-  res.json({
-    section: "SCORE_EXACT",
-    match: `${m.home} vs ${m.away}`,
-    pick: p.score,
-    confidence: p.confidence
-  });
+  res.json(predictMatch("SCORE_EXACT"));
 });
 
 /* =======================
-   HT / FT
+   HT/FT (1 MATCH)
 ======================= */
 app.get("/vip/htft", (req, res) => {
-
-  const m = generateMatch();
-  const p = predict(m.home, m.away);
-
-  const options = [
-    `${m.home}/${m.home}`,
-    `${m.home}/DRAW`,
-    `DRAW/DRAW`,
-    `${m.away}/${m.away}`
-  ];
-
-  res.json({
-    section: "HT_FT",
-    match: `${m.home} vs ${m.away}`,
-    pick: options[Math.floor(Math.random() * options.length)],
-    confidence: p.confidence
-  });
+  const p = predictMatch("HT_FT");
+  p.htft = `${p.prediction.pick}/${p.prediction.pick}`;
+  res.json(p);
 });
 
 /* =======================
-   BEST COMBO (3 MATCHS)
+   COMBOS (3–5 MATCHES)
 ======================= */
 app.get("/vip/combos", (req, res) => {
+  const arr = [];
+  const size = 3 + Math.floor(Math.random() * 3);
 
-  let matches = [];
-
-  for (let i = 0; i < 3; i++) {
-
-    const m = generateMatch();
-    const p = predict(m.home, m.away);
-
-    matches.push({
-      match: `${m.home} vs ${m.away}`,
-      prediction: {
-        type: "1X2",
-        pick: p.winner
-      },
-      confidence: p.confidence
-    });
+  for (let i = 0; i < size; i++) {
+    arr.push(predictMatch("COMBI"));
   }
 
-  res.json({
-    section: "BEST_COMBO_TODAY",
-    matches
-  });
+  res.json(arr);
 });
 
 /* =======================
-   JACKPOT DU JOUR (7-8 MATCHS PRO)
+   JACKPOT (7–8 MATCHES)
 ======================= */
 app.get("/vip/jackpot", (req, res) => {
+  const arr = [];
+  const size = 7 + Math.floor(Math.random() * 2);
 
-  let matches = [];
-
-  while (matches.length < 8) {
-
-    const m = generateMatch();
-    const p = predict(m.home, m.away);
-
-    if (p.confidence >= 52) {
-      matches.push({
-        match: `${m.home} vs ${m.away}`,
-        prediction: {
-          type: "1X2",
-          pick: p.winner
-        },
-        score: p.score,
-        confidence: p.confidence,
-        btts: p.btts,
-        over25: p.over25
-      });
-    }
+  for (let i = 0; i < size; i++) {
+    arr.push(predictMatch("JACKPOT"));
   }
 
-  res.json({
-    section: "JACKPOT_DU_JOUR",
-    matches
-  });
+  res.json(arr);
 });
 
 /* =======================
    LIVE MATCHES
 ======================= */
 app.get("/live", (req, res) => {
-
-  let live = [];
+  const arr = [];
 
   for (let i = 0; i < 3; i++) {
-
     const m = generateMatch();
 
-    live.push({
+    arr.push({
       match: `${m.home} vs ${m.away}`,
-      score: `${Math.floor(Math.random()*3)}-${Math.floor(Math.random()*3)}`,
-      minute: Math.floor(Math.random()*90)
+      score: `${Math.floor(Math.random() * 3)}-${Math.floor(Math.random() * 3)}`,
+      minute: Math.floor(Math.random() * 90)
     });
   }
 
-  res.json({
-    section: "LIVE",
-    matches: live
-  });
-});
-
-/* =======================
-   UI BOOKMAKER PRO
-======================= */
-app.get("/ui", (req, res) => {
-
-res.send(`
-<!DOCTYPE html>
-<html>
-<head>
-<title>KING V13 BET365 UI PRO ⚽🔥</title>
-
-<style>
-body{
-  margin:0;
-  font-family: Arial;
-  background:#0b0f14;
-  color:white;
-}
-
-.header{
-  background:#111827;
-  padding:18px;
-  text-align:center;
-  font-size:20px;
-  color:#00ff88;
-  font-weight:bold;
-}
-
-.menu{
-  display:flex;
-  flex-wrap:wrap;
-  justify-content:center;
-  gap:8px;
-  padding:10px;
-}
-
-button{
-  background:#1f2937;
-  color:white;
-  border:none;
-  padding:10px 12px;
-  border-radius:8px;
-  cursor:pointer;
-  font-weight:bold;
-}
-
-button:hover{
-  background:#00ff88;
-  color:black;
-}
-
-.card{
-  background:#111827;
-  margin:10px auto;
-  padding:15px;
-  border-radius:10px;
-  max-width:650px;
-  text-align:left;
-  box-shadow:0 0 10px rgba(0,255,136,0.1);
-}
-
-.badge{
-  display:inline-block;
-  padding:4px 8px;
-  border-radius:6px;
-  font-size:12px;
-  margin-bottom:8px;
-}
-
-.green{background:#16a34a;}
-.yellow{background:#facc15;color:black;}
-.red{background:#ef4444;}
-
-pre{
-  white-space:pre-wrap;
-}
-
-</style>
-</head>
-
-<body>
-
-<div class="header">
-KING PREDICTIONS V13 BET365 PRO ⚽🔥
-</div>
-
-<div class="menu">
-  <button onclick="load('/free')">FREE</button>
-  <button onclick="load('/vip/1x2')">1X2</button>
-  <button onclick="load('/vip/over25')">OVER 2.5</button>
-  <button onclick="load('/vip/btts')">BTTS</button>
-  <button onclick="load('/vip/score')">SCORE</button>
-  <button onclick="load('/vip/htft')">HT/FT</button>
-  <button onclick="load('/vip/combos')">COMBI</button>
-  <button onclick="load('/vip/jackpot')">JACKPOT 🔥</button>
-  <button onclick="load('/live')">LIVE</button>
-</div>
-
-<div id="data" class="card">
-Clique sur une section 👆
-</div>
-
-<script>
-
-async function load(url){
-  const r = await fetch(url);
-  const d = await r.json();
-  document.getElementById("data").innerHTML = render(d);
-}
-
-/* =======================
-   RENDER PRO UI
-======================= */
-function render(data){
-
-  if(Array.isArray(data)){
-    return data.map(m => card(m)).join('');
-  }
-
-  return card(data);
-}
-
-/* =======================
-   CARD DESIGN PRO
-======================= */
-function card(m){
-
-  if(!m.match && !m.prediction){
-    return `<pre>${JSON.stringify(m,null,2)}</pre>`;
-  }
-
-  const conf = m.confidence || 0;
-
-  let color = "green";
-  if(conf < 52) color = "yellow";
-  if(conf < 50) color = "red";
-
-  return `
-    <div class="card">
-      <span class="badge ${color}">CONF ${conf}%</span><br><br>
-
-      <b>${m.match || ""}</b><br><br>
-
-      ${m.prediction ? `
-        <div>🎯 Type: ${m.prediction.type}</div>
-        <div>👉 Pick: ${m.prediction.pick}</div>
-      ` : ""}
-
-      ${m.score ? `<div>⚽ Score: ${m.score}</div>` : ""}
-
-      ${m.winner ? `<div>🏆 Winner: ${m.winner}</div>` : ""}
-
-      ${m.btts ? `<div>BTTS: ${m.btts}</div>` : ""}
-
-      ${m.over25 ? `<div>Over 2.5: ${m.over25}</div>` : ""}
-
-    </div>
-  `;
-}
-
-</script>
-
-</body>
-</html>
-`);
-
+  res.json(arr);
 });
 
 /* =======================
    START SERVER
 ======================= */
 const PORT = process.env.PORT || 3000;
-
 app.listen(PORT, () => {
-  console.log("KING V11 BUSINESS RUNNING ⚽🔥");
+  console.log("KING PREDICTIONS V14 RUNNING ⚽🔥");
 });
