@@ -214,6 +214,10 @@ async function load(url){
   `);
 });
 
+app.get("/", (req, res) => {
+  res.send("KING PREDICTIONS V15 ⚽🔥 SERVER OK");
+});
+
 app.listen(PORT, () => {
   console.log("KING PREDICTIONS V15 RUNNING ⚽🔥");
 });
