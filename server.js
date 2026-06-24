@@ -14,7 +14,7 @@ const teams = [
 ];
 
 /* =======================
-   TEAM STRENGTH SYSTEM (PRO)
+   STRENGTH ENGINE (REALISTIC)
 ======================= */
 function strength(team) {
   const seed = team.charCodeAt(0);
@@ -23,7 +23,6 @@ function strength(team) {
   const defense = 55 + (seed % 35);
   const form = 50 + (seed % 30);
 
-  // stabilité + logique globale
   const stability = (attack + form - defense) / 3;
 
   return attack + form + stability;
@@ -44,82 +43,99 @@ function generateMatch() {
 }
 
 /* =======================
-   HOME
+   PICK ENGINE (1 MARKET ONLY)
 ======================= */
-app.get("/", (req, res) => {
-  res.send("KING PREDICTIONS V7 BUSINESS PRO ⚽🔥");
-});
-
-/* =======================
-   FREE (1 MATCH SAFE)
-======================= */
-app.get("/free", (req, res) => {
-  const m = generateMatch();
-
-  const s1 = strength(m.home);
-  const s2 = strength(m.away);
+function generatePick(home, away) {
+  const s1 = strength(home);
+  const s2 = strength(away);
 
   const total = s1 + s2;
 
   const p1 = Math.round((s1 / total) * 100);
   const p2 = Math.round((s2 / total) * 100);
 
-  const winner = s1 > s2 ? m.home : m.away;
+  const winner = s1 > s2 ? home : away;
 
-  const goals = Math.round((s1 + s2) / 120);
+  const over25 = (s1 + s2 > 125) ? "OVER" : "UNDER";
+  const btts = (s1 > 110 && s2 > 110) ? "YES" : "NO";
+
+  return {
+    winner,
+    confidence: Math.max(p1, p2),
+    score: `${Math.round(s1 / 80)}-${Math.round(s2 / 80)}`,
+    over25,
+    btts
+  };
+}
+
+/* =======================
+   HOME
+======================= */
+app.get("/", (req, res) => {
+  res.send("KING PREDICTIONS V8 PRO BUSINESS CLEAN ⚽🔥");
+});
+
+/* =======================
+   FREE (1 MATCH / 1 MARKET)
+======================= */
+app.get("/free", (req, res) => {
+  const m = generateMatch();
+  const p = generatePick(m.home, m.away);
+
+  // FREE = 1 seul marché
+  const marketType = Math.random() > 0.5 ? "1X2" : "OVER_2_5";
+
+  let prediction;
+
+  if (marketType === "1X2") {
+    prediction = {
+      type: "1X2",
+      pick: p.winner
+    };
+  } else {
+    prediction = {
+      type: "OVER_2_5",
+      pick: p.over25
+    };
+  }
 
   res.json({
     match: `${m.home} vs ${m.away}`,
-    prediction: {
-      type: "1X2",
-      pick: winner
-    },
-    score: `${Math.round(s1/80)}-${Math.round(s2/80)}`,
-    confidence: Math.max(p1, p2),
-    alternatives: {
-      btts: (Math.random() > 0.5) ? "YES" : "NO",
-      over25: (s1 + s2 > 120) ? "OVER" : "UNDER"
-    }
+    prediction,
+    confidence: p.confidence
   });
 });
 
 /* =======================
-   VIP (PRO STRUCTURE)
-   - 3 MATCHS FIXES
+   VIP (FIXED 3 MATCHES)
 ======================= */
 app.get("/vip", (req, res) => {
 
   const results = [];
 
+  const markets = ["1X2", "OVER_2_5", "BTTS"];
+
   for (let i = 0; i < 3; i++) {
 
     const m = generateMatch();
+    const p = generatePick(m.home, m.away);
 
-    const s1 = strength(m.home);
-    const s2 = strength(m.away);
+    const market = markets[i];
 
-    const total = s1 + s2;
+    let pick = "";
 
-    const p1 = Math.round((s1 / total) * 100);
-    const p2 = Math.round((s2 / total) * 100);
-
-    const winner = s1 > s2 ? m.home : m.away;
-
-    const score1 = Math.round(s1 / 75);
-    const score2 = Math.round(s2 / 75);
+    if (market === "1X2") pick = p.winner;
+    if (market === "OVER_2_5") pick = p.over25;
+    if (market === "BTTS") pick = p.btts;
 
     results.push({
       match: `${m.home} vs ${m.away}`,
-      winner,
-      confidence: Math.max(p1, p2),
-
-      // marchés VIP PRO
-      btts: (s1 > 110 && s2 > 110) ? "YES" : "NO",
-      over25: (s1 + s2 > 125) ? "OVER" : "UNDER",
-
-      htft: `${winner}/${winner}`,
-
-      score: `${score1}-${score2}`
+      prediction: {
+        type: market,
+        pick
+      },
+      score: p.score,
+      confidence: p.confidence
     });
   }
 
@@ -129,37 +145,28 @@ app.get("/vip", (req, res) => {
 });
 
 /* =======================
-   JACKPOT (7-8 MATCHS)
+   JACKPOT (7-8 MATCHES FIXED)
 ======================= */
 app.get("/jackpot", (req, res) => {
 
   const jackpot = [];
 
-  for (let i = 0; i < 7 + Math.floor(Math.random() * 2); i++) {
+  const size = 7 + Math.floor(Math.random() * 2);
+
+  for (let i = 0; i < size; i++) {
 
     const m = generateMatch();
-
-    const s1 = strength(m.home);
-    const s2 = strength(m.away);
-
-    const total = s1 + s2;
-
-    const p1 = Math.round((s1 / total) * 100);
-    const p2 = Math.round((s2 / total) * 100);
-
-    const winner = s1 > s2 ? m.home : m.away;
+    const p = generatePick(m.home, m.away);
 
     jackpot.push({
       match: `${m.home} vs ${m.away}`,
-      winner,
-      confidence: Math.max(p1, p2),
-      score: `${Math.round(s1/80)}-${Math.round(s2/80)}`
+      winner: p.winner,
+      score: p.score,
+      confidence: p.confidence
     });
   }
 
-  res.json({
-    jackpot
-  });
+  res.json({ jackpot });
 });
 
 /* =======================
@@ -183,14 +190,14 @@ app.get("/live", (req, res) => {
 });
 
 /* =======================
-   UI CLEAN (PRO UI SIMPLE)
+   UI CLEAN
 ======================= */
 app.get("/ui", (req, res) => {
   res.send(`
 <!DOCTYPE html>
 <html>
 <head>
-<title>KING PREDICTIONS V7</title>
+<title>V8 BUSINESS CLEAN</title>
 <style>
 body{background:#0f0f0f;color:white;font-family:Arial;text-align:center}
 .header{padding:20px;background:#111;color:#00ff88;font-size:22px}
@@ -200,7 +207,7 @@ button{padding:12px;margin:8px;border:none;border-radius:8px;cursor:pointer}
 </head>
 <body>
 
-<div class="header">KING PREDICTIONS V7 BUSINESS PRO ⚽🔥</div>
+<div class="header">KING PREDICTIONS V8 BUSINESS CLEAN ⚽🔥</div>
 
 <button onclick="load('/free')">FREE</button>
 <button onclick="load('/vip')">VIP</button>
@@ -227,4 +234,4 @@ async function load(url){
    START
 ======================= */
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("V7 BUSINESS PRO RUNNING ⚽🔥"));
+app.listen(PORT, () => console.log("V8 BUSINESS CLEAN RUNNING ⚽🔥"));
