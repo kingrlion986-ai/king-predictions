@@ -28,15 +28,15 @@ function generateMatch() {
 }
 
 // =======================
-// STATS SIMPLE
+// STATS SIMPLE MAIS STABLE
 // =======================
 function stats(team) {
   const seed = team.charCodeAt(0);
 
   return {
-    attack: 60 + (seed % 30),
-    defense: 55 + (seed % 25),
-    form: 50 + (seed % 20)
+    attack: 60 + (seed % 35),
+    defense: 55 + (seed % 30),
+    form: 50 + (seed % 25)
   };
 }
 
@@ -44,30 +44,12 @@ function stats(team) {
 // HOME
 // =======================
 app.get("/", (req, res) => {
-  res.send("KING PREDICTIONS V4 CLEAN ⚽🔥");
+  res.send("KING PREDICTIONS V5 CLEAN ⚽🔥");
 });
 
 // =======================
-// MATCHES STABLE
-// =======================
-app.get("/matches", (req, res) => {
-  const list = [];
-
-  for (let i = 0; i < 5; i++) {
-    const m = generateMatch();
-
-    list.push({
-      home: m.home,
-      away: m.away,
-      time: new Date(Date.now() + i * 3600000).toISOString()
-    });
-  }
-
-  res.json(list);
-});
-
-// =======================
-// FREE PREDICTION
+// FREE (1 SAFE PICK)
+// ❌ PAS SCORE EXACT / PAS HT-FT
 // =======================
 app.get("/free", (req, res) => {
   const m = generateMatch();
@@ -83,19 +65,24 @@ app.get("/free", (req, res) => {
   const p1 = Math.round((power1 / total) * 100);
   const p2 = Math.round((power2 / total) * 100);
 
-  const s1 = Math.round(power1 / 80);
-  const s2 = Math.round(power2 / 80);
+  const winner = power1 > power2 ? m.home : m.away;
 
   res.json({
     match: `${m.home} vs ${m.away}`,
-    score: `${s1}-${s2}`,
-    winner: s1 > s2 ? m.home : m.away,
-    confidence: Math.max(p1, p2)
+    prediction: {
+      type: "1X2",
+      pick: winner
+    },
+    confidence: Math.max(p1, p2),
+    alternatives: {
+      btts: (p1 > 55 && p2 > 55) ? "YES" : "NO",
+      over15: (p1 + p2 > 140) ? "YES" : "NO"
+    }
   });
 });
 
 // =======================
-// VIP
+// VIP (ANALYSE MULTI)
 // =======================
 app.get("/vip", (req, res) => {
   const results = [];
@@ -114,15 +101,15 @@ app.get("/vip", (req, res) => {
     const p1 = Math.round((power1 / total) * 100);
     const p2 = Math.round((power2 / total) * 100);
 
-    const s1 = Math.round(power1 / 75);
-    const s2 = Math.round(power2 / 75);
+    const winner = power1 > power2 ? m.home : m.away;
 
     results.push({
       match: `${m.home} vs ${m.away}`,
-      score: `${s1}-${s2}`,
-      winner: s1 > s2 ? m.home : m.away,
+      winner,
+      confidence: Math.max(p1, p2),
       btts: Math.random() > 0.5 ? "YES" : "NO",
-      over25: Math.random() > 0.5 ? "YES" : "NO"
+      over15: (p1 + p2 > 140) ? "YES" : "NO",
+      over25: (p1 + p2 > 160) ? "YES" : "NO"
     });
   }
 
@@ -130,7 +117,7 @@ app.get("/vip", (req, res) => {
 });
 
 // =======================
-// LIVE
+// LIVE MATCHES
 // =======================
 app.get("/live", (req, res) => {
   const live = [];
@@ -149,14 +136,14 @@ app.get("/live", (req, res) => {
 });
 
 // =======================
-// UI FIXED (PLUS DE PAGE BLANCHE)
+// UI CLEAN PRO (FREE / VIP / LIVE ONLY)
 // =======================
 app.get("/ui", (req, res) => {
   res.send(`
 <!DOCTYPE html>
 <html>
 <head>
-<title>KING PREDICTIONS V4 CLEAN ⚽🔥</title>
+<title>KING PREDICTIONS V5 ⚽🔥</title>
 
 <style>
 body{
@@ -166,18 +153,31 @@ body{
   text-align:center;
 }
 
+.header{
+  background:#111;
+  padding:20px;
+  font-size:22px;
+  color:#00ff88;
+  font-weight:bold;
+}
+
 button{
-  padding:12px;
-  margin:6px;
-  cursor:pointer;
+  padding:12px 20px;
+  margin:8px;
   border:none;
   border-radius:8px;
+  cursor:pointer;
+  font-weight:bold;
 }
+
+.free{background:#22c55e;color:black}
+.vip{background:#facc15;color:black}
+.live{background:#ef4444;color:white}
 
 .card{
   background:#1f1f1f;
   margin:10px auto;
-  padding:10px;
+  padding:12px;
   width:85%;
   border-radius:10px;
 }
@@ -186,12 +186,14 @@ button{
 
 <body>
 
-<h1>KING PREDICTIONS V4 CLEAN ⚽🔥</h1>
+<div class="header">
+KING PREDICTIONS V5 CLEAN ⚽🔥
+</div>
 
-<button onclick="load('/matches')">MATCHS</button>
-<button onclick="load('/free')">FREE</button>
-<button onclick="load('/vip')">VIP</button>
-<button onclick="load('/live')">LIVE</button>
+<!-- NAVIGATION SIMPLE -->
+<button class="free" onclick="load('/free')">FREE</button>
+<button class="vip" onclick="load('/vip')">VIP</button>
+<button class="live" onclick="load('/live')">LIVE</button>
 
 <div id="data"></div>
 
@@ -219,4 +221,4 @@ async function load(url){
 // START SERVER
 // =======================
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("V4 CLEAN RUNNING ⚽🔥"));
+app.listen(PORT, () => console.log("V5 CLEAN RUNNING ⚽🔥"));
