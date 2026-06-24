@@ -29,6 +29,7 @@ const SETTINGS = {
 app.get("/free", async (req, res) => {
   try {
     const matches = await getMatches();
+
     if (!matches.length) {
       return res.json({ error: "No matches" });
     }
@@ -233,8 +234,6 @@ app.get("/vip/jackpot", async (req, res) => {
 
 /* =========================
    LIVE
-   (pour l’instant on garde une version simple,
-   mais plus réaliste que du full random)
 ========================= */
 app.get("/live", async (req, res) => {
   try {
