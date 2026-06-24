@@ -3,6 +3,23 @@ const fetch = require("node-fetch");
 const API_KEY = process.env.API_KEY;
 const BASE_URL = "https://api.football-data.org/v4";
 
+/* =========================
+   CACHE CONFIG
+========================= */
+const CACHE = {
+  matches: {
+    data: null,
+    expiresAt: 0
+  },
+  teamRecentMatches: {}
+};
+
+const MATCHES_TTL = 5 * 60 * 1000; // 5 min
+const TEAM_MATCHES_TTL = 15 * 60 * 1000; // 15 min
+
+/* =========================
+   API CORE
+========================= */
 async function apiGet(endpoint) {
   try {
     const res = await fetch(`${BASE_URL}${endpoint}`, {
@@ -23,33 +40,79 @@ async function apiGet(endpoint) {
   }
 }
 
+/* =========================
+   MATCHES
+========================= */
 async function getMatches() {
-  const data = await apiGet("/matches");
-  const matches = data?.matches || [];
+  const now = Date.now();
 
-  return matches.filter(m =>
-    m &&
-    m.homeTeam &&
-    m.awayTeam &&
-    m.homeTeam.id &&
-    m.awayTeam.id
+  if (CACHE.matches.data && CACHE.matches.expiresAt > now) {
+    return CACHE.matches.data;
+  }
+
+  const data = await apiGet("/matches");
+  const matches = (data?.matches || []).filter(
+    m =>
+      m &&
+      m.homeTeam &&
+      m.awayTeam &&
+      m.homeTeam.id &&
+      m.awayTeam.id
   );
+
+  CACHE.matches = {
+    data: matches,
+    expiresAt: now + MATCHES_TTL
+  };
+
+  return matches;
 }
 
+/* =========================
+   TEAM RECENT MATCHES
+========================= */
 async function getTeamRecentMatches(teamId, limit = 5) {
-  const data = await apiGet(`/teams/${teamId}/matches?status=FINISHED&limit=${limit}`);
-  const matches = data?.matches || [];
+  const now = Date.now();
+  const cacheKey = `${teamId}_${limit}`;
 
-  return matches.filter(m =>
-    m &&
-    m.homeTeam &&
-    m.awayTeam &&
-    m.score &&
-    m.score.fullTime
+  const cached = CACHE.teamRecentMatches[cacheKey];
+  if (cached && cached.expiresAt > now) {
+    return cached.data;
+  }
+
+  const data = await apiGet(
+    `/teams/${teamId}/matches?status=FINISHED&limit=${limit}`
   );
+
+  const matches = (data?.matches || []).filter(
+    m =>
+      m &&
+      m.homeTeam &&
+      m.awayTeam &&
+      m.score &&
+      m.score.fullTime
+  );
+
+  CACHE.teamRecentMatches[cacheKey] = {
+    data: matches,
+    expiresAt: now + TEAM_MATCHES_TTL
+  };
+
+  return matches;
+}
+
+/* =========================
+   OPTIONAL DEBUG
+========================= */
+function getCacheStats() {
+  return {
+    matchesCached: !!CACHE.matches.data,
+    teamCaches: Object.keys(CACHE.teamRecentMatches).length
+  };
 }
 
 module.exports = {
   getMatches,
-  getTeamRecentMatches
+  getTeamRecentMatches,
+  getCacheStats
 };
