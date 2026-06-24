@@ -266,11 +266,11 @@ app.get("/live", (req, res) => {
 ======================= */
 app.get("/ui", (req, res) => {
 
-  res.send(`
+res.send(`
 <!DOCTYPE html>
 <html>
 <head>
-<title>KING V11 BUSINESS</title>
+<title>KING V13 BET365 UI PRO ⚽🔥</title>
 
 <style>
 body{
@@ -282,7 +282,7 @@ body{
 
 .header{
   background:#111827;
-  padding:15px;
+  padding:18px;
   text-align:center;
   font-size:20px;
   color:#00ff88;
@@ -301,7 +301,7 @@ button{
   background:#1f2937;
   color:white;
   border:none;
-  padding:10px 14px;
+  padding:10px 12px;
   border-radius:8px;
   cursor:pointer;
   font-weight:bold;
@@ -314,24 +314,37 @@ button:hover{
 
 .card{
   background:#111827;
-  margin:10px;
+  margin:10px auto;
   padding:15px;
   border-radius:10px;
-  max-width:600px;
-  margin-left:auto;
-  margin-right:auto;
+  max-width:650px;
+  text-align:left;
+  box-shadow:0 0 10px rgba(0,255,136,0.1);
 }
+
+.badge{
+  display:inline-block;
+  padding:4px 8px;
+  border-radius:6px;
+  font-size:12px;
+  margin-bottom:8px;
+}
+
+.green{background:#16a34a;}
+.yellow{background:#facc15;color:black;}
+.red{background:#ef4444;}
 
 pre{
   white-space:pre-wrap;
 }
+
 </style>
 </head>
 
 <body>
 
 <div class="header">
-KING PREDICTIONS V11 BUSINESS CLEAN ⚽🔥
+KING PREDICTIONS V13 BET365 PRO ⚽🔥
 </div>
 
 <div class="menu">
@@ -346,24 +359,74 @@ KING PREDICTIONS V11 BUSINESS CLEAN ⚽🔥
   <button onclick="load('/live')">LIVE</button>
 </div>
 
-<div class="card">
-  <pre id="data">Clique sur une section 👆</pre>
+<div id="data" class="card">
+Clique sur une section 👆
 </div>
 
 <script>
+
 async function load(url){
   const r = await fetch(url);
   const d = await r.json();
-  document.getElementById("data").innerHTML =
-  "<pre style='color:#00ff88'>" +
-  JSON.stringify(d, null, 2) +
-  "</pre>";
+  document.getElementById("data").innerHTML = render(d);
 }
+
+/* =======================
+   RENDER PRO UI
+======================= */
+function render(data){
+
+  if(Array.isArray(data)){
+    return data.map(m => card(m)).join('');
+  }
+
+  return card(data);
+}
+
+/* =======================
+   CARD DESIGN PRO
+======================= */
+function card(m){
+
+  if(!m.match && !m.prediction){
+    return `<pre>${JSON.stringify(m,null,2)}</pre>`;
+  }
+
+  const conf = m.confidence || 0;
+
+  let color = "green";
+  if(conf < 52) color = "yellow";
+  if(conf < 50) color = "red";
+
+  return `
+    <div class="card">
+      <span class="badge ${color}">CONF ${conf}%</span><br><br>
+
+      <b>${m.match || ""}</b><br><br>
+
+      ${m.prediction ? `
+        <div>🎯 Type: ${m.prediction.type}</div>
+        <div>👉 Pick: ${m.prediction.pick}</div>
+      ` : ""}
+
+      ${m.score ? `<div>⚽ Score: ${m.score}</div>` : ""}
+
+      ${m.winner ? `<div>🏆 Winner: ${m.winner}</div>` : ""}
+
+      ${m.btts ? `<div>BTTS: ${m.btts}</div>` : ""}
+
+      ${m.over25 ? `<div>Over 2.5: ${m.over25}</div>` : ""}
+
+    </div>
+  `;
+}
+
 </script>
 
 </body>
 </html>
-  `);
+`);
+
 });
 
 /* =======================
