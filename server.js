@@ -14,7 +14,7 @@ const teams = [
 ];
 
 /* =======================
-   MATCH GENERATOR SAFE
+   MATCH GENERATOR
 ======================= */
 function generateMatch() {
   const home = teams[Math.floor(Math.random() * teams.length)];
@@ -28,7 +28,7 @@ function generateMatch() {
 }
 
 /* =======================
-   PRO STATS ENGINE
+   ENGINE PRO
 ======================= */
 function stats(team) {
   const seed = team.charCodeAt(0);
@@ -40,9 +40,6 @@ function stats(team) {
   };
 }
 
-/* =======================
-   PREDICTION ENGINE
-======================= */
 function predict(home, away) {
 
   const t1 = stats(home);
@@ -53,13 +50,13 @@ function predict(home, away) {
 
   const total = power1 + power2;
 
-  const prob1 = Math.round((power1 / total) * 100);
+  const prob = Math.round((power1 / total) * 100);
 
   const winner = power1 > power2 ? home : away;
 
   return {
     winner,
-    confidence: Math.max(prob1, 100 - prob1),
+    confidence: Math.max(prob, 100 - prob),
     score: `${Math.round(power1 / 80)}-${Math.round(power2 / 80)}`,
     over25: (power1 + power2 > 125) ? "OVER" : "UNDER",
     btts: (power1 > 110 && power2 > 110) ? "YES" : "NO"
@@ -70,11 +67,11 @@ function predict(home, away) {
    HOME
 ======================= */
 app.get("/", (req, res) => {
-  res.send("KING PREDICTIONS V9 PRO CLEAN ⚽🔥");
+  res.send("KING PREDICTIONS V10 PRO BOOKMAKER ⚽🔥");
 });
 
 /* =======================
-   FREE (1 MATCH / 1 PICK)
+   FREE
 ======================= */
 app.get("/free", (req, res) => {
 
@@ -93,97 +90,113 @@ app.get("/free", (req, res) => {
 });
 
 /* =======================
-   VIP (PRO STRUCTURE CLEAN)
+   VIP 1X2
 ======================= */
-app.get("/vip", (req, res) => {
+app.get("/vip/1x2", (req, res) => {
 
-  const m1 = generateMatch();
-  const m2 = generateMatch();
-  const m3 = generateMatch();
-  const m4 = generateMatch();
-  const m5 = generateMatch();
-
-  const p1 = predict(m1.home, m1.away);
-  const p2 = predict(m2.home, m2.away);
-  const p3 = predict(m3.home, m3.away);
-  const p4 = predict(m4.home, m4.away);
-  const p5 = predict(m5.home, m5.away);
+  const m = generateMatch();
+  const p = predict(m.home, m.away);
 
   res.json({
-    section: "VIP",
-
-    "1X2": {
-      match: `${m1.home} vs ${m1.away}`,
-      prediction: { type: "1X2", pick: p1.winner },
-      score: p1.score,
-      confidence: p1.confidence
-    },
-
-    "OVER_2_5": {
-      match: `${m2.home} vs ${m2.away}`,
-      prediction: { type: "OVER_2_5", pick: p2.over25 },
-      score: p2.score,
-      confidence: p2.confidence
-    },
-
-    "BTTS": {
-      match: `${m3.home} vs ${m3.away}`,
-      prediction: { type: "BTTS", pick: p3.btts },
-      score: p3.score,
-      confidence: p3.confidence
-    },
-
-    "SCORE_EXACT": {
-      match: `${m4.home} vs ${m4.away}`,
-      prediction: { type: "SCORE_EXACT", pick: p4.score },
-      confidence: p4.confidence
-    },
-
-    "HT_FT": {
-      match: `${m5.home} vs ${m5.away}`,
-      prediction: {
-        type: "HT_FT",
-        pick: `${m5.home}/${m5.home}`
-      },
-      confidence: p5.confidence
-    },
-
-    "COMBINED": {
-      type: "COMBO_3",
-      matches: [
-        { match: `${m1.home} vs ${m1.away}`, pick: p1.winner },
-        { match: `${m2.home} vs ${m2.away}`, pick: p2.over25 },
-        { match: `${m3.home} vs ${m3.away}`, pick: p3.btts }
-      ],
-      confidence: Math.round((p1.confidence + p2.confidence + p3.confidence) / 3)
-    }
+    section: "1X2",
+    match: `${m.home} vs ${m.away}`,
+    pick: p.winner,
+    confidence: p.confidence
   });
 });
 
 /* =======================
-   JACKPOT (7–8 MATCHES)
+   OVER 2.5
 ======================= */
-app.get("/jackpot", (req, res) => {
+app.get("/vip/over25", (req, res) => {
 
-  const list = [];
-  const size = 7 + Math.floor(Math.random() * 2);
+  const m = generateMatch();
+  const p = predict(m.home, m.away);
 
-  for (let i = 0; i < size; i++) {
+  res.json({
+    section: "OVER_2_5",
+    match: `${m.home} vs ${m.away}`,
+    pick: p.over25,
+    confidence: p.confidence
+  });
+});
 
+/* =======================
+   BTTS
+======================= */
+app.get("/vip/btts", (req, res) => {
+
+  const m = generateMatch();
+  const p = predict(m.home, m.away);
+
+  res.json({
+    section: "BTTS",
+    match: `${m.home} vs ${m.away}`,
+    pick: p.btts,
+    confidence: p.confidence
+  });
+});
+
+/* =======================
+   SCORE EXACT
+======================= */
+app.get("/vip/score", (req, res) => {
+
+  const m = generateMatch();
+  const p = predict(m.home, m.away);
+
+  res.json({
+    section: "SCORE_EXACT",
+    match: `${m.home} vs ${m.away}`,
+    pick: p.score,
+    confidence: p.confidence
+  });
+});
+
+/* =======================
+   HT / FT
+======================= */
+app.get("/vip/htft", (req, res) => {
+
+  const m = generateMatch();
+  const p = predict(m.home, m.away);
+
+  const options = [
+    `${m.home}/${m.home}`,
+    `${m.home}/DRAW`,
+    `DRAW/DRAW`,
+    `${m.away}/${m.away}`
+  ];
+
+  res.json({
+    section: "HT_FT",
+    match: `${m.home} vs ${m.away}`,
+    pick: options[Math.floor(Math.random() * options.length)],
+    confidence: p.confidence
+  });
+});
+
+/* =======================
+   COMBINED (3 MATCHS MAX)
+======================= */
+app.get("/vip/combos", (req, res) => {
+
+  let matches = [];
+
+  for (let i = 0; i < 3; i++) {
     const m = generateMatch();
     const p = predict(m.home, m.away);
 
-    list.push({
+    matches.push({
       match: `${m.home} vs ${m.away}`,
-      winner: p.winner,
-      score: p.score,
+      pick: p.winner,
       confidence: p.confidence
     });
   }
 
   res.json({
-    section: "JACKPOT",
-    matches: list
+    section: "COMBINED",
+    matches
   });
 });
 
@@ -192,7 +205,7 @@ app.get("/jackpot", (req, res) => {
 ======================= */
 app.get("/live", (req, res) => {
 
-  const live = [];
+  let live = [];
 
   for (let i = 0; i < 3; i++) {
     const m = generateMatch();
@@ -211,39 +224,100 @@ app.get("/live", (req, res) => {
 });
 
 /* =======================
-   UI CLEAN PRO
+   UI BOOKMAKER PRO
 ======================= */
 app.get("/ui", (req, res) => {
+
   res.send(`
 <!DOCTYPE html>
 <html>
 <head>
-<title>KING V9 PRO</title>
+<title>KING V10 BOOKMAKER</title>
 
 <style>
-body{background:#0f0f0f;color:white;font-family:Arial;text-align:center}
-.header{padding:20px;background:#111;color:#00ff88;font-size:22px}
-button{padding:10px;margin:5px;border-radius:8px;border:none;cursor:pointer}
-pre{background:#1f1f1f;padding:10px;border-radius:10px;width:90%;margin:auto}
+body{
+  margin:0;
+  font-family: Arial;
+  background:#0b0f14;
+  color:white;
+}
+
+.header{
+  background:#111827;
+  padding:15px;
+  text-align:center;
+  font-size:20px;
+  color:#00ff88;
+  font-weight:bold;
+}
+
+.menu{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:8px;
+  padding:10px;
+}
+
+button{
+  background:#1f2937;
+  color:white;
+  border:none;
+  padding:10px 14px;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:bold;
+}
+
+button:hover{
+  background:#00ff88;
+  color:black;
+}
+
+.card{
+  background:#111827;
+  margin:10px;
+  padding:15px;
+  border-radius:10px;
+  max-width:600px;
+  margin-left:auto;
+  margin-right:auto;
+}
+
+pre{
+  white-space:pre-wrap;
+  word-wrap:break-word;
+}
 </style>
 </head>
 
 <body>
 
-<div class="header">KING PREDICTIONS V9 PRO CLEAN ⚽🔥</div>
+<div class="header">
+KING PREDICTIONS V10 BOOKMAKER ⚽🔥
+</div>
 
-<button onclick="load('/free')">FREE</button>
-<button onclick="load('/vip')">VIP</button>
-<button onclick="load('/jackpot')">JACKPOT</button>
-<button onclick="load('/live')">LIVE</button>
+<div class="menu">
+  <button onclick="load('/free')">FREE</button>
+  <button onclick="load('/vip/1x2')">1X2</button>
+  <button onclick="load('/vip/over25')">OVER 2.5</button>
+  <button onclick="load('/vip/btts')">BTTS</button>
+  <button onclick="load('/vip/score')">SCORE</button>
+  <button onclick="load('/vip/htft')">HT/FT</button>
+  <button onclick="load('/vip/combos')">COMBI</button>
+  <button onclick="load('/live')">LIVE</button>
+</div>
 
-<pre id="data"></pre>
+<div class="card">
+  <pre id="data">Clique sur une section 👆</pre>
+</div>
 
 <script>
 async function load(url){
   const r = await fetch(url);
   const d = await r.json();
-  document.getElementById('data').innerText = JSON.stringify(d,null,2);
+  document.getElementById("data").innerText =
+    JSON.stringify(d, null, 2);
 }
 </script>
 
@@ -253,10 +327,10 @@ async function load(url){
 });
 
 /* =======================
-   START SAFE
+   START
 ======================= */
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log("V9 PRO CLEAN RUNNING ⚽🔥");
+  console.log("KING V10 BOOKMAKER RUNNING ⚽🔥");
 });
