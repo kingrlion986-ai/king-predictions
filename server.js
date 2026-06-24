@@ -193,6 +193,45 @@ app.get("/live", (req, res) => {
    START SERVER
 ======================= */
 const PORT = process.env.PORT || 3000;
+
+app.get("/ui", (req, res) => {
+  res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+<title>KING PREDICTIONS V14</title>
+</head>
+
+<body style="background:#0b0f14;color:white;font-family:Arial;text-align:center">
+
+<h1>KING PREDICTIONS V14 ⚽🔥</h1>
+
+<button onclick="load('/free')">FREE</button>
+<button onclick="load('/vip/1x2')">VIP 1X2</button>
+<button onclick="load('/vip/over25')">OVER 2.5</button>
+<button onclick="load('/vip/btts')">BTTS</button>
+<button onclick="load('/vip/score')">SCORE</button>
+<button onclick="load('/vip/htft')">HT/FT</button>
+<button onclick="load('/vip/combos')">COMBI</button>
+<button onclick="load('/vip/jackpot')">JACKPOT</button>
+<button onclick="load('/live')">LIVE</button>
+
+<pre id="data"></pre>
+
+<script>
+async function load(url){
+  const r = await fetch(url);
+  const d = await r.json();
+  document.getElementById("data").innerText =
+    JSON.stringify(d, null, 2);
+}
+</script>
+
+</body>
+</html>
+  `);
+});
+
 app.listen(PORT, () => {
   console.log("KING PREDICTIONS V14 RUNNING ⚽🔥");
 });
