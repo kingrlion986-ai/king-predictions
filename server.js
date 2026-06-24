@@ -232,6 +232,28 @@ async function load(url){
   `);
 });
 
+const fetch = require("node-fetch");
+
+app.get("/test-api", async (req, res) => {
+  try {
+    const response = await fetch(
+      "https://api.football-data.org/v4/matches",
+      {
+        headers: {
+          "X-Auth-Token": process.env.API_KEY
+        }
+      }
+    );
+
+    const data = await response.json();
+
+    res.json(data);
+  } catch (error) {
+    res.json({
+      error: error.message
+    });
+  }
+});
 app.listen(PORT, () => {
   console.log("KING PREDICTIONS V14 RUNNING ⚽🔥");
 });
