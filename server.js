@@ -354,8 +354,10 @@ KING PREDICTIONS V11 BUSINESS CLEAN ⚽🔥
 async function load(url){
   const r = await fetch(url);
   const d = await r.json();
-  document.getElementById("data").innerText =
-    JSON.stringify(d, null, 2);
+  document.getElementById("data").innerHTML =
+  "<pre style='color:#00ff88'>" +
+  JSON.stringify(d, null, 2) +
+  "</pre>";
 }
 </script>
 
