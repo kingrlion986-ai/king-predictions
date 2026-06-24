@@ -4,25 +4,35 @@ const cors = require("cors");
 const app = express();
 app.use(cors());
 
+// =======================
+// TEAMS
+// =======================
 const teams = [
   "Manchester City","Arsenal","Real Madrid","Barcelona",
   "PSG","Bayern Munich","Liverpool","Chelsea",
   "Juventus","AC Milan"
 ];
 
-// STABLE MATCH GENERATOR
+// =======================
+// MATCH GENERATOR SAFE
+// =======================
 function generateMatch() {
   const home = teams[Math.floor(Math.random() * teams.length)];
   let away = teams[Math.floor(Math.random() * teams.length)];
+
   while (away === home) {
     away = teams[Math.floor(Math.random() * teams.length)];
   }
+
   return { home, away };
 }
 
-// SIMPLE STATS (NO BUG)
+// =======================
+// STATS SIMPLE
+// =======================
 function stats(team) {
   const seed = team.charCodeAt(0);
+
   return {
     attack: 60 + (seed % 30),
     defense: 55 + (seed % 25),
@@ -30,17 +40,22 @@ function stats(team) {
   };
 }
 
+// =======================
 // HOME
+// =======================
 app.get("/", (req, res) => {
   res.send("KING PREDICTIONS V4 CLEAN ⚽🔥");
 });
 
-// MATCHES (STABLE)
+// =======================
+// MATCHES STABLE
+// =======================
 app.get("/matches", (req, res) => {
   const list = [];
 
   for (let i = 0; i < 5; i++) {
     const m = generateMatch();
+
     list.push({
       home: m.home,
       away: m.away,
@@ -51,7 +66,9 @@ app.get("/matches", (req, res) => {
   res.json(list);
 });
 
+// =======================
 // FREE PREDICTION
+// =======================
 app.get("/free", (req, res) => {
   const m = generateMatch();
 
@@ -77,7 +94,9 @@ app.get("/free", (req, res) => {
   });
 });
 
+// =======================
 // VIP
+// =======================
 app.get("/vip", (req, res) => {
   const results = [];
 
@@ -110,7 +129,9 @@ app.get("/vip", (req, res) => {
   res.json(results);
 });
 
+// =======================
 // LIVE
+// =======================
 app.get("/live", (req, res) => {
   const live = [];
 
@@ -127,32 +148,75 @@ app.get("/live", (req, res) => {
   res.json(live);
 });
 
-// UI SIMPLE ET STABLE
+// =======================
+// UI FIXED (PLUS DE PAGE BLANCHE)
+// =======================
 app.get("/ui", (req, res) => {
   res.send(`
-  <html>
-  <body style="background:#111;color:white;text-align:center;font-family:Arial">
-    <h1>KING PREDICTIONS V4 CLEAN ⚽🔥</h1>
+<!DOCTYPE html>
+<html>
+<head>
+<title>KING PREDICTIONS V4 CLEAN ⚽🔥</title>
 
-    <button onclick="load('/matches')">MATCHS</button>
-    <button onclick="load('/free')">FREE</button>
-    <button onclick="load('/vip')">VIP</button>
-    <button onclick="load('/live')">LIVE</button>
+<style>
+body{
+  background:#0f0f0f;
+  color:white;
+  font-family:Arial;
+  text-align:center;
+}
 
-    <div id="data"></div>
+button{
+  padding:12px;
+  margin:6px;
+  cursor:pointer;
+  border:none;
+  border-radius:8px;
+}
 
-    <script>
-      async function load(url){
-        const r = await fetch(url);
-        const d = await r.json();
-        document.getElementById('data').innerHTML =
-          '<pre>' + JSON.stringify(d, null, 2) + '</pre>';
-      }
-    </script>
-  </body>
-  </html>
+.card{
+  background:#1f1f1f;
+  margin:10px auto;
+  padding:10px;
+  width:85%;
+  border-radius:10px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>KING PREDICTIONS V4 CLEAN ⚽🔥</h1>
+
+<button onclick="load('/matches')">MATCHS</button>
+<button onclick="load('/free')">FREE</button>
+<button onclick="load('/vip')">VIP</button>
+<button onclick="load('/live')">LIVE</button>
+
+<div id="data"></div>
+
+<script>
+async function load(url){
+  try{
+    const r = await fetch(url);
+    const d = await r.json();
+
+    document.getElementById('data').innerHTML =
+      "<pre>" + JSON.stringify(d, null, 2) + "</pre>";
+  } catch(e){
+    document.getElementById('data').innerHTML =
+      "<div class='card'>Erreur API</div>";
+  }
+}
+</script>
+
+</body>
+</html>
   `);
 });
 
+// =======================
+// START SERVER
+// =======================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("V4 CLEAN RUNNING ⚽🔥"));
