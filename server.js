@@ -478,6 +478,21 @@ app.get("/history", (req, res) => {
   res.json(loadHistory());
 });
 
+/* =========================
+   STATS
+========================= */
+app.get("/stats", (req, res) => {
+  const history = loadHistory();
+
+  res.json({
+    jackpotsSaved: history.length,
+    lastPrediction:
+      history.length > 0
+        ? history[history.length - 1].date
+        : null
+  });
+});
+
 app.get("/", (req, res) => {
   res.send("KING PREDICTIONS V16 ⚽🔥 SERVER OK");
 });
