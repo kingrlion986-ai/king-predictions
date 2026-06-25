@@ -328,15 +328,23 @@ const analyses = await Promise.all(
 
      const history = loadHistory();
 
-history.push({
-  date: new Date().toISOString(),
-  type: "jackpot",
-  predictions: result
-});
+const lastEntry = history[history.length - 1];
 
-saveHistory(history);
+if (
+  !lastEntry ||
+  JSON.stringify(lastEntry.predictions) !==
+  JSON.stringify(result)
+) {
+  history.push({
+    date: new Date().toISOString(),
+    type: "jackpot",
+    predictions: result
+  });
 
-    res.json(result);
+  saveHistory(history);
+}
+
+res.json(result);
   } catch (err) {
     console.log("JACKPOT ERROR:", err.message);
     res.status(500).json({ error: "Internal server error" });
