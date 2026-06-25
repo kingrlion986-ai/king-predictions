@@ -315,18 +315,60 @@ const probabilities = build1X2Probabilities(
   awayStats
 );
 
-const btts = buildBTTSPrediction(homeStats, awayStats);
+const score = buildCorrectScore(
+  homeStats,
+  awayStats
+);
 
-const over25 = buildOver25Prediction(homeStats, awayStats);
+/* =========================
+   V17 CONSISTENCY ENGINE
+========================= */
+const [homeGoals, awayGoals] =
+  score.score.split("-").map(Number);
 
-const score = buildCorrectScore(homeStats, awayStats);
+let finalWinner;
+
+if (homeGoals > awayGoals) {
+  finalWinner = homeStats.teamName;
+} else if (awayGoals > homeGoals) {
+  finalWinner = awayStats.teamName;
+} else {
+  finalWinner = "DRAW";
+}
+
+const finalBTTS =
+  homeGoals > 0 && awayGoals > 0
+    ? "YES"
+    : "NO";
+
+const finalOver25 =
+  homeGoals + awayGoals >= 3
+    ? "OVER 2.5"
+    : "UNDER 2.5";
+
+const btts = {
+  pick: finalBTTS,
+  confidence: 70
+};
+
+const over25 = {
+  market: finalOver25,
+  confidence: 70,
+  expectedGoals:
+    score.expectedHomeGoals +
+    score.expectedAwayGoals
+};
+
+const winnerFixed = {
+  ...winner,
+  pick: finalWinner
+};
 
 const htft = buildHTFTPrediction(
   homeStats,
   awayStats,
-  winner
+  winnerFixed
 );
-
 const result = {
     match: `${homeTeam.name} vs ${awayTeam.name}`,
     date: match.utcDate,
@@ -334,12 +376,12 @@ const result = {
     awayTeam: awayTeam.name,
 
     teamStats: {
-      home: homeStats,
-      away: awayStats
-    },
+  home: homeStats,
+  away: awayStats
+},
 
-    predictions: {
-  winner: winner.pick,
+predictions: {
+  winner: winnerFixed.pick,
   winnerConfidence: winner.confidence,
 
   probabilities,
@@ -357,7 +399,7 @@ const result = {
 },
 
     model: {
-      winnerDiff: winner.diff,
+      winnerDiff: winnerFixed.diff || winner.diff,
       expectedGoals: over25.expectedGoals,
       expectedHomeGoals: score.expectedHomeGoals,
       expectedAwayGoals: score.expectedAwayGoals
