@@ -507,6 +507,20 @@ app.get("/results", async (req, res) => {
 });
 
 /* =========================
+   HEALTH
+========================= */
+app.get("/health", (req, res) => {
+  const history = loadHistory();
+
+  res.json({
+    status: "ok",
+    version: "16",
+    history: history.length,
+    timestamp: new Date().toISOString()
+  });
+});
+
+/* =========================
    STATS
 ========================= */
 app.get("/stats", (req, res) => {
