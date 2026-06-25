@@ -278,12 +278,23 @@ app.get("/live", async (req, res) => {
   try {
     const matches = await getMatches();
 
-    const result = matches.slice(0, 3).map(m => ({
-      match: `${m.homeTeam.name} vs ${m.awayTeam.name}`,
-      status: m.status,
-      score: `${m.score?.fullTime?.home ?? 0}-${m.score?.fullTime?.away ?? 0}`,
-      utcDate: m.utcDate
-    }));
+    const result = matches.slice(0, 3).map(m => {
+
+  console.log(
+    `${m.homeTeam.name} vs ${m.awayTeam.name}`,
+    "STATUS:",
+    m.status,
+    "DATE:",
+    m.utcDate
+  );
+
+  return {
+    match: `${m.homeTeam.name} vs ${m.awayTeam.name}`,
+    status: m.status,
+    score: `${m.score?.fullTime?.home ?? 0}-${m.score?.fullTime?.away ?? 0}`,
+    utcDate: m.utcDate
+  };
+});
 
     res.json(result);
   } catch (err) {
