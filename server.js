@@ -463,6 +463,13 @@ async function load(url){
   `);
 });
 
+/* =========================
+   HISTORY
+========================= */
+app.get("/history", (req, res) => {
+  res.json(loadHistory());
+});
+
 app.get("/", (req, res) => {
   res.send("KING PREDICTIONS V16 ⚽🔥 SERVER OK");
 });
