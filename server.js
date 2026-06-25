@@ -256,7 +256,7 @@ const analyses = await Promise.all(
 
     const result = analyses.map(a => ({
       match: a.match,
-      pick: `${a.predictions.winner} OR ${a.predictions.over25}`,
+      pick: `${a.predictions.winner} + ${a.predictions.over25}`,
       confidence: Math.round(
         (a.predictions.winnerConfidence + a.predictions.over25Confidence) / 2
       )
