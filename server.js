@@ -30,13 +30,16 @@ app.get("/free", async (req, res) => {
   try {
     const matches = await getMatches();
 
-    if (!matches.length) {
-      return res.json({ error: "No matches" });
-    }
+const futureMatches = matches.filter(
+  m => m.status === "TIMED"
+);
 
-    const match = matches[0];
-    const analysis = await analyzeMatch(match);
+if (!futureMatches.length) {
+  return res.json({ error: "No future matches" });
+}
 
+const match = futureMatches[0];
+const analysis = await analyzeMatch(match);
     res.json({
       match: analysis.match,
       prediction: "1X2",
@@ -59,10 +62,19 @@ app.get("/free", async (req, res) => {
 app.get("/vip/1x2", async (req, res) => {
   try {
     const matches = await getMatches();
-    const selected = matches.slice(0, SETTINGS.maxVIP_1X2);
 
-    const analyses = await Promise.all(selected.map(analyzeMatch));
+const futureMatches = matches.filter(
+  m => m.status === "TIMED"
+);
 
+const selected = futureMatches.slice(
+  0,
+  SETTINGS.maxVIP_1X2
+);
+
+const analyses = await Promise.all(
+  selected.map(analyzeMatch)
+);
     const result = analyses
       .map(a => ({
         match: a.match,
@@ -90,9 +102,19 @@ app.get("/vip/1x2", async (req, res) => {
 app.get("/vip/over25", async (req, res) => {
   try {
     const matches = await getMatches();
-    const selected = matches.slice(0, SETTINGS.maxOVER);
 
-    const analyses = await Promise.all(selected.map(analyzeMatch));
+const futureMatches = matches.filter(
+  m => m.status === "TIMED"
+);
+
+const selected = futureMatches.slice(
+  0,
+  SETTINGS.maxVIP_1X2
+);
+
+const analyses = await Promise.all(
+  selected.map(analyzeMatch)
+);
 
     const result = analyses.map(a => ({
       match: a.match,
@@ -116,9 +138,19 @@ app.get("/vip/over25", async (req, res) => {
 app.get("/vip/btts", async (req, res) => {
   try {
     const matches = await getMatches();
-    const selected = matches.slice(0, SETTINGS.maxBTTS);
 
-    const analyses = await Promise.all(selected.map(analyzeMatch));
+const futureMatches = matches.filter(
+  m => m.status === "TIMED"
+);
+
+const selected = futureMatches.slice(
+  0,
+  SETTINGS.maxVIP_1X2
+);
+
+const analyses = await Promise.all(
+  selected.map(analyzeMatch)
+);
 
     const result = analyses.map(a => ({
       match: a.match,
@@ -141,9 +173,19 @@ app.get("/vip/btts", async (req, res) => {
 app.get("/vip/score", async (req, res) => {
   try {
     const matches = await getMatches();
-    const selected = matches.slice(0, SETTINGS.maxSCORE);
 
-    const analyses = await Promise.all(selected.map(analyzeMatch));
+const futureMatches = matches.filter(
+  m => m.status === "TIMED"
+);
+
+const selected = futureMatches.slice(
+  0,
+  SETTINGS.maxVIP_1X2
+);
+
+const analyses = await Promise.all(
+  selected.map(analyzeMatch)
+);
 
     const result = analyses.map(a => ({
       match: a.match,
@@ -165,9 +207,19 @@ app.get("/vip/score", async (req, res) => {
 app.get("/vip/htft", async (req, res) => {
   try {
     const matches = await getMatches();
-    const selected = matches.slice(0, 3);
 
-    const analyses = await Promise.all(selected.map(analyzeMatch));
+const futureMatches = matches.filter(
+  m => m.status === "TIMED"
+);
+
+const selected = futureMatches.slice(
+  0,
+  SETTINGS.maxVIP_1X2
+);
+
+const analyses = await Promise.all(
+  selected.map(analyzeMatch)
+);
 
     const result = analyses.map(a => ({
       match: a.match,
@@ -188,9 +240,19 @@ app.get("/vip/htft", async (req, res) => {
 app.get("/vip/combos", async (req, res) => {
   try {
     const matches = await getMatches();
-    const selected = matches.slice(0, SETTINGS.maxCOMBI);
 
-    const analyses = await Promise.all(selected.map(analyzeMatch));
+const futureMatches = matches.filter(
+  m => m.status === "TIMED"
+);
+
+const selected = futureMatches.slice(
+  0,
+  SETTINGS.maxVIP_1X2
+);
+
+const analyses = await Promise.all(
+  selected.map(analyzeMatch)
+);
 
     const result = analyses.map(a => ({
       match: a.match,
@@ -213,9 +275,19 @@ app.get("/vip/combos", async (req, res) => {
 app.get("/vip/jackpot", async (req, res) => {
   try {
     const matches = await getMatches();
-    const selected = matches.slice(0, SETTINGS.maxJACKPOT);
 
-    const analyses = await Promise.all(selected.map(analyzeMatch));
+const futureMatches = matches.filter(
+  m => m.status === "TIMED"
+);
+
+const selected = futureMatches.slice(
+  0,
+  SETTINGS.maxJACKPOT
+);
+
+const analyses = await Promise.all(
+  selected.map(analyzeMatch)
+);
 
     const result = analyses.map(a => ({
       match: a.match,
@@ -239,8 +311,12 @@ app.get("/vip/top", async (req, res) => {
   try {
     const matches = await getMatches();
 
+    const futureMatches = matches.filter(
+      m => m.status === "TIMED"
+    );
+
     const analyses = await Promise.all(
-      matches.map(analyzeMatch)
+      futureMatches.map(analyzeMatch)
     );
 
     const topMatches = analyses
@@ -264,7 +340,6 @@ app.get("/vip/top", async (req, res) => {
 
   } catch (err) {
     console.log("VIP TOP ERROR:", err.message);
-
     res.status(500).json({
       error: "Internal server error"
     });
