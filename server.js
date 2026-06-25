@@ -1,6 +1,9 @@
 const express = require("express");
 const cors = require("cors");
 
+const fs = require("fs");
+const path = require("path");
+
 const { getMatches } = require("./services/footballApi");
 const { analyzeMatch } = require("./services/predictionEngine");
 
@@ -9,6 +12,32 @@ app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
+
+const HISTORY_FILE = path.join(
+  __dirname,
+  "history.json"
+);
+
+function loadHistory() {
+  try {
+    if (!fs.existsSync(HISTORY_FILE)) {
+      return [];
+    }
+
+    return JSON.parse(
+      fs.readFileSync(HISTORY_FILE, "utf8")
+    );
+  } catch (err) {
+    return [];
+  }
+}
+
+function saveHistory(data) {
+  fs.writeFileSync(
+    HISTORY_FILE,
+    JSON.stringify(data, null, 2)
+  );
+}
 
 /* =========================
    SETTINGS LIMITS
@@ -296,6 +325,16 @@ const analyses = await Promise.all(
       over25: a.predictions.over25,
       score: a.predictions.correctScore
     }));
+
+     const history = loadHistory();
+
+history.push({
+  date: new Date().toISOString(),
+  type: "jackpot",
+  predictions: result
+});
+
+saveHistory(history);
 
     res.json(result);
   } catch (err) {
