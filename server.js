@@ -472,6 +472,80 @@ async function load(url){
 });
 
 /* =========================
+   ACCURACY
+========================= */
+app.get("/accuracy", async (req, res) => {
+  try {
+    const history = loadHistory();
+
+    if (!history.length) {
+      return res.json({
+        checked: 0,
+        correct: 0,
+        accuracy: 0
+      });
+    }
+
+    const matches = await getMatches();
+
+    const finishedMatches = matches.filter(
+      m => m.status === "FINISHED"
+    );
+
+    let checked = 0;
+    let correct = 0;
+
+    history.forEach(entry => {
+      entry.predictions.forEach(pred => {
+
+        const realMatch = finishedMatches.find(
+          m =>
+            `${m.homeTeam.name} vs ${m.awayTeam.name}` === pred.match
+        );
+
+        if (!realMatch) return;
+
+        checked++;
+
+        let realWinner = "DRAW";
+
+        if (
+          realMatch.score.fullTime.home >
+          realMatch.score.fullTime.away
+        ) {
+          realWinner = realMatch.homeTeam.name;
+        } else if (
+          realMatch.score.fullTime.away >
+          realMatch.score.fullTime.home
+        ) {
+          realWinner = realMatch.awayTeam.name;
+        }
+
+        if (pred.winner === realWinner) {
+          correct++;
+        }
+      });
+    });
+
+    res.json({
+      checked,
+      correct,
+      accuracy:
+        checked > 0
+          ? Math.round((correct / checked) * 100)
+          : 0
+    });
+
+  } catch (err) {
+    console.log("ACCURACY ERROR:", err.message);
+
+    res.status(500).json({
+      error: "Internal server error"
+    });
+  }
+});
+
+/* =========================
    HISTORY
 ========================= */
 app.get("/history", (req, res) => {
