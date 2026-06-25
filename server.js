@@ -479,6 +479,34 @@ app.get("/history", (req, res) => {
 });
 
 /* =========================
+   RESULTS
+========================= */
+app.get("/results", async (req, res) => {
+  try {
+    const matches = await getMatches();
+
+    const finishedMatches = matches.filter(
+      m => m.status === "FINISHED"
+    );
+
+    const result = finishedMatches.slice(0, 20).map(m => ({
+      match: `${m.homeTeam.name} vs ${m.awayTeam.name}`,
+      score: `${m.score.fullTime.home}-${m.score.fullTime.away}`,
+      date: m.utcDate
+    }));
+
+    res.json(result);
+
+  } catch (err) {
+    console.log("RESULTS ERROR:", err.message);
+
+    res.status(500).json({
+      error: "Internal server error"
+    });
+  }
+});
+
+/* =========================
    STATS
 ========================= */
 app.get("/stats", (req, res) => {
