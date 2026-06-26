@@ -1,10 +1,61 @@
 const { getTeamRecentMatches } = require("./footballApi");
 
+/* =========================
+   CACHE
+========================= */
+const CACHE = {};
+const TTL = 15 * 60 * 1000;
+
+/* =========================
+   HELPERS
+========================= */
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function round(value, decimals = 2) {
+  return Number(value.toFixed(decimals));
+}
+
+/* =========================
+   MAIN ANALYSIS
+========================= */
 async function analyzeTeam(team) {
+  const now = Date.now();
+  const cached = CACHE[team.id];
+
+  if (cached && cached.expiresAt > now) {
+    return cached.data;
+  }
+
   const matches = await getTeamRecentMatches(team.id, 10);
 
-  if (!matches.length) {
-    return null;
+  if (!matches || matches.length === 0) {
+    const empty = {
+      teamId: team.id,
+      teamName: team.name,
+      matchesAnalyzed: 0,
+      wins: 0,
+      draws: 0,
+      losses: 0,
+      avgScored: 0,
+      avgConceded: 0,
+      cleanSheets: 0,
+      bttsRate: 0,
+      over25Rate: 0,
+      formPoints: 0,
+      strength: 50,
+      attackIndex: 50,
+      defenseIndex: 50,
+      recentForm: []
+    };
+
+    CACHE[team.id] = {
+      data: empty,
+      expiresAt: now + TTL
+    };
+
+    return empty;
   }
 
   let wins = 0;
@@ -14,56 +65,105 @@ async function analyzeTeam(team) {
   let goalsFor = 0;
   let goalsAgainst = 0;
 
+  let cleanSheets = 0;
+  let bttsCount = 0;
+  let over25Count = 0;
+
+  const form = [];
+
   for (const match of matches) {
+    const isHome = match.homeTeam.id === team.id;
 
-    const home = match.homeTeam.id === team.id;
+    const scored = isHome
+      ? (match.score?.fullTime?.home ?? 0)
+      : (match.score?.fullTime?.away ?? 0);
 
-    const scored = home
-      ? match.score.fullTime.home
-      : match.score.fullTime.away;
-
-    const conceded = home
-      ? match.score.fullTime.away
-      : match.score.fullTime.home;
+    const conceded = isHome
+      ? (match.score?.fullTime?.away ?? 0)
+      : (match.score?.fullTime?.home ?? 0);
 
     goalsFor += scored;
     goalsAgainst += conceded;
 
-    if (scored > conceded) wins++;
-    else if (scored === conceded) draws++;
-    else losses++;
+    if (scored > conceded) {
+      wins++;
+      form.push("W");
+    } else if (scored === conceded) {
+      draws++;
+      form.push("D");
+    } else {
+      losses++;
+      form.push("L");
+    }
+
+    if (scored > 0 && conceded > 0) bttsCount++;
+    if (scored + conceded >= 3) over25Count++;
+    if (conceded === 0) cleanSheets++;
   }
 
-  const avgGoalsFor = goalsFor / matches.length;
-const avgGoalsAgainst = goalsAgainst / matches.length;
+  const matchesCount = matches.length;
 
-const formPoints = wins * 3 + draws;
+  const avgScored = goalsFor / matchesCount;
+  const avgConceded = goalsAgainst / matchesCount;
 
-const power =
-  (formPoints * 2) +
-  (avgGoalsFor * 12) -
-  (avgGoalsAgainst * 8);
+  const bttsRate = (bttsCount / matchesCount) * 100;
+  const over25Rate = (over25Count / matchesCount) * 100;
 
-return {
+  const formPoints = wins * 3 + draws;
 
-  team: team.name,
+  /* =========================
+     INDICES V17
+  ========================= */
 
-  matches: matches.length,
+  const attackIndex = clamp(avgScored * 35, 0, 100);
+  const defenseIndex = clamp((1 - avgConceded / 3) * 100, 0, 100);
 
-  wins,
-  draws,
-  losses,
+  const formIndex = (formPoints / (matchesCount * 3)) * 100;
 
-  formPoints,
+  const strength = clamp(
+    round(
+      (attackIndex * 0.35) +
+      (defenseIndex * 0.35) +
+      (formIndex * 0.30),
+      1
+    ),
+    0,
+    100
+  );
 
-  avgGoalsFor: Number(avgGoalsFor.toFixed(2)),
+  const result = {
+    teamId: team.id,
+    teamName: team.name,
 
-  avgGoalsAgainst: Number(avgGoalsAgainst.toFixed(2)),
+    matchesAnalyzed: matchesCount,
 
-  power: Number(power.toFixed(1))
+    wins,
+    draws,
+    losses,
 
-};
+    avgScored: round(avgScored, 2),
+    avgConceded: round(avgConceded, 2),
 
+    cleanSheets,
+    bttsRate: round(bttsRate, 1),
+    over25Rate: round(over25Rate, 1),
+
+    formPoints,
+
+    attackIndex: round(attackIndex, 1),
+    defenseIndex: round(defenseIndex, 1),
+
+    strength,
+
+    recentForm: form.slice(0, 5)
+  };
+
+  CACHE[team.id] = {
+    data: result,
+    expiresAt: now + TTL
+  };
+
+  return result;
 }
 
 module.exports = {
