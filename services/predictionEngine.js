@@ -96,18 +96,37 @@ function predictOver25(home, away) {
    SCORE ENGINE
 ========================= */
 function predictScore(home, away) {
-  const homeGoals =
-    (home.avgScored * 0.7) +
-    (away.avgConceded * 0.3);
 
-  const awayGoals =
-    (away.avgScored * 0.7) +
-    (home.avgConceded * 0.3);
+  let homeExpected =
+    (home.homeAttack * 0.40) +
+    (away.awayDefense * 0.25) +
+    ((home.attackIndex / 100) * 0.20) +
+    ((home.strength / 100) * 0.15);
 
-  const h = clamp(Math.round(homeGoals), 0, 4);
-  const a = clamp(Math.round(awayGoals), 0, 4);
+  let awayExpected =
+    (away.awayAttack * 0.40) +
+    (home.homeDefense * 0.25) +
+    ((away.attackIndex / 100) * 0.20) +
+    ((away.strength / 100) * 0.15);
 
-  return `${h}-${a}`;
+  // Avantage domicile
+  homeExpected += 0.20;
+
+  // Équipe qui marque rarement
+  if (home.failedToScore >= 4) homeExpected -= 0.40;
+  if (away.failedToScore >= 4) awayExpected -= 0.40;
+
+  // Défenses solides
+  if (away.cleanSheets >= 4) homeExpected -= 0.30;
+  if (home.cleanSheets >= 4) awayExpected -= 0.30;
+
+  homeExpected = clamp(homeExpected, 0, 4);
+  awayExpected = clamp(awayExpected, 0, 4);
+
+  const homeGoals = Math.round(homeExpected);
+  const awayGoals = Math.round(awayExpected);
+
+  return `${homeGoals}-${awayGoals}`;
 }
 
 /* =========================
