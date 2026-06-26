@@ -230,6 +230,8 @@ console.log(awayStats);
 
   const winnerPick = pickWinner(homeStats, awayStats);
   const probabilities = build1X2(homeStats, awayStats);
+
+  const xg = calculateExpectedGoals(homeStats, awayStats);
   const score = predictScore(homeStats, awayStats);
 
   const [hg, ag] = score.split("-").map(Number);
@@ -284,9 +286,9 @@ teamStats: {
     },
 
     model: {
-      expectedGoals: hg + ag,
-      expectedHomeGoals: hg,
-      expectedAwayGoals: ag,
+      expectedGoals: round(xg.home + xg.away, 2),
+expectedHomeGoals: round(xg.home, 2),
+expectedAwayGoals: round(xg.away, 2),
       winnerDiff: homeStats.strength - awayStats.strength
     }
   };
