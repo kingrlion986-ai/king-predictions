@@ -317,8 +317,8 @@ const analyses = await Promise.all(
 
     const result = analyses.map(a => ({
       match: a.match,
-      pick: a.predictions.htft,
-      confidence: a.predictions.htftConfidence
+      pick: a.predictions?.htft || "N/A",
+confidence: a.predictions?.htftConfidence || 60
     }));
 
     res.json(result);
