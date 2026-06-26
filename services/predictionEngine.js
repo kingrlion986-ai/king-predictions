@@ -338,6 +338,11 @@ const probabilities = build1X2Probabilities(
   awayStats
 );
 
+   const score = buildCorrectScore(
+  homeStats,
+  awayStats
+);
+
 /* =========================
    V17 CONSISTENCY ENGINE
 ========================= */
