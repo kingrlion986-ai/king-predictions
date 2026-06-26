@@ -63,8 +63,7 @@ async function analyzeTeam(team) {
     return teamCache.data;
   }
 
-  const recentMatches = await getTeamRecentMatches(team.id, 5);
-
+  const recentMatches = await getTeamRecentMatches(team.id, 10);
   let result;
 
   if (!recentMatches.length) {
@@ -167,26 +166,50 @@ async function analyzeTeam(team) {
    PREDICTIONS
 ========================= */
 function buildWinnerPrediction(homeStats, awayStats) {
-  const homeScore = homeStats.strength + 4;
-  const awayScore = awayStats.strength;
-  const diff = round(Math.abs(homeScore - awayScore), 1);
+
+  const homePower =
+    (homeStats.strength * 0.45) +
+    (homeStats.formPoints * 1.5) +
+    (homeStats.avgScored * 8) -
+    (homeStats.avgConceded * 5) +
+    4; // avantage domicile
+
+  const awayPower =
+    (awayStats.strength * 0.45) +
+    (awayStats.formPoints * 1.5) +
+    (awayStats.avgScored * 8) -
+    (awayStats.avgConceded * 5);
+
+  const diff = Math.abs(homePower - awayPower);
 
   let pick = "DRAW";
 
-  if (homeScore > awayScore + 3) pick = homeStats.teamName;
-  else if (awayScore > homeScore + 3) pick = awayStats.teamName;
+  if (homePower > awayPower + 5) {
+    pick = homeStats.teamName;
+  } else if (awayPower > homePower + 5) {
+    pick = awayStats.teamName;
+  }
 
-  let confidence = 55 + diff * 1.8;
-  if (pick === "DRAW") confidence = 58 + diff;
+  let confidence;
 
-  confidence = clamp(Math.round(confidence), 55, 92);
+  if (pick === "DRAW") {
+    confidence = 58;
+  } else {
+    confidence = 60 + (diff * 0.6);
+  }
+
+  confidence = clamp(
+    Math.round(confidence),
+    60,
+    88
+  );
 
   return {
     pick,
     confidence,
-    homeScore,
-    awayScore,
-    diff
+    homeScore: round(homePower, 1),
+    awayScore: round(awayPower, 1),
+    diff: round(diff, 1)
   };
 }
 
@@ -311,11 +334,6 @@ async function analyzeMatch(match) {
   const winner = buildWinnerPrediction(homeStats, awayStats);
 
 const probabilities = build1X2Probabilities(
-  homeStats,
-  awayStats
-);
-
-const score = buildCorrectScore(
   homeStats,
   awayStats
 );
