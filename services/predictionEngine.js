@@ -229,9 +229,9 @@ const htftConfidence = confidence;
 
   htft,
   htftConfidence
-    }
+},
 
-    teamStats: {
+teamStats: {
       home: homeStats,
       away: awayStats
     },
