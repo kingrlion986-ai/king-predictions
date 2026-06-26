@@ -1,3 +1,5 @@
+const { analyzeTeam } = require("./teamAnalyzer");
+
 const { getTeamRecentMatches } = require("./footballApi");
 
 /* =========================
@@ -55,7 +57,7 @@ function getMatchCacheKey(match) {
 /* =========================
    TEAM ANALYSIS
 ========================= */
-async function analyzeTeam(team) {
+async function analyzeTeamOLD(team) {
   const now = Date.now();
   const teamCache = ANALYSIS_CACHE.teams[team.id];
 
