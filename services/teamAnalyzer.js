@@ -34,23 +34,35 @@ async function analyzeTeam(team) {
     else losses++;
   }
 
-  return {
+  const avgGoalsFor = goalsFor / matches.length;
+const avgGoalsAgainst = goalsAgainst / matches.length;
 
-    team: team.name,
+const formPoints = wins * 3 + draws;
 
-    matches: matches.length,
+const power =
+  (formPoints * 2) +
+  (avgGoalsFor * 12) -
+  (avgGoalsAgainst * 8);
 
-    wins,
-    draws,
-    losses,
+return {
 
-    avgGoalsFor:
-      goalsFor / matches.length,
+  team: team.name,
 
-    avgGoalsAgainst:
-      goalsAgainst / matches.length
+  matches: matches.length,
 
-  };
+  wins,
+  draws,
+  losses,
+
+  formPoints,
+
+  avgGoalsFor: Number(avgGoalsFor.toFixed(2)),
+
+  avgGoalsAgainst: Number(avgGoalsAgainst.toFixed(2)),
+
+  power: Number(power.toFixed(1))
+
+};
 
 }
 
