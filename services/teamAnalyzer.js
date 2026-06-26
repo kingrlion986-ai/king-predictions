@@ -32,23 +32,43 @@ async function analyzeTeam(team) {
 
   if (!matches || matches.length === 0) {
     const empty = {
-      teamId: team.id,
-      teamName: team.name,
-      matchesAnalyzed: 0,
-      wins: 0,
-      draws: 0,
-      losses: 0,
-      avgScored: 0,
-      avgConceded: 0,
-      cleanSheets: 0,
-      bttsRate: 0,
-      over25Rate: 0,
-      formPoints: 0,
-      strength: 50,
-      attackIndex: 50,
-      defenseIndex: 50,
-      recentForm: []
-    };
+  teamId: team.id,
+  teamName: team.name,
+  matchesAnalyzed: 0,
+
+  wins: 0,
+  draws: 0,
+  losses: 0,
+
+  avgScored: 0,
+  avgConceded: 0,
+
+  homeAttack: 0,
+  awayAttack: 0,
+
+  homeDefense: 0,
+  awayDefense: 0,
+
+  homeWins: 0,
+  awayWins: 0,
+
+  failedToScore: 0,
+
+  recentGoals: [],
+  recentConceded: [],
+
+  cleanSheets: 0,
+  bttsRate: 0,
+  over25Rate: 0,
+
+  formPoints: 0,
+
+  strength: 50,
+  attackIndex: 50,
+  defenseIndex: 50,
+
+  recentForm: []
+};
 
     CACHE[team.id] = {
       data: empty,
