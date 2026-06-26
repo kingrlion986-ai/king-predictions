@@ -132,6 +132,37 @@ async function analyzeMatch(match) {
   const homeStats = await analyzeTeam(match.homeTeam);
   const awayStats = await analyzeTeam(match.awayTeam);
 
+     /* =========================
+     VIP PRO MAX ENGINE
+  ========================= */
+
+  const strengthDiff =
+    Math.abs(homeStats.strength - awayStats.strength);
+
+  const goalIndex =
+    (homeStats.avgScored + awayStats.avgScored) -
+    (homeStats.avgConceded + awayStats.avgConceded);
+
+  let vipScore =
+    (strengthDiff * 1.2) +
+    (goalIndex * 2.5) +
+    (homeStats.formPoints + awayStats.formPoints);
+
+  vipScore = round(vipScore, 1);
+
+  let riskLevel = "MEDIUM";
+
+  if (vipScore >= 25) riskLevel = "HIGH CONFIDENCE";
+  if (vipScore >= 40) riskLevel = "SAFE BET";
+  if (vipScore < 15) riskLevel = "RISKY";
+
+  const valuePick =
+    vipScore >= 35
+      ? "STRONG BET"
+      : vipScore >= 20
+      ? "NORMAL BET"
+      : "AVOID";
+
   // fallback sécurité
   if (!homeStats || !awayStats) {
     return {
