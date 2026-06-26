@@ -170,6 +170,18 @@ if (isHome) {
   const avgScored = goalsFor / matchesCount;
   const avgConceded = goalsAgainst / matchesCount;
 
+   const homeAttack =
+  homeMatches > 0 ? homeGoals / homeMatches : 0;
+
+const awayAttack =
+  awayMatches > 0 ? awayGoals / awayMatches : 0;
+
+const homeDefense =
+  homeMatches > 0 ? homeConceded / homeMatches : 0;
+
+const awayDefense =
+  awayMatches > 0 ? awayConceded / awayMatches : 0;
+
   const bttsRate = (bttsCount / matchesCount) * 100;
   const over25Rate = (over25Count / matchesCount) * 100;
 
@@ -207,6 +219,20 @@ if (isHome) {
 
     avgScored: round(avgScored, 2),
     avgConceded: round(avgConceded, 2),
+
+     homeAttack: round(homeAttack, 2),
+awayAttack: round(awayAttack, 2),
+
+homeDefense: round(homeDefense, 2),
+awayDefense: round(awayDefense, 2),
+
+homeWins,
+awayWins,
+
+failedToScore,
+
+recentGoals: recentGoals.slice(0, 5),
+recentConceded: recentConceded.slice(0, 5),
 
     cleanSheets,
     bttsRate: round(bttsRate, 1),
