@@ -48,13 +48,18 @@ function build1X2(home, away) {
 function pickWinner(home, away) {
   const diff = home.strength - away.strength;
 
-  if (Math.abs(diff) < 5) {
+  // ⚠️ zone DRAW réduite
+  if (Math.abs(diff) < 2.5) {
     return "DRAW";
   }
 
+  // ⚠️ domination forte = victoire obligatoire
+  if (diff >= 6) return home.teamName;
+  if (diff <= -6) return away.teamName;
+
+  // zone normale
   return diff > 0 ? home.teamName : away.teamName;
 }
-
 /* =========================
    BTTS MODEL (FIXED)
 ========================= */
