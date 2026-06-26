@@ -200,23 +200,36 @@ async function analyzeMatch(match) {
   confidence = adjustLowQualityMatch(homeStats, awayStats, confidence);
   confidence = clamp(confidence, 50, 92);
 
+   let htft = "X/X";
+
+if (finalWinner === homeStats.teamName) {
+  htft = "1/1";
+} else if (finalWinner === awayStats.teamName) {
+  htft = "2/2";
+}
+
+const htftConfidence = confidence;
+
   return {
     match: `${homeStats.teamName} vs ${awayStats.teamName}`,
 
     predictions: {
-      winner: finalWinner,
-      winnerConfidence: confidence,
+  winner: finalWinner,
+  winnerConfidence: confidence,
 
-      probabilities,
+  probabilities,
 
-      btts,
-      bttsConfidence: 70,
+  btts,
+  bttsConfidence: 70,
 
-      over25,
-      over25Confidence: 70,
+  over25,
+  over25Confidence: 70,
 
-      correctScore: score
-    },
+  correctScore: score,
+
+  htft,
+  htftConfidence
+    }
 
     teamStats: {
       home: homeStats,
