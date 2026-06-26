@@ -69,6 +69,23 @@ async function analyzeTeam(team) {
   let bttsCount = 0;
   let over25Count = 0;
 
+   let failedToScore = 0;
+
+let homeWins = 0;
+let awayWins = 0;
+
+let homeGoals = 0;
+let awayGoals = 0;
+
+let homeConceded = 0;
+let awayConceded = 0;
+
+let homeMatches = 0;
+let awayMatches = 0;
+
+const recentGoals = [];
+const recentConceded = [];
+
   const form = [];
 
   for (const match of matches) {
@@ -81,6 +98,33 @@ async function analyzeTeam(team) {
     const conceded = isHome
       ? (match.score?.fullTime?.away ?? 0)
       : (match.score?.fullTime?.home ?? 0);
+
+     recentGoals.push(scored);
+recentConceded.push(conceded);
+
+if (scored === 0) {
+  failedToScore++;
+}
+
+if (isHome) {
+  homeMatches++;
+  homeGoals += scored;
+  homeConceded += conceded;
+
+  if (scored > conceded) {
+    homeWins++;
+  }
+
+} else {
+
+  awayMatches++;
+  awayGoals += scored;
+  awayConceded += conceded;
+
+  if (scored > conceded) {
+    awayWins++;
+  }
+}
 
     goalsFor += scored;
     goalsAgainst += conceded;
