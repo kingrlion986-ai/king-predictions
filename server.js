@@ -1,6 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 
+const { filterVipMatches } = require("./services/vipFilterEngine");
+
 const fs = require("fs");
 const path = require("path");
 
@@ -10,6 +12,29 @@ const { analyzeMatch } = require("./services/predictionEngine");
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+app.get("/vip/matches", async (req, res) => {
+  try {
+    const matches = await getMatches();
+
+    const vipMatches = filterVipMatches(matches);
+
+    res.json({
+      success: true,
+      totalMatches: matches.length,
+      vipMatches: vipMatches.length,
+      data: vipMatches
+    });
+
+  } catch (error) {
+    console.log("VIP MATCH ERROR:", error);
+
+    res.status(500).json({
+      success: false,
+      error: "VIP system error"
+    });
+  }
+});
 
 const PORT = process.env.PORT || 3000;
 
@@ -82,6 +107,46 @@ const analysis = await analyzeMatch(match);
   } catch (err) {
     console.log("FREE ERROR:", err.message);
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/* =========================
+   VIP PREDICTIONS
+========================= */
+app.get("/vip/predictions", async (req, res) => {
+  try {
+    const matches = await getMatches();
+
+    const vipMatches = filterVipMatches(matches);
+
+    const predictions = await Promise.all(
+      vipMatches.map(async (match) => {
+        const result = await analyzeMatch(match);
+
+        return {
+          match: result.match,
+          winner: result.predictions.winner,
+          confidence: result.predictions.winnerConfidence,
+          btts: result.predictions.btts,
+          over25: result.predictions.over25,
+          score: result.predictions.correctScore
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      count: predictions.length,
+      data: predictions
+    });
+
+  } catch (error) {
+    console.log("VIP PREDICTIONS ERROR:", error);
+
+    res.status(500).json({
+      success: false,
+      error: "VIP prediction error"
+    });
   }
 });
 
