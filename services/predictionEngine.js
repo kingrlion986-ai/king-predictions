@@ -98,16 +98,21 @@ function predictOver25(home, away) {
 function calculateExpectedGoals(home, away) {
 
   let homeXG =
-    (home.homeAttack * 0.40) +
-    (away.awayDefense * 0.25) +
-    ((home.attackIndex / 100) * 0.20) +
-    ((home.strength / 100) * 0.15);
+    (home.homeAttack * 0.45) +
+    (away.awayDefense * 0.20) +
+    (home.avgScored * 0.25) +
+    (away.avgConceded * 0.15);
 
   let awayXG =
-    (away.awayAttack * 0.40) +
-    (home.homeDefense * 0.25) +
-    ((away.attackIndex / 100) * 0.20) +
-    ((away.strength / 100) * 0.15);
+    (away.awayAttack * 0.45) +
+    (home.homeDefense * 0.20) +
+    (away.avgScored * 0.25) +
+    (home.avgConceded * 0.15);
+
+  const diff = home.strength - away.strength;
+
+  homeXG += diff * 0.025;
+  awayXG -= diff * 0.025;
 
   homeXG += 0.20;
 
@@ -122,7 +127,6 @@ function calculateExpectedGoals(home, away) {
     away: clamp(awayXG, 0, 4)
   };
 }
-
 function predictScore(home, away) {
 
   const xg = calculateExpectedGoals(home, away);
