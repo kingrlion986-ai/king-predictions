@@ -11,6 +11,21 @@ function round(value, decimals = 2) {
   return Number(value.toFixed(decimals));
 }
 
+function adjustLowQualityMatch(home, away, confidence) {
+  const avgStrength =
+    (home.strength + away.strength) / 2;
+
+  if (avgStrength < 15) {
+    confidence -= 15;
+  } else if (avgStrength < 25) {
+    confidence -= 10;
+  } else if (avgStrength < 40) {
+    confidence -= 5;
+  }
+
+  return confidence;
+}
+
 /* =========================
    1X2 MODEL (V17 PROBABILISTIC)
 ========================= */
@@ -142,7 +157,10 @@ async function analyzeMatch(match) {
 
   const over25 = (hg + ag >= 3) ? "OVER 2.5" : "UNDER 2.5";
 
-  const confidence = getConfidence(home, away, finalWinner);
+  let confidence = getConfidence(home, away, finalWinner);
+
+confidence = adjustLowQualityMatch(home, away, confidence);
+confidence = clamp(confidence, 50, 92);
 
   return {
     match: `${home.teamName} vs ${away.teamName}`,
