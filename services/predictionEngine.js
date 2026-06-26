@@ -95,38 +95,63 @@ function predictOver25(home, away) {
 /* =========================
    SCORE ENGINE
 ========================= */
-function predictScore(home, away) {
+function calculateExpectedGoals(home, away) {
 
-  let homeExpected =
+  let homeXG =
     (home.homeAttack * 0.40) +
     (away.awayDefense * 0.25) +
     ((home.attackIndex / 100) * 0.20) +
     ((home.strength / 100) * 0.15);
 
-  let awayExpected =
+  let awayXG =
     (away.awayAttack * 0.40) +
     (home.homeDefense * 0.25) +
     ((away.attackIndex / 100) * 0.20) +
     ((away.strength / 100) * 0.15);
 
-  // Avantage domicile
-  homeExpected += 0.20;
+  homeXG += 0.20;
 
-  // Équipe qui marque rarement
-  if (home.failedToScore >= 4) homeExpected -= 0.40;
-  if (away.failedToScore >= 4) awayExpected -= 0.40;
+  if (home.failedToScore >= 4) homeXG -= 0.40;
+  if (away.failedToScore >= 4) awayXG -= 0.40;
 
-  // Défenses solides
-  if (away.cleanSheets >= 4) homeExpected -= 0.30;
-  if (home.cleanSheets >= 4) awayExpected -= 0.30;
+  if (away.cleanSheets >= 4) homeXG -= 0.30;
+  if (home.cleanSheets >= 4) awayXG -= 0.30;
 
-  homeExpected = clamp(homeExpected, 0, 4);
-  awayExpected = clamp(awayExpected, 0, 4);
+  return {
+    home: clamp(homeXG, 0, 4),
+    away: clamp(awayXG, 0, 4)
+  };
+}
 
-  const homeGoals = Math.round(homeExpected);
-  const awayGoals = Math.round(awayExpected);
+function predictScore(home, away) {
 
-  return `${homeGoals}-${awayGoals}`;
+  const xg = calculateExpectedGoals(home, away);
+
+  const possibleScores = [
+    "0-0","1-0","0-1","1-1",
+    "2-0","0-2","2-1","1-2",
+    "2-2","3-1","1-3","3-2",
+    "2-3","3-3","4-1","1-4"
+  ];
+
+  let bestScore = "1-1";
+  let bestValue = 999;
+
+  for (const score of possibleScores) {
+
+    const [h, a] = score.split("-").map(Number);
+
+    const value =
+      Math.abs(h - xg.home) +
+      Math.abs(a - xg.away);
+
+    if (value < bestValue) {
+      bestValue = value;
+      bestScore = score;
+    }
+  }
+
+  return bestScore;
 }
 
 /* =========================
