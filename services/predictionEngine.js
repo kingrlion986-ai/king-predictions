@@ -132,6 +132,9 @@ async function analyzeMatch(match) {
   const homeStats = await analyzeTeam(match.homeTeam);
   const awayStats = await analyzeTeam(match.awayTeam);
 
+   console.log(homeStats);
+console.log(awayStats);
+
      /* =========================
      VIP PRO MAX ENGINE
   ========================= */
