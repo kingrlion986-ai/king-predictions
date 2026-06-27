@@ -39,14 +39,19 @@ function build1X2(home, away) {
 let drawProb = 34;
 let awayProb = 33;
 
-if (diff > 0) {
-  homeProb += diff * 20;
-  awayProb -= diff * 15;
-  drawProb -= diff * 5;
+if (diff > 0.60) {
+  homeProb += diff * 24;
+  awayProb -= diff * 18;
+  drawProb -= diff * 6;
+
+} else if (diff < -0.60) {
+  awayProb += (-diff) * 24;
+  homeProb -= (-diff) * 18;
+  drawProb -= (-diff) * 6;
+
 } else {
-  awayProb += (-diff) * 20;
-  homeProb -= (-diff) * 15;
-  drawProb -= (-diff) * 5;
+  // xG très proches : léger avantage au nul
+  drawProb += 8;
 }
 
 homeProb = clamp(homeProb, 5, 90);
