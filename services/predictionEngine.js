@@ -55,6 +55,17 @@ function build1X2(home, away) {
     }
   }
 
+   const strengthDiff = home.strength - away.strength;
+
+// Ajustement progressif
+const adjustment = clamp(Math.abs(strengthDiff) / 100, 0, 0.25);
+
+if (strengthDiff > 0) {
+  homeWin *= (1 + adjustment);
+} else if (strengthDiff < 0) {
+  awayWin *= (1 + adjustment);
+}
+
   const total = homeWin + draw + awayWin;
 
   return {
