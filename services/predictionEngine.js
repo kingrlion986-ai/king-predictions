@@ -338,10 +338,13 @@ console.log(awayStats);
     };
   }
    
-const probabilities = build1X2(homeStats, awayStats);
-
 const mc = runMonteCarlo(homeStats, awayStats);
+const probabilities = mc.probabilities;
 
+console.log(mc);
+
+const xg = calculateExpectedGoals(homeStats, awayStats);
+const score = predictScore(homeStats, awayStats);
 console.log(mc);
 
    const xg = calculateExpectedGoals(homeStats, awayStats);
