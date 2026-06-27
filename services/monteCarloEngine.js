@@ -13,5 +13,18 @@ function randomPoisson(lambda) {
 }
 
 module.exports = {
-  randomPoisson
+  randomPoisson,
+  simulateMatch
 };
+
+function simulateMatch(homeXG, awayXG) {
+
+  const homeGoals = randomPoisson(homeXG);
+  const awayGoals = randomPoisson(awayXG);
+
+  return {
+    homeGoals,
+    awayGoals
+  };
+
+}
