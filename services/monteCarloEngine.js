@@ -1,53 +1,48 @@
-function randomPoisson(lambda) {
-  const L = Math.exp(-lambda);
-
-  let p = 1;
-  let k = 0;
-
-  do {
-    k++;
-    p *= Math.random();
-  } while (p > L);
-
-  return k - 1;
-}
-
-module.exports = {
-  randomPoisson,
-  simulateMatch
-};
-
-function simulateMatch(homeXG, awayXG) {
-
-  const homeGoals = randomPoisson(homeXG);
-  const awayGoals = randomPoisson(awayXG);
-
-  return {
-    homeGoals,
-    awayGoals
-  };
-
-}
-
 const { simulateMatch } = require("./monteCarloEngine");
 
-const homeXG = 1.8;
-const awayXG = 0.9;
+function runMonteCarlo(homeXG, awayXG, iterations = 10000) {
 
-let homeWins = 0;
-let draws = 0;
-let awayWins = 0;
+  let homeWins = 0;
+  let draws = 0;
+  let awayWins = 0;
 
-for (let i = 0; i < 100; i++) {
+  const scoreMap = {};
 
-  const result = simulateMatch(homeXG, awayXG);
+  for (let i = 0; i < iterations; i++) {
 
-  if (result.homeGoals > result.awayGoals) homeWins++;
-  else if (result.homeGoals === result.awayGoals) draws++;
-  else awayWins++;
+    const result = simulateMatch(homeXG, awayXG);
 
+    const score = `${result.homeGoals}-${result.awayGoals}`;
+
+    scoreMap[score] = (scoreMap[score] || 0) + 1;
+
+    if (result.homeGoals > result.awayGoals) homeWins++;
+    else if (result.homeGoals === result.awayGoals) draws++;
+    else awayWins++;
+  }
+
+  // trouver score le plus fréquent
+  let bestScore = "";
+  let bestCount = 0;
+
+  for (const score in scoreMap) {
+    if (scoreMap[score] > bestCount) {
+      bestScore = score;
+      bestCount = scoreMap[score];
+    }
+  }
+
+  return {
+    1X2: {
+      home: (homeWins / iterations) * 100,
+      draw: (draws / iterations) * 100,
+      away: (awayWins / iterations) * 100
+    },
+    bestScore,
+    bestScoreProbability: (bestCount / iterations) * 100
+  };
 }
 
-console.log("HOME WINS:", homeWins);
-console.log("DRAWS:", draws);
-console.log("AWAY WINS:", awayWins);
+// TEST
+const result = runMonteCarlo(1.8, 0.9, 10000);
+console.log(result);
