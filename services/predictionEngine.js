@@ -34,46 +34,34 @@ function build1X2(home, away) {
   const xg = calculateExpectedGoals(home, away);
 
   let homeWin = 0;
-  let draw = 0;
-  let awayWin = 0;
+let draw = 0;
+let awayWin = 0;
 
-  for (let h = 0; h <= 5; h++) {
-    for (let a = 0; a <= 5; a++) {
+for (let h = 0; h <= 5; h++) {
+  for (let a = 0; a <= 5; a++) {
 
-      const probability =
-        poisson(xg.home, h) *
-        poisson(xg.away, a);
+    const probability =
+      poisson(xg.home, h) *
+      poisson(xg.away, a);
 
-      if (h > a) {
-        homeWin += probability;
-      } else if (h === a) {
-        draw += probability;
-      } else {
-        awayWin += probability;
-      }
-
+    if (h > a) {
+      homeWin += probability;
+    } else if (h === a) {
+      draw += probability;
+    } else {
+      awayWin += probability;
     }
+
   }
-
-   const strengthDiff = home.strength - away.strength;
-
-// Ajustement progressif
-const adjustment = clamp(Math.abs(strengthDiff) / 100, 0, 0.25);
-
-if (strengthDiff > 0) {
-  homeWin *= (1 + adjustment);
-} else if (strengthDiff < 0) {
-  awayWin *= (1 + adjustment);
 }
 
-  const total = homeWin + draw + awayWin;
+const total = homeWin + draw + awayWin;
 
-  return {
-    home: round((homeWin / total) * 100),
-    draw: round((draw / total) * 100),
-    away: round((awayWin / total) * 100)
-  };
-}
+return {
+  home: round((homeWin / total) * 100),
+  draw: round((draw / total) * 100),
+  away: round((awayWin / total) * 100)
+};
 
 /* =========================
    WINNER PICK
