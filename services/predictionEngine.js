@@ -180,38 +180,7 @@ function predictScore(home, away) {
 
   return bestScore;
 }
-  return result;
-}
-function predictScore(home, away) {
 
-  const xg = calculateExpectedGoals(home, away);
-
-  const possibleScores = [
-    "0-0","1-0","0-1","1-1",
-    "2-0","0-2","2-1","1-2",
-    "2-2","3-1","1-3","3-2",
-    "2-3","3-3","4-1","1-4"
-  ];
-
-  let bestScore = "1-1";
-  let bestValue = 999;
-
-  for (const score of possibleScores) {
-
-    const [h, a] = score.split("-").map(Number);
-
-    const value =
-      Math.abs(h - xg.home) +
-      Math.abs(a - xg.away);
-
-    if (value < bestValue) {
-      bestValue = value;
-      bestScore = score;
-    }
-  }
-
-  return bestScore;
-}
 
 /* =========================
    CONFIDENCE ENGINE
