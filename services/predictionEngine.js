@@ -111,10 +111,10 @@ function calculateExpectedGoals(home, away) {
 
   const diff = home.strength - away.strength;
 
-  homeXG += diff * 0.025;
-  awayXG -= diff * 0.025;
+  homeXG += diff * 0.018;
+  awayXG -= diff * 0.018;
 
-  homeXG += 0.20;
+  homeXG += 0.15;
 
   if (home.failedToScore >= 4) homeXG -= 0.40;
   if (away.failedToScore >= 4) awayXG -= 0.40;
