@@ -30,27 +30,43 @@ function adjustLowQualityMatch(home, away, confidence) {
    1X2 MODEL
 ========================= */
 function build1X2(home, away) {
-  const homeAdv = 1.08;
 
-  const homePower = home.strength * homeAdv;
-  const awayPower = away.strength;
+  const xg = calculateExpectedGoals(home, away);
 
-  const drawFactor = clamp(100 - Math.abs(homePower - awayPower), 10, 60);
+  const diff = xg.home - xg.away;
 
-  let homeProb = homePower / (homePower + awayPower);
-  let awayProb = awayPower / (homePower + awayPower);
+  let homeProb = 33;
+let drawProb = 34;
+let awayProb = 33;
 
-  homeProb *= 100;
-  awayProb *= 100;
+if (diff > 0) {
+  homeProb += diff * 20;
+  awayProb -= diff * 15;
+  drawProb -= diff * 5;
+} else {
+  awayProb += (-diff) * 20;
+  homeProb -= (-diff) * 15;
+  drawProb -= (-diff) * 5;
+}
 
-  const drawProb = drawFactor;
+homeProb = clamp(homeProb, 5, 90);
+drawProb = clamp(drawProb, 5, 40);
+awayProb = clamp(awayProb, 5, 90);
 
-  const total = homeProb + awayProb + drawProb;
+const total = homeProb + drawProb + awayProb;
+
+return {
+  home: round(homeProb * 100 / total),
+  draw: round(drawProb * 100 / total),
+  away: round(awayProb * 100 / total)
+};
+
+  const total = homeProb + drawProb + awayProb;
 
   return {
-    home: round((homeProb / total) * 100),
-    draw: round((drawProb / total) * 100),
-    away: round((awayProb / total) * 100)
+    home: round(homeProb * 100 / total),
+    draw: round(drawProb * 100 / total),
+    away: round(awayProb * 100 / total)
   };
 }
 
@@ -68,31 +84,21 @@ function pickWinner(home, away) {
 }
 
 /* =========================
-   BTTS
-========================= */
-function predictBTTS(home, away) {
-  const attack = (home.avgScored + away.avgScored) / 2;
-  const defense = (home.avgConceded + away.avgConceded) / 2;
-
-  const score = (attack * 0.6) + (defense * 0.4);
-
-  if (score > 2.4) return "YES";
-  return "NO";
-}
-
-/* =========================
    OVER 2.5
 ========================= */
 function predictOver25(home, away) {
-  const expectedGoals =
-    home.avgScored +
-    away.avgScored +
-    (home.avgConceded + away.avgConceded) * 0.5;
 
-  return expectedGoals >= 2.7 ? "OVER 2.5" : "UNDER 2.5";
+  const xg = calculateExpectedGoals(home, away);
+
+  const totalXG = xg.home + xg.away;
+
+  return {
+    prediction: totalXG >= 2.5 ? "OVER 2.5" : "UNDER 2.5",
+    confidence: round(clamp(totalXG / 4, 0, 1) * 100)
+  };
+
 }
 
-/* =========================
 /* =========================
    SCORE ENGINE
 ========================= */
@@ -189,6 +195,22 @@ function predictScore(home, away) {
   return bestScore;
 }
 
+function predictBTTS(home, away) {
+
+  const xg = calculateExpectedGoals(home, away);
+
+  const homeProb = 1 - Math.exp(-xg.home);
+  const awayProb = 1 - Math.exp(-xg.away);
+
+  const probability = homeProb * awayProb;
+
+  return {
+    prediction: probability >= 0.50 ? "YES" : "NO",
+    confidence: round(probability * 100)
+  };
+
+}
+
 
 /* =========================
    CONFIDENCE ENGINE
@@ -276,7 +298,7 @@ console.log(awayStats);
     hg > ag ? homeStats.teamName :
     ag > hg ? awayStats.teamName : "DRAW";
 
-  const btts = (hg > 0 && ag > 0) ? "YES" : "NO";
+  const bttsResult = predictBTTS(homeStats, awayStats);
 
   const over25 = (hg + ag >= 3) ? "OVER 2.5" : "UNDER 2.5";
 
@@ -304,8 +326,8 @@ const htftConfidence = confidence;
 
   probabilities,
 
-  btts,
-  bttsConfidence: 70,
+  btts: bttsResult.prediction,
+bttsConfidence: bttsResult.confidence,
 
   over25,
   over25Confidence: 70,
