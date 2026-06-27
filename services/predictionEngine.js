@@ -33,45 +33,34 @@ function build1X2(home, away) {
 
   const xg = calculateExpectedGoals(home, away);
 
-  const diff = xg.home - xg.away;
+  let homeWin = 0;
+  let draw = 0;
+  let awayWin = 0;
 
-  let homeProb = 33;
-let drawProb = 34;
-let awayProb = 33;
+  for (let h = 0; h <= 5; h++) {
+    for (let a = 0; a <= 5; a++) {
 
-if (diff > 0.60) {
-  homeProb += diff * 24;
-  awayProb -= diff * 18;
-  drawProb -= diff * 6;
+      const probability =
+        poisson(xg.home, h) *
+        poisson(xg.away, a);
 
-} else if (diff < -0.60) {
-  awayProb += (-diff) * 24;
-  homeProb -= (-diff) * 18;
-  drawProb -= (-diff) * 6;
+      if (h > a) {
+        homeWin += probability;
+      } else if (h === a) {
+        draw += probability;
+      } else {
+        awayWin += probability;
+      }
 
-} else {
-  // xG très proches : léger avantage au nul
-  drawProb += 8;
-}
+    }
+  }
 
-homeProb = clamp(homeProb, 5, 90);
-drawProb = clamp(drawProb, 5, 40);
-awayProb = clamp(awayProb, 5, 90);
-
-const total = homeProb + drawProb + awayProb;
-
-return {
-  home: round(homeProb * 100 / total),
-  draw: round(drawProb * 100 / total),
-  away: round(awayProb * 100 / total)
-};
-
-  const total = homeProb + drawProb + awayProb;
+  const total = homeWin + draw + awayWin;
 
   return {
-    home: round(homeProb * 100 / total),
-    draw: round(drawProb * 100 / total),
-    away: round(awayProb * 100 / total)
+    home: round((homeWin / total) * 100),
+    draw: round((draw / total) * 100),
+    away: round((awayWin / total) * 100)
   };
 }
 
@@ -298,19 +287,15 @@ console.log(awayStats);
       model: {}
     };
   }
+   
+const probabilities = build1X2(homeStats, awayStats);
 
-  const winnerPick = pickWinner(homeStats, awayStats);
-  const probabilities = build1X2(homeStats, awayStats);
+const xg = calculateExpectedGoals(homeStats, awayStats);
+const score = predictScore(homeStats, awayStats);
 
-  const xg = calculateExpectedGoals(homeStats, awayStats);
-  const score = predictScore(homeStats, awayStats);
-
-  const [hg, ag] = score.split("-").map(Number);
-
-  const probabilities = build1X2(homeStats, awayStats);
+const [hg, ag] = score.split("-").map(Number);
 
 let finalWinner = "DRAW";
-
 if (
   probabilities.home > probabilities.draw &&
   probabilities.home > probabilities.away
