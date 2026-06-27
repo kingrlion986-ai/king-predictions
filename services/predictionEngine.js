@@ -339,17 +339,14 @@ console.log(awayStats);
   }
    
 const mc = runMonteCarlo(homeStats, awayStats);
+
+console.log(mc);
+
 const probabilities = mc.probabilities;
 
-console.log(mc);
-
 const xg = calculateExpectedGoals(homeStats, awayStats);
-const score = predictScore(homeStats, awayStats);
-console.log(mc);
 
-   const xg = calculateExpectedGoals(homeStats, awayStats);
-   
-const score = predictScore(homeStats, awayStats);
+const score = mc.score;
 
 const [hg, ag] = score.split("-").map(Number);
 
@@ -365,9 +362,14 @@ if (
 ) {
   finalWinner = awayStats.teamName;
 }
-  const bttsResult = predictBTTS(homeStats, awayStats);
+  const bttsResult = {
+  prediction: mc.btts >= 50 ? "YES" : "NO",
+  confidence: mc.btts
+};
 
-  const over25 = (hg + ag >= 3) ? "OVER 2.5" : "UNDER 2.5";
+const over25 = mc.over25 >= 50
+  ? "OVER 2.5"
+  : "UNDER 2.5";
    
   let confidence = getConfidence(xg);
 
