@@ -34,34 +34,34 @@ function build1X2(home, away) {
   const xg = calculateExpectedGoals(home, away);
 
   let homeWin = 0;
-let draw = 0;
-let awayWin = 0;
+  let draw = 0;
+  let awayWin = 0;
 
-for (let h = 0; h <= 5; h++) {
-  for (let a = 0; a <= 5; a++) {
+  for (let h = 0; h <= 5; h++) {
+    for (let a = 0; a <= 5; a++) {
 
-    const probability =
-      poisson(xg.home, h) *
-      poisson(xg.away, a);
+      const probability =
+        poisson(xg.home, h) *
+        poisson(xg.away, a);
 
-    if (h > a) {
-      homeWin += probability;
-    } else if (h === a) {
-      draw += probability;
-    } else {
-      awayWin += probability;
+      if (h > a) {
+        homeWin += probability;
+      } else if (h === a) {
+        draw += probability;
+      } else {
+        awayWin += probability;
+      }
     }
-
   }
+
+  const total = homeWin + draw + awayWin;
+
+  return {
+    home: round((homeWin / total) * 100),
+    draw: round((draw / total) * 100),
+    away: round((awayWin / total) * 100)
+  };
 }
-
-const total = homeWin + draw + awayWin;
-
-return {
-  home: round((homeWin / total) * 100),
-  draw: round((draw / total) * 100),
-  away: round((awayWin / total) * 100)
-};
 
 /* =========================
    WINNER PICK
@@ -216,16 +216,12 @@ function predictBTTS(home, away) {
 /* =========================
    CONFIDENCE ENGINE
 ========================= */
-function getConfidence(home, away, winnerPick) {
-  const diff = Math.abs(home.strength - away.strength);
+function getConfidence(xg) {
+  const diff = Math.abs(xg.home - xg.away);
 
-  let base = 60 + diff * 0.4;
+  let confidence = 60 + (diff * 18);
 
-  if (winnerPick === "DRAW") {
-    base = 55 + diff * 0.2;
-  }
-
-  return clamp(Math.round(base), 55, 92);
+  return clamp(Math.round(confidence), 50, 90);
 }
 
 /* =========================
@@ -309,8 +305,8 @@ if (
   const bttsResult = predictBTTS(homeStats, awayStats);
 
   const over25 = (hg + ag >= 3) ? "OVER 2.5" : "UNDER 2.5";
-
-  let confidence = getConfidence(homeStats, awayStats, finalWinner);
+   
+  let confidence = getConfidence(xg);
 
   confidence = adjustLowQualityMatch(homeStats, awayStats, confidence);
   confidence = clamp(confidence, 50, 92);
