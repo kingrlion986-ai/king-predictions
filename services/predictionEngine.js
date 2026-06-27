@@ -95,6 +95,14 @@ function predictOver25(home, away) {
 
   const xg = calculateExpectedGoals(home, away);
 
+   if (xg.home < 0.5 && xg.away > 0.8) {
+  return "0-1";
+}
+
+if (xg.away < 0.5 && xg.home > 0.8) {
+  return "1-0";
+}
+
   const totalXG = xg.home + xg.away;
 
   return {
