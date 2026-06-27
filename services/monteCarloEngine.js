@@ -1,5 +1,3 @@
-const { simulateMatch } = require("./monteCarloEngine");
-
 function runMonteCarlo(homeXG, awayXG, iterations = 10000) {
 
   let homeWins = 0;
@@ -13,7 +11,6 @@ function runMonteCarlo(homeXG, awayXG, iterations = 10000) {
     const result = simulateMatch(homeXG, awayXG);
 
     const score = `${result.homeGoals}-${result.awayGoals}`;
-
     scoreMap[score] = (scoreMap[score] || 0) + 1;
 
     if (result.homeGoals > result.awayGoals) homeWins++;
@@ -21,14 +18,13 @@ function runMonteCarlo(homeXG, awayXG, iterations = 10000) {
     else awayWins++;
   }
 
-  // trouver score le plus fréquent
   let bestScore = "";
   let bestCount = 0;
 
-  for (const score in scoreMap) {
-    if (scoreMap[score] > bestCount) {
-      bestScore = score;
-      bestCount = scoreMap[score];
+  for (const s in scoreMap) {
+    if (scoreMap[s] > bestCount) {
+      bestScore = s;
+      bestCount = scoreMap[s];
     }
   }
 
@@ -43,6 +39,8 @@ function runMonteCarlo(homeXG, awayXG, iterations = 10000) {
   };
 }
 
-// TEST
-const result = runMonteCarlo(1.8, 0.9, 10000);
-console.log(result);
+module.exports = {
+  randomPoisson,
+  simulateMatch,
+  runMonteCarlo
+};
