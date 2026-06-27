@@ -167,6 +167,61 @@ function poisson(lambda, k) {
   return (Math.exp(-lambda) * Math.pow(lambda, k)) / factorial(k);
 }
 
+function simulatePoisson(lambda) {
+  let L = Math.exp(-lambda);
+  let p = 1;
+  let k = 0;
+
+  do {
+    k++;
+    p *= Math.random();
+  } while (p > L);
+
+  return k - 1;
+}
+
+function runMonteCarlo(home, away, simulations = 10000) {
+  const xg = calculateExpectedGoals(home, away);
+
+  let homeWins = 0;
+  let draws = 0;
+  let awayWins = 0;
+  let btts = 0;
+  let over25 = 0;
+
+  const scores = {};
+
+  for (let i = 0; i < simulations; i++) {
+    const homeGoals = simulatePoisson(xg.home);
+    const awayGoals = simulatePoisson(xg.away);
+
+    const score = `${homeGoals}-${awayGoals}`;
+    scores[score] = (scores[score] || 0) + 1;
+
+    if (homeGoals > awayGoals) homeWins++;
+    else if (homeGoals < awayGoals) awayWins++;
+    else draws++;
+
+    if (homeGoals > 0 && awayGoals > 0) btts++;
+
+    if (homeGoals + awayGoals >= 3) over25++;
+  }
+
+  const bestScore = Object.entries(scores)
+    .sort((a, b) => b[1] - a[1])[0][0];
+
+  return {
+    probabilities: {
+      home: round(homeWins / simulations * 100),
+      draw: round(draws / simulations * 100),
+      away: round(awayWins / simulations * 100)
+    },
+    score: bestScore,
+    btts: round(btts / simulations * 100),
+    over25: round(over25 / simulations * 100)
+  };
+}
+
 function predictScore(home, away) {
 
   const xg = calculateExpectedGoals(home, away);
@@ -285,7 +340,12 @@ console.log(awayStats);
    
 const probabilities = build1X2(homeStats, awayStats);
 
-const xg = calculateExpectedGoals(homeStats, awayStats);
+const mc = runMonteCarlo(homeStats, awayStats);
+
+console.log(mc);
+
+   const xg = calculateExpectedGoals(homeStats, awayStats);
+   
 const score = predictScore(homeStats, awayStats);
 
 const [hg, ag] = score.split("-").map(Number);
