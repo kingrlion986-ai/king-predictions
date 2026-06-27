@@ -127,9 +127,17 @@ function calculateExpectedGoals(home, away) {
   if (away.cleanSheets >= 4) homeXG -= 0.30;
   if (home.cleanSheets >= 4) awayXG -= 0.30;
 
+   // Bonus offensif
+if (home.avgScored >= 1.8) homeXG += 0.20;
+if (away.avgScored >= 1.8) awayXG += 0.20;
+
+// Mauvaise défense
+if (home.avgConceded >= 1.5) awayXG += 0.20;
+if (away.avgConceded >= 1.5) homeXG += 0.20;
+
   homeXG = clamp(homeXG, 0, 4);
   awayXG = clamp(awayXG, 0, 4);
-
+   
   return {
     home: homeXG,
     away: awayXG
