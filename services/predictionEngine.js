@@ -142,8 +142,8 @@ if (away.avgScored >= 1.8) awayXG += 0.20;
 if (home.avgConceded >= 1.5) awayXG += 0.20;
 if (away.avgConceded >= 1.5) homeXG += 0.20;
 
-  homeXG = clamp(homeXG, 0, 4);
-  awayXG = clamp(awayXG, 0, 4);
+  homeXG = clamp(homeXG, 0.15, 4);
+  awayXG = clamp(awayXG, 0.15, 4);
    
   return {
     home: homeXG,
