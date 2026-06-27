@@ -93,8 +93,10 @@ function predictOver25(home, away) {
 }
 
 /* =========================
+/* =========================
    SCORE ENGINE
 ========================= */
+
 function calculateExpectedGoals(home, away) {
 
   let homeXG =
@@ -114,18 +116,71 @@ function calculateExpectedGoals(home, away) {
   homeXG += diff * 0.018;
   awayXG -= diff * 0.018;
 
+  // avantage domicile
   homeXG += 0.15;
 
+  // difficulté à marquer
   if (home.failedToScore >= 4) homeXG -= 0.40;
   if (away.failedToScore >= 4) awayXG -= 0.40;
 
+  // défenses solides
   if (away.cleanSheets >= 4) homeXG -= 0.30;
   if (home.cleanSheets >= 4) awayXG -= 0.30;
 
+  homeXG = clamp(homeXG, 0, 4);
+  awayXG = clamp(awayXG, 0, 4);
+
   return {
-    home: clamp(homeXG, 0, 4),
-    away: clamp(awayXG, 0, 4)
+    home: homeXG,
+    away: awayXG
   };
+}
+
+function factorial(n) {
+  if (n <= 1) return 1;
+
+  let result = 1;
+
+  for (let i = 2; i <= n; i++) {
+    result *= i;
+  }
+
+  return result;
+}
+
+function poisson(lambda, k) {
+  return (Math.exp(-lambda) * Math.pow(lambda, k)) / factorial(k);
+}
+
+function predictScore(home, away) {
+
+  const xg = calculateExpectedGoals(home, away);
+
+  let bestScore = "0-0";
+  let bestProbability = -1;
+
+  for (let homeGoals = 0; homeGoals <= 4; homeGoals++) {
+
+    for (let awayGoals = 0; awayGoals <= 4; awayGoals++) {
+
+      const probability =
+        poisson(xg.home, homeGoals) *
+        poisson(xg.away, awayGoals);
+
+      if (probability > bestProbability) {
+
+        bestProbability = probability;
+        bestScore = `${homeGoals}-${awayGoals}`;
+
+      }
+
+    }
+
+  }
+
+  return bestScore;
+}
+  return result;
 }
 function predictScore(home, away) {
 
