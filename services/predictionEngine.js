@@ -294,10 +294,21 @@ console.log(awayStats);
 
   const [hg, ag] = score.split("-").map(Number);
 
-  const finalWinner =
-    hg > ag ? homeStats.teamName :
-    ag > hg ? awayStats.teamName : "DRAW";
+  const probabilities = build1X2(homeStats, awayStats);
 
+let finalWinner = "DRAW";
+
+if (
+  probabilities.home > probabilities.draw &&
+  probabilities.home > probabilities.away
+) {
+  finalWinner = homeStats.teamName;
+} else if (
+  probabilities.away > probabilities.draw &&
+  probabilities.away > probabilities.home
+) {
+  finalWinner = awayStats.teamName;
+}
   const bttsResult = predictBTTS(homeStats, awayStats);
 
   const over25 = (hg + ag >= 3) ? "OVER 2.5" : "UNDER 2.5";
