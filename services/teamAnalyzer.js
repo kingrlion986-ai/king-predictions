@@ -114,7 +114,7 @@ const recentConceded = [];
 
   for (const [index, match] of matches.entries()) {
      
-     const weight = (15 - index) / 15
+     const weight = (matches.length - index) / matches.length;
      
     const isHome = match.homeTeam.id === team.id;
 
