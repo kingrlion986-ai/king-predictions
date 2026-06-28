@@ -28,7 +28,7 @@ async function analyzeTeam(team) {
     return cached.data;
   }
 
-  const matches = await getTeamRecentMatches(team.id, 10);
+  const matches = await getTeamRecentMatches(team.id, 15);
 
   if (!matches || matches.length === 0) {
     const empty = {
@@ -85,6 +85,10 @@ async function analyzeTeam(team) {
   let goalsFor = 0;
   let goalsAgainst = 0;
 
+  let weightedGoalsFor = 0;
+  let weightedGoalsAgainst = 0;
+  let totalWeight = 0;
+
   let cleanSheets = 0;
   let bttsCount = 0;
   let over25Count = 0;
@@ -108,7 +112,15 @@ const recentConceded = [];
 
   const form = [];
 
-  for (const match of matches) {
+   let totalWeight = 0;
+
+let weightedGoalsFor = 0;
+let weightedGoalsAgainst = 0;
+
+  for (const [index, match] of matches.entries()) {
+     
+     const weight = (15 - index) / 15
+     
     const isHome = match.homeTeam.id === team.id;
 
     const scored = isHome
@@ -118,6 +130,11 @@ const recentConceded = [];
     const conceded = isHome
       ? (match.score?.fullTime?.away ?? 0)
       : (match.score?.fullTime?.home ?? 0);
+
+     totalWeight += weight;
+
+weightedGoalsFor += scored * weight;
+weightedGoalsAgainst += conceded * weight;
 
      recentGoals.push(scored);
 recentConceded.push(conceded);
@@ -167,10 +184,13 @@ if (isHome) {
 
   const matchesCount = matches.length;
 
-  const avgScored = goalsFor / matchesCount;
-  const avgConceded = goalsAgainst / matchesCount;
+const avgScored =
+  totalWeight > 0 ? weightedGoalsFor / totalWeight : 0;
 
-   const homeAttack =
+const avgConceded =
+  totalWeight > 0 ? weightedGoalsAgainst / totalWeight : 0;
+
+const homeAttack =
   homeMatches > 0 ? homeGoals / homeMatches : 0;
 
 const awayAttack =
@@ -182,10 +202,13 @@ const homeDefense =
 const awayDefense =
   awayMatches > 0 ? awayConceded / awayMatches : 0;
 
-  const bttsRate = (bttsCount / matchesCount) * 100;
-  const over25Rate = (over25Count / matchesCount) * 100;
+const bttsRate =
+  matchesCount > 0 ? (bttsCount / matchesCount) * 100 : 0;
 
-  const formPoints = wins * 3 + draws;
+const over25Rate =
+  matchesCount > 0 ? (over25Count / matchesCount) * 100 : 0;
+
+const formPoints = wins * 3 + draws;
 
   /* =========================
      INDICES V17
