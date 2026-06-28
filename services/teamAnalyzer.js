@@ -112,11 +112,6 @@ const recentConceded = [];
 
   const form = [];
 
-   let totalWeight = 0;
-
-let weightedGoalsFor = 0;
-let weightedGoalsAgainst = 0;
-
   for (const [index, match] of matches.entries()) {
      
      const weight = (15 - index) / 15
