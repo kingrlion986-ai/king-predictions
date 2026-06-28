@@ -413,8 +413,8 @@ bttsConfidence: bttsResult.confidence,
 
   correctScore: score,
 
-  htft,
-  htftConfidence
+  htft: mc.htft,
+htftConfidence: confidence
 },
 
 teamStats: {
