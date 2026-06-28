@@ -28,7 +28,7 @@ async function analyzeTeam(team) {
     return cached.data;
   }
 
-  const matches = await getTeamRecentMatches(team.id, 15);
+  const matches = await getTeamRecentMatches(team.id, 25);
 
   if (!matches || matches.length === 0) {
     const empty = {
