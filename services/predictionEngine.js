@@ -191,9 +191,25 @@ function runMonteCarlo(home, away, simulations = 10000) {
 
   const scores = {};
 
+   const htft = {};
+
   for (let i = 0; i < simulations; i++) {
     const homeGoals = simulatePoisson(xg.home);
     const awayGoals = simulatePoisson(xg.away);
+
+    const homeHT = simulatePoisson(xg.home * 0.45);
+    const awayHT = simulatePoisson(xg.away * 0.45);
+
+     let htResult = "X";
+if (homeHT > awayHT) htResult = "1";
+else if (homeHT < awayHT) htResult = "2";
+
+let ftResult = "X";
+if (homeGoals > awayGoals) ftResult = "1";
+else if (homeGoals < awayGoals) ftResult = "2";
+
+const htftKey = `${htResult}/${ftResult}`;
+htft[htftKey] = (htft[htftKey] || 0) + 1;
 
     const score = `${homeGoals}-${awayGoals}`;
     scores[score] = (scores[score] || 0) + 1;
@@ -210,6 +226,9 @@ function runMonteCarlo(home, away, simulations = 10000) {
   const bestScore = Object.entries(scores)
     .sort((a, b) => b[1] - a[1])[0][0];
 
+   const bestHTFT = Object.entries(htft)
+  .sort((a, b) => b[1] - a[1])[0][0];
+
   return {
     probabilities: {
       home: round(homeWins / simulations * 100),
@@ -217,6 +236,7 @@ function runMonteCarlo(home, away, simulations = 10000) {
       away: round(awayWins / simulations * 100)
     },
     score: bestScore,
+     htft: bestHTFT,
     btts: round(btts / simulations * 100),
     over25: round(over25 / simulations * 100)
   };
@@ -375,17 +395,7 @@ const over25 = mc.over25 >= 50
 
   confidence = adjustLowQualityMatch(homeStats, awayStats, confidence);
   confidence = clamp(confidence, 50, 92);
-
-   let htft = "X/X";
-
-if (finalWinner === homeStats.teamName) {
-  htft = "1/1";
-} else if (finalWinner === awayStats.teamName) {
-  htft = "2/2";
-}
-
-const htftConfidence = confidence;
-
+   
   return {
     match: `${homeStats.teamName} vs ${awayStats.teamName}`,
 
