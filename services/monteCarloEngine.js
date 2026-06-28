@@ -1,5 +1,7 @@
 function runMonteCarlo(homeXG, awayXG, iterations = 10000) {
 
+  console.log("RUN MONTE CARLO OK");
+
   let homeWins = 0;
   let draws = 0;
   let awayWins = 0;
