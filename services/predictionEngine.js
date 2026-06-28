@@ -358,7 +358,7 @@ console.log(awayStats);
     };
   }
    
-const mc = runMonteCarlo(homeStats, awayStats);
+runMonteCarlo(homeStats, awayStats, 15000);
 
 console.log(mc);
 
