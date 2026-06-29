@@ -251,29 +251,32 @@ function predictScore(home, away) {
 
   const xg = calculateExpectedGoals(home, away);
 
-  let bestScore = "0-0";
-  let bestProbability = -1;
+  const scores = [];
 
-  for (let homeGoals = 0; homeGoals <= 4; homeGoals++) {
+  for (let homeGoals = 0; homeGoals <= 6; homeGoals++) {
 
-    for (let awayGoals = 0; awayGoals <= 4; awayGoals++) {
+    for (let awayGoals = 0; awayGoals <= 6; awayGoals++) {
 
       const probability =
         poisson(xg.home, homeGoals) *
         poisson(xg.away, awayGoals);
 
-      if (probability > bestProbability) {
-
-        bestProbability = probability;
-        bestScore = `${homeGoals}-${awayGoals}`;
-
-      }
+      scores.push({
+        score: `${homeGoals}-${awayGoals}`,
+        probability: round(probability * 100, 2)
+      });
 
     }
 
   }
 
-  return bestScore;
+  scores.sort((a, b) => b.probability - a.probability);
+
+  return {
+    best: scores[0].score,
+    top3: scores.slice(0, 3)
+  };
+
 }
 
 function predictBTTS(home, away) {
@@ -365,16 +368,17 @@ console.log(awayStats);
    
 const mc = runMonteCarlo(homeStats, awayStats, 15000);
 
-console.log(mc);
-
 const probabilities = mc.probabilities;
 
 const xg = calculateExpectedGoals(homeStats, awayStats);
 
-const score = mc.score;
+// Score exact déterministe
+const scorePrediction = predictScore(homeStats, awayStats);
+
+const score = scorePrediction.best;
 
 const [hg, ag] = score.split("-").map(Number);
-
+   
 let finalWinner = "DRAW";
 if (
   probabilities.home > probabilities.draw &&
@@ -417,6 +421,8 @@ bttsConfidence: bttsResult.confidence,
   over25Confidence: 70,
 
   correctScore: score,
+
+topScores: scorePrediction.top3,
 
   htft: mc.htft,
 htftConfidence: confidence
