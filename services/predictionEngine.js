@@ -107,16 +107,14 @@ if (xg.away < 0.5 && xg.home > 0.8) {
 function calculateExpectedGoals(home, away) {
 
   let homeXG =
-  (home.homeAttack * 0.40) +
-  (away.awayDefense * 0.15) +
-  (home.avgScored * 0.30) +
-  (away.avgConceded * 0.15);
+  1.10 +
+  (home.homeAttack - away.awayDefense) * 0.22 +
+  (home.avgScored - away.avgConceded) * 0.35;
 
-let awayXG =
-  (away.awayAttack * 0.40) +
-  (home.homeDefense * 0.15) +
-  (away.avgScored * 0.30) +
-  (home.avgConceded * 0.15);
+  let awayXG =
+  0.95 +
+  (away.awayAttack - home.homeDefense) * 0.22 +
+  (away.avgScored - home.avgConceded) * 0.35;
    
   const diff = home.strength - away.strength;
 
