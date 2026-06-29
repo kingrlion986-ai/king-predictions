@@ -60,12 +60,19 @@ async function getMatches() {
       m.awayTeam.id
   );
 
-  CACHE.matches = {
-    data: matches,
-    expiresAt: now + MATCHES_TTL
-  };
+  console.log(
+  matches.map(m => ({
+    match: `${m.homeTeam.name} vs ${m.awayTeam.name}`,
+    status: m.status
+  }))
+);
 
-  return matches;
+CACHE.matches = {
+  data: matches,
+  expiresAt: now + MATCHES_TTL
+};
+
+return matches;
 }
 
 /* =========================
