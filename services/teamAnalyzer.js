@@ -209,7 +209,7 @@ const formPoints = wins * 3 + draws;
      INDICES V17
   ========================= */
 
-  const attackIndex = clamp(avgScored * 35, 0, 100);
+  const attackIndex = clamp(avgScored * 30, 0, 100);
   const defenseIndex = clamp((1 - avgConceded / 3) * 100, 0, 100);
 
   const formIndex = (formPoints / (matchesCount * 3)) * 100;
@@ -226,7 +226,7 @@ const strength = clamp(
   0,
   100
 );
-
+   
   const result = {
     teamId: team.id,
     teamName: team.name,
