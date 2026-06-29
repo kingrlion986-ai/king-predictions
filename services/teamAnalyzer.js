@@ -205,8 +205,6 @@ const over25Rate =
 
 const formPoints = wins * 3 + draws;
 
-   const reliability = clamp(matchesCount / 15, 0.4, 1);
-
   /* =========================
      INDICES V17
   ========================= */
