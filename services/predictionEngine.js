@@ -41,15 +41,24 @@ function build1X2(home, away) {
     for (let a = 0; a <= 5; a++) {
 
       const probability =
-        poisson(xg.home, h) *
-        poisson(xg.away, a);
+  poisson(xg.home, h) *
+  poisson(xg.away, a);
 
+const diff = home.strength - away.strength;
+
+let adjustedProbability = probability;
+
+if (h > a) {
+  adjustedProbability *= Math.max(0.5, 1 + diff / 250);
+} else if (h < a) {
+  adjustedProbability *= Math.max(0.5, 1 - diff / 250);
+}
       if (h > a) {
-        homeWin += probability;
-      } else if (h === a) {
-        draw += probability;
-      } else {
-        awayWin += probability;
+  homeWin += adjustedProbability;
+} else if (h === a) {
+  draw += probability;
+} else {
+  awayWin += adjustedProbability;
       }
     }
   }
