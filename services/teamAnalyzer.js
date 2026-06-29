@@ -215,9 +215,8 @@ const formPoints = wins * 3 + draws;
      INDICES V17
   ========================= */
 
-  const attackIndex = clamp(avgScored * 30, 0, 100);
-  const defenseIndex = clamp((1 - avgConceded / 3) * 100, 0, 100);
-
+  const attackIndex = clamp((avgScored / 3) * 100, 0, 100);
+  const defenseIndex = clamp(((3 - avgConceded) / 3) * 100, 0, 100);
   const formIndex = (formPoints / (matchesCount * 3)) * 100;
 
 const reliability = clamp(matchesCount / 15, 0.4, 1);
