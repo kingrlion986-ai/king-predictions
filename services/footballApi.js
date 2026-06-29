@@ -113,6 +113,21 @@ async function getTeamRecentMatches(teamId, limit = 5) {
   }))
 );
 
+   console.log({
+  teamId,
+  requested: limit,
+  received: matches.length
+});
+
+   console.log(
+  matches.map(m => ({
+    date: m.utcDate,
+    home: m.homeTeam.name,
+    away: m.awayTeam.name,
+    score: `${m.score.fullTime.home}-${m.score.fullTime.away}`
+  }))
+);
+
   return matches;
 }
 
