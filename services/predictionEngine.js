@@ -106,6 +106,23 @@ if (xg.away < 0.5 && xg.home > 0.8) {
 
 function calculateExpectedGoals(home, away) {
 
+   console.log({
+  home: home.teamName,
+  away: away.teamName,
+
+  homeAttack: home.homeAttack,
+  awayAttack: away.awayAttack,
+
+  homeDefense: home.homeDefense,
+  awayDefense: away.awayDefense,
+
+  homeAvg: home.avgScored,
+  awayAvg: away.avgScored,
+
+  homeStrength: home.strength,
+  awayStrength: away.strength
+});
+   
   let homeXG =
   1.10 +
   (home.homeAttack - away.awayDefense) * 0.22 +
