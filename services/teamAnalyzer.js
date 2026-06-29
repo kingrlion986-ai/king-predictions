@@ -227,7 +227,9 @@ const strength = clamp(
   100
 );
 
-   console.log({
+   console.log("===== DEBUG STRENGTH =====");
+
+console.log({
   team: team.name,
   attackIndex,
   defenseIndex,
