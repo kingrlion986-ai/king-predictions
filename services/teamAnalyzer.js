@@ -226,6 +226,16 @@ const strength = clamp(
   0,
   100
 );
+
+   console.log({
+  team: team.name,
+  attackIndex,
+  defenseIndex,
+  formIndex,
+  reliability,
+  rawStrength,
+  strength
+});
    
   const result = {
     teamId: team.id,
