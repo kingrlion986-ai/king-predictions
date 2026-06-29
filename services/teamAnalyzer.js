@@ -205,6 +205,8 @@ const over25Rate =
 
 const formPoints = wins * 3 + draws;
 
+   const reliability = clamp(matchesCount / 15, 0.4, 1);
+
   /* =========================
      INDICES V17
   ========================= */
@@ -214,16 +216,18 @@ const formPoints = wins * 3 + draws;
 
   const formIndex = (formPoints / (matchesCount * 3)) * 100;
 
-  const strength = clamp(
-    round(
-      (attackIndex * 0.35) +
-      (defenseIndex * 0.35) +
-      (formIndex * 0.30),
-      1
-    ),
-    0,
-    100
-  );
+const reliability = clamp(matchesCount / 15, 0.4, 1);
+
+const rawStrength =
+  (attackIndex * 0.35) +
+  (defenseIndex * 0.35) +
+  (formIndex * 0.30);
+
+const strength = clamp(
+  round(rawStrength * reliability, 1),
+  0,
+  100
+);
 
   const result = {
     teamId: team.id,
