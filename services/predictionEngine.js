@@ -142,6 +142,13 @@ if (away.avgConceded >= 1.5) homeXG += 0.10;
    
   homeXG = clamp(homeXG, 0.20, 3.50);
   awayXG = clamp(awayXG, 0.20, 3.50);
+
+   console.log("NEW XG MODEL", {
+  home: home.teamName,
+  away: away.teamName,
+  homeXG,
+  awayXG
+});
    
   return {
     home: homeXG,
