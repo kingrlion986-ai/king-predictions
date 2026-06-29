@@ -30,6 +30,12 @@ async function analyzeTeam(team) {
 
   const matches = await getTeamRecentMatches(team.id, 25);
 
+   if (matches.length < 8) {
+  console.log(
+    `${team.name}: seulement ${matches.length} matchs récupérés`
+  );
+   }
+
   if (!matches || matches.length === 0) {
     const empty = {
   teamId: team.id,
