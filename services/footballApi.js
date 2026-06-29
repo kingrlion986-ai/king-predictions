@@ -98,6 +98,14 @@ async function getTeamRecentMatches(teamId, limit = 5) {
     expiresAt: now + TEAM_MATCHES_TTL
   };
 
+   console.log(
+  matches.slice(0, 5).map(m => ({
+    home: m.homeTeam.name,
+    away: m.awayTeam.name,
+    status: m.status
+  }))
+);
+
   return matches;
 }
 
