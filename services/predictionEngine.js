@@ -107,43 +107,43 @@ if (xg.away < 0.5 && xg.home > 0.8) {
 function calculateExpectedGoals(home, away) {
 
   let homeXG =
-    (home.homeAttack * 0.45) +
-    (away.awayDefense * 0.20) +
-    (home.avgScored * 0.25) +
-    (away.avgConceded * 0.15);
+  (home.homeAttack * 0.40) +
+  (away.awayDefense * 0.15) +
+  (home.avgScored * 0.30) +
+  (away.avgConceded * 0.15);
 
-  let awayXG =
-    (away.awayAttack * 0.45) +
-    (home.homeDefense * 0.20) +
-    (away.avgScored * 0.25) +
-    (home.avgConceded * 0.15);
-
+let awayXG =
+  (away.awayAttack * 0.40) +
+  (home.homeDefense * 0.15) +
+  (away.avgScored * 0.30) +
+  (home.avgConceded * 0.15);
+   
   const diff = home.strength - away.strength;
 
-  homeXG += diff * 0.018;
-  awayXG -= diff * 0.018;
+  homeXG += diff * 0.012;
+  awayXG -= diff * 0.012;
 
   // avantage domicile
-  homeXG += 0.15;
+  homeXG += 0.20;
 
   // difficulté à marquer
-  if (home.failedToScore >= 4) homeXG -= 0.40;
-  if (away.failedToScore >= 4) awayXG -= 0.40;
-
+  if (home.failedToScore >= 4) homeXG -= 0.25;
+  if (away.failedToScore >= 4) awayXG -= 0.25;
+   
   // défenses solides
-  if (away.cleanSheets >= 4) homeXG -= 0.30;
-  if (home.cleanSheets >= 4) awayXG -= 0.30;
+  if (away.cleanSheets >= 4) homeXG -= 0.20;
+  if (home.cleanSheets >= 4) awayXG -= 0.20;
 
    // Bonus offensif
-if (home.avgScored >= 1.8) homeXG += 0.20;
-if (away.avgScored >= 1.8) awayXG += 0.20;
+if (home.avgScored >= 1.8) homeXG += 0.10;
+if (away.avgScored >= 1.8) awayXG += 0.10;
 
 // Mauvaise défense
-if (home.avgConceded >= 1.5) awayXG += 0.20;
-if (away.avgConceded >= 1.5) homeXG += 0.20;
-
-  homeXG = clamp(homeXG, 0.15, 4);
-  awayXG = clamp(awayXG, 0.15, 4);
+if (home.avgConceded >= 1.5) awayXG += 0.10;
+if (away.avgConceded >= 1.5) homeXG += 0.10;
+   
+  homeXG = clamp(homeXG, 0.20, 3.50);
+  awayXG = clamp(awayXG, 0.20, 3.50);
    
   return {
     home: homeXG,
