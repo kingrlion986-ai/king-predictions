@@ -91,6 +91,9 @@ async function getTeamRecentMatches(teamId, limit = 5) {
     `/teams/${teamId}/matches?status=FINISHED&limit=${limit}`
   );
 
+   console.log("TEAM API RESPONSE");
+console.log(JSON.stringify(data, null, 2));
+
   const matches = (data?.matches || []).filter(
     m =>
       m &&
