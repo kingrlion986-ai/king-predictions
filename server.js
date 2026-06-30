@@ -680,10 +680,6 @@ app.get("/stats", (req, res) => {
   });
 });
 
-app.get("/", (req, res) => {
-  res.send("KING PREDICTIONS V16 ⚽🔥 SERVER OK");
-});
-
 app.get("/debug", async (req, res) => {
   try {
     const matches = await getMatches();
@@ -701,6 +697,7 @@ app.get("/debug", async (req, res) => {
       error: err.message
     });
   }
+});
 
 app.listen(PORT, () => {
   console.log("KING PREDICTIONS V16 RUNNING ⚽🔥");
