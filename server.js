@@ -84,6 +84,12 @@ app.get("/free", async (req, res) => {
   try {
     const matches = await getMatches();
 
+    matches.forEach(match => {
+  console.log(
+    `${match.homeTeam.name} (${match.homeTeam.id}) vs ${match.awayTeam.name} (${match.awayTeam.id})`
+  );
+});
+
 const futureMatches = matches.filter(
   m => m.status === "TIMED"
 );
