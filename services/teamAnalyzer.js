@@ -28,7 +28,7 @@ async function analyzeTeam(team) {
     return cached.data;
   }
 
-  const matches = await getTeamRecentMatches(team.id, 25);
+  const matches = await getTeamRecentMatches(team.id, 50);
 
    if (matches.length < 8) {
   console.log(
