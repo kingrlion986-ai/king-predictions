@@ -78,7 +78,7 @@ return matches;
 /* =========================
    TEAM RECENT MATCHES
 ========================= */
-async function getTeamRecentMatches(teamId, limit = 5) {
+async function getTeamRecentMatches(teamId, limit = 50) {
   const now = Date.now();
   const cacheKey = `${teamId}_${limit}`;
 
