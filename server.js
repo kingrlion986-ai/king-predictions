@@ -684,6 +684,24 @@ app.get("/", (req, res) => {
   res.send("KING PREDICTIONS V16 ⚽🔥 SERVER OK");
 });
 
+app.get("/debug", async (req, res) => {
+  try {
+    const matches = await getMatches();
+
+    const result = matches.map(m => ({
+      home: m.homeTeam.name,
+      homeId: m.homeTeam.id,
+      away: m.awayTeam.name,
+      awayId: m.awayTeam.id
+    }));
+
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({
+      error: err.message
+    });
+  }
+
 app.listen(PORT, () => {
   console.log("KING PREDICTIONS V16 RUNNING ⚽🔥");
 });
