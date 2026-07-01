@@ -15,6 +15,7 @@ function round(v, d = 2) {
    XG MODEL
 ========================= */
 function calculateExpectedGoals(home, away) {
+
   let homeXG =
     1.1 +
     (home.homeAttack - away.awayDefense) * 0.22 +
@@ -28,9 +29,21 @@ function calculateExpectedGoals(home, away) {
     (away.avgScored - home.avgConceded) * 0.35 -
     (home.strength - away.strength) * 0.012;
 
+  homeXG = clamp(homeXG, 0.2, 3.5);
+  awayXG = clamp(awayXG, 0.2, 3.5);
+
+  console.log({
+    home: home.teamName,
+    away: away.teamName,
+    homeStrength: home.strength,
+    awayStrength: away.strength,
+    homeXG,
+    awayXG
+  });
+
   return {
-    home: clamp(homeXG, 0.2, 3.5),
-    away: clamp(awayXG, 0.2, 3.5)
+    home: homeXG,
+    away: awayXG
   };
 }
 
