@@ -1,4 +1,4 @@
-const { getTeamRecentMatches } = require("./footballService");
+const { getTeamRecentMatches } = require("./footballApi");
 
 /* =========================
    CACHE
