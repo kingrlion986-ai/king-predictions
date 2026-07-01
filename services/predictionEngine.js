@@ -273,14 +273,13 @@ htft[htftKey] = (htft[htftKey] || 0) + 1;
   };
 }
 
-function predictScore(home, away) {
+function predictScore(home, away, winner) {
 
   const xg = calculateExpectedGoals(home, away);
 
-  const scores = [];
+  let scores = [];
 
   for (let homeGoals = 0; homeGoals <= 6; homeGoals++) {
-
     for (let awayGoals = 0; awayGoals <= 6; awayGoals++) {
 
       const probability =
@@ -293,7 +292,24 @@ function predictScore(home, away) {
       });
 
     }
+  }
 
+  // FILTRE selon le vainqueur
+  if (winner === home.teamName) {
+    scores = scores.filter(s => {
+      const [h, a] = s.score.split("-").map(Number);
+      return h > a;
+    });
+  } else if (winner === away.teamName) {
+    scores = scores.filter(s => {
+      const [h, a] = s.score.split("-").map(Number);
+      return a > h;
+    });
+  } else {
+    scores = scores.filter(s => {
+      const [h, a] = s.score.split("-").map(Number);
+      return h === a;
+    });
   }
 
   scores.sort((a, b) => b.probability - a.probability);
@@ -302,7 +318,6 @@ function predictScore(home, away) {
     best: scores[0].score,
     top3: scores.slice(0, 3)
   };
-
 }
 
 function predictBTTS(home, away) {
@@ -398,14 +413,27 @@ const probabilities = mc.probabilities;
 
 const xg = calculateExpectedGoals(homeStats, awayStats);
 
-// Score exact déterministe
-const scorePrediction = predictScore(homeStats, awayStats);
+let finalWinner = "DRAW";
+
+if (
+  probabilities.home > probabilities.draw &&
+  probabilities.home > probabilities.away
+) {
+  finalWinner = homeStats.teamName;
+} else if (
+  probabilities.away > probabilities.draw &&
+  probabilities.away > probabilities.home
+) {
+  finalWinner = awayStats.teamName;
+}
+
+const scorePrediction = predictScore(
+  homeStats,
+  awayStats,
+  finalWinner
+);
 
 const score = scorePrediction.best;
-
-const [hg, ag] = score.split("-").map(Number);
-   
-let finalWinner = "DRAW";
 if (
   probabilities.home > probabilities.draw &&
   probabilities.home > probabilities.away
