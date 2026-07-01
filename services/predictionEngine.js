@@ -277,7 +277,7 @@ function predictScore(home, away, winner) {
 
   const xg = calculateExpectedGoals(home, away);
 
-  let scores = [];
+  const scores = {};
 
   for (let homeGoals = 0; homeGoals <= 6; homeGoals++) {
     for (let awayGoals = 0; awayGoals <= 6; awayGoals++) {
@@ -355,10 +355,7 @@ async function analyzeMatch(match) {
   const homeStats = await analyzeTeam(match.homeTeam);
   const awayStats = await analyzeTeam(match.awayTeam);
 
-   console.log(homeStats);
-console.log(awayStats);
-
-     /* =========================
+  /* =========================
      VIP PRO MAX ENGINE
   ========================= */
 
@@ -378,9 +375,9 @@ console.log(awayStats);
 
   let riskLevel = "MEDIUM";
 
-  if (vipScore >= 25) riskLevel = "HIGH CONFIDENCE";
   if (vipScore >= 40) riskLevel = "SAFE BET";
-  if (vipScore < 15) riskLevel = "RISKY";
+  else if (vipScore >= 25) riskLevel = "HIGH CONFIDENCE";
+  else if (vipScore < 15) riskLevel = "RISKY";
 
   const valuePick =
     vipScore >= 35
@@ -389,7 +386,10 @@ console.log(awayStats);
       ? "NORMAL BET"
       : "AVOID";
 
-  // fallback sécurité
+  /* =========================
+     SAFETY FALLBACK
+  ========================= */
+
   if (!homeStats || !awayStats) {
     return {
       match: `${match.homeTeam?.name} vs ${match.awayTeam?.name}`,
@@ -400,97 +400,118 @@ console.log(awayStats);
         bttsConfidence: 50,
         over25: "UNDER 2.5",
         over25Confidence: 50,
-        correctScore: "0-0"
+        correctScore: "0-0",
+        topScores: [],
+        htft: "X/X",
+        htftConfidence: 50
       },
       teamStats: null,
       model: {}
     };
   }
-   
-const mc = runMonteCarlo(homeStats, awayStats, 15000);
 
-const probabilities = mc.probabilities;
+  /* =========================
+     MONTE CARLO CORE
+  ========================= */
 
-const xg = calculateExpectedGoals(homeStats, awayStats);
+  const mc = runMonteCarlo(homeStats, awayStats, 15000);
+  const probabilities = mc.probabilities;
 
-let finalWinner = "DRAW";
+  const xg = calculateExpectedGoals(homeStats, awayStats);
 
-if (
-  probabilities.home > probabilities.draw &&
-  probabilities.home > probabilities.away
-) {
-  finalWinner = homeStats.teamName;
-} else if (
-  probabilities.away > probabilities.draw &&
-  probabilities.away > probabilities.home
-) {
-  finalWinner = awayStats.teamName;
-}
+  /* =========================
+     WINNER (STABLE LOGIC)
+  ========================= */
 
-const scorePrediction = predictScore(
-  homeStats,
-  awayStats,
-  finalWinner
-);
+  let finalWinner = "DRAW";
 
-const score = scorePrediction.best;
-if (
-  probabilities.home > probabilities.draw &&
-  probabilities.home > probabilities.away
-) {
-  finalWinner = homeStats.teamName;
-} else if (
-  probabilities.away > probabilities.draw &&
-  probabilities.away > probabilities.home
-) {
-  finalWinner = awayStats.teamName;
-}
+  if (
+    probabilities.home >= 55 &&
+    probabilities.home > probabilities.away
+  ) {
+    finalWinner = homeStats.teamName;
+  } else if (
+    probabilities.away >= 55 &&
+    probabilities.away > probabilities.home
+  ) {
+    finalWinner = awayStats.teamName;
+  }
+
+  /* =========================
+     SCORE PREDICTION
+  ========================= */
+
+  const scorePrediction = predictScore(
+    homeStats,
+    awayStats,
+    finalWinner
+  );
+
+  const score = scorePrediction.best || "0-0";
+
+  /* =========================
+     BTTS
+  ========================= */
+
   const bttsResult = {
-  prediction: mc.btts >= 50 ? "YES" : "NO",
-  confidence: mc.btts
-};
+    prediction: mc.btts >= 50 ? "YES" : "NO",
+    confidence: mc.btts
+  };
 
-const over25 = mc.over25 >= 50
-  ? "OVER 2.5"
-  : "UNDER 2.5";
-   
+  /* =========================
+     OVER / UNDER 2.5
+  ========================= */
+
+  const over25 =
+    mc.over25 >= 50 ? "OVER 2.5" : "UNDER 2.5";
+
+  /* =========================
+     CONFIDENCE ENGINE
+  ========================= */
+
   let confidence = getConfidence(xg);
-
-  confidence = adjustLowQualityMatch(homeStats, awayStats, confidence);
+  confidence = adjustLowQualityMatch(
+    homeStats,
+    awayStats,
+    confidence
+  );
   confidence = clamp(confidence, 50, 92);
-   
+
+  /* =========================
+     RETURN FINAL OBJECT
+  ========================= */
+
   return {
     match: `${homeStats.teamName} vs ${awayStats.teamName}`,
 
     predictions: {
-  winner: finalWinner,
-  winnerConfidence: confidence,
+      winner: finalWinner,
+      winnerConfidence: confidence,
 
-  probabilities,
+      probabilities,
 
-  btts: bttsResult.prediction,
-bttsConfidence: bttsResult.confidence,
+      btts: bttsResult.prediction,
+      bttsConfidence: bttsResult.confidence,
 
-  over25,
-  over25Confidence: 70,
+      over25,
+      over25Confidence: 70,
 
-  correctScore: score,
+      correctScore: score,
+      topScores: scorePrediction.top3,
 
-topScores: scorePrediction.top3,
+      htft: mc.htft,
+      htftConfidence: confidence
+    },
 
-  htft: mc.htft,
-htftConfidence: confidence
-},
-
-teamStats: {
+    teamStats: {
       home: homeStats,
       away: awayStats
     },
 
     model: {
       expectedGoals: round(xg.home + xg.away, 2),
-expectedHomeGoals: round(xg.home, 2),
-expectedAwayGoals: round(xg.away, 2),
+      expectedHomeGoals: round(xg.home, 2),
+      expectedAwayGoals: round(xg.away, 2),
       winnerDiff: homeStats.strength - awayStats.strength
     }
   };
