@@ -50,6 +50,11 @@ function buildStats(matches, teamId) {
   const isHome = match.homeTeam.id === teamId;
 
   const gf = isHome
+matches.forEach(match => {
+
+  const isHome = match.homeTeam.id === teamId;
+
+  const gf = isHome
     ? safe(match.score.fullTime.home)
     : safe(match.score.fullTime.away);
 
@@ -77,7 +82,7 @@ function buildStats(matches, teamId) {
   if (ga === 0) cleanSheets++;
   if (gf === 0) failedToScore++;
 
-  /* ✅ AJOUT ICI */
+  // ✅ OVER / UNDER + BTTS DOIT ÊTRE ICI
   const totalGoals = gf + ga;
 
   if (totalGoals >= 3) over25++;
