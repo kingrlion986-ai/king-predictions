@@ -231,6 +231,9 @@ async function analyzeTeam(team) {
 
   };
 
+   console.log("===== TEAM ANALYZER =====");
+   console.log(result);
+
   CACHE.set(team.id, result);
 
   return result;
