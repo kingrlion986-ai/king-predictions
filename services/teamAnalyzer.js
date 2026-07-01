@@ -1,14 +1,9 @@
-const { getTeamRecentMatches } = require("./footballApi");
-
-/* =========================
-   CACHE
-========================= */
-const CACHE = {};
-const TTL = 15 * 60 * 1000;
+const { analyzeTeam } = require("./teamAnalyzer");
 
 /* =========================
    HELPERS
 ========================= */
+
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
@@ -17,282 +12,322 @@ function round(value, decimals = 2) {
   return Number(value.toFixed(decimals));
 }
 
+/* évite les matchs trop faibles qui explosent les scores */
+function adjustLowQualityMatch(home, away, confidence) {
+  const avgStrength = (home.strength + away.strength) / 2;
+
+  if (avgStrength < 15) confidence -= 12;
+  else if (avgStrength < 25) confidence -= 8;
+  else if (avgStrength < 40) confidence -= 4;
+
+  return confidence;
+}
+
 /* =========================
-   MAIN ANALYSIS
+   POISSON
 ========================= */
-async function analyzeTeam(team) {
-  const now = Date.now();
-  const cached = CACHE[team.id];
 
-  if (cached && cached.expiresAt > now) {
-    return cached.data;
-  }
+function factorial(n) {
+  if (n <= 1) return 1;
+  let r = 1;
+  for (let i = 2; i <= n; i++) r *= i;
+  return r;
+}
 
-  const matches = await getTeamRecentMatches(team.id, 50);
+function poisson(lambda, k) {
+  return (Math.exp(-lambda) * Math.pow(lambda, k)) / factorial(k);
+}
 
-   if (matches.length < 8) {
-  console.log(
-    `${team.name}: seulement ${matches.length} matchs récupérés`
-  );
-   }
+/* =========================
+   EXPECTED GOALS MODEL
+========================= */
 
-  if (!matches || matches.length === 0) {
-    const empty = {
-  teamId: team.id,
-  teamName: team.name,
-  matchesAnalyzed: 0,
+function calculateExpectedGoals(home, away) {
+  let homeXG =
+    1.05 +
+    (home.homeAttack - away.awayDefense) * 0.18 +
+    (home.avgScored - away.avgConceded) * 0.28;
 
-  wins: 0,
-  draws: 0,
-  losses: 0,
+  let awayXG =
+    0.95 +
+    (away.awayAttack - home.homeDefense) * 0.18 +
+    (away.avgScored - home.avgConceded) * 0.28;
 
-  avgScored: 0,
-  avgConceded: 0,
+  const diff = home.strength - away.strength;
 
-  homeAttack: 0,
-  awayAttack: 0,
+  homeXG += diff * 0.01;
+  awayXG -= diff * 0.01;
 
-  homeDefense: 0,
-  awayDefense: 0,
+  // home advantage
+  homeXG += 0.18;
 
-  homeWins: 0,
-  awayWins: 0,
+  // corrections réalistes
+  if (home.failedToScore >= 4) homeXG -= 0.2;
+  if (away.failedToScore >= 4) awayXG -= 0.2;
 
-  failedToScore: 0,
+  if (home.cleanSheets >= 4) awayXG -= 0.15;
+  if (away.cleanSheets >= 4) homeXG -= 0.15;
 
-  recentGoals: [],
-  recentConceded: [],
+  homeXG = clamp(homeXG, 0.25, 2.8);
+  awayXG = clamp(awayXG, 0.25, 2.8);
 
-  cleanSheets: 0,
-  bttsRate: 0,
-  over25Rate: 0,
+  return { home: homeXG, away: awayXG };
+}
 
-  formPoints: 0,
+/* =========================
+   MONTE CARLO (STABLE)
+========================= */
 
-  strength: 50,
-  attackIndex: 50,
-  defenseIndex: 50,
+function simulatePoisson(lambda) {
+  let L = Math.exp(-lambda);
+  let p = 1;
+  let k = 0;
 
-  recentForm: []
-};
+  do {
+    k++;
+    p *= Math.random();
+  } while (p > L);
 
-    CACHE[team.id] = {
-      data: empty,
-      expiresAt: now + TTL
-    };
+  return k - 1;
+}
 
-    return empty;
-  }
+function runMonteCarlo(home, away, simulations = 12000) {
+  const xg = calculateExpectedGoals(home, away);
 
-  let wins = 0;
+  let homeWins = 0;
   let draws = 0;
-  let losses = 0;
+  let awayWins = 0;
+  let btts = 0;
+  let over25 = 0;
 
-  let goalsFor = 0;
-  let goalsAgainst = 0;
+  const scores = {};
+  const htft = {};
 
-  let weightedGoalsFor = 0;
-  let weightedGoalsAgainst = 0;
-  let totalWeight = 0;
+  for (let i = 0; i < simulations; i++) {
+    const hg = simulatePoisson(xg.home);
+    const ag = simulatePoisson(xg.away);
 
-  let cleanSheets = 0;
-  let bttsCount = 0;
-  let over25Count = 0;
+    const hgHT = simulatePoisson(xg.home * 0.45);
+    const agHT = simulatePoisson(xg.away * 0.45);
 
-   let failedToScore = 0;
+    const ht = hgHT > agHT ? "1" : hgHT < agHT ? "2" : "X";
+    const ft = hg > ag ? "1" : hg < ag ? "2" : "X";
 
-let homeWins = 0;
-let awayWins = 0;
+    const key = `${ht}/${ft}`;
+    htft[key] = (htft[key] || 0) + 1;
 
-let homeGoals = 0;
-let awayGoals = 0;
+    const score = `${hg}-${ag}`;
+    scores[score] = (scores[score] || 0) + 1;
 
-let homeConceded = 0;
-let awayConceded = 0;
+    if (hg > ag) homeWins++;
+    else if (ag > hg) awayWins++;
+    else draws++;
 
-let homeMatches = 0;
-let awayMatches = 0;
-
-const recentGoals = [];
-const recentConceded = [];
-
-  const form = [];
-
-  for (const [index, match] of matches.entries()) {
-     
-     const weight = (matches.length - index) / matches.length;
-     
-    const isHome = match.homeTeam.id === team.id;
-
-    const scored = isHome
-      ? (match.score?.fullTime?.home ?? 0)
-      : (match.score?.fullTime?.away ?? 0);
-
-    const conceded = isHome
-      ? (match.score?.fullTime?.away ?? 0)
-      : (match.score?.fullTime?.home ?? 0);
-
-     totalWeight += weight;
-
-weightedGoalsFor += scored * weight;
-weightedGoalsAgainst += conceded * weight;
-
-     recentGoals.push(scored);
-recentConceded.push(conceded);
-
-if (scored === 0) {
-  failedToScore++;
-}
-
-if (isHome) {
-  homeMatches++;
-  homeGoals += scored;
-  homeConceded += conceded;
-
-  if (scored > conceded) {
-    homeWins++;
+    if (hg > 0 && ag > 0) btts++;
+    if (hg + ag >= 3) over25++;
   }
 
-} else {
+  const bestScore = Object.entries(scores).sort((a, b) => b[1] - a[1])[0][0];
+  const bestHTFT = Object.entries(htft).sort((a, b) => b[1] - a[1])[0][0];
 
-  awayMatches++;
-  awayGoals += scored;
-  awayConceded += conceded;
-
-  if (scored > conceded) {
-    awayWins++;
-  }
+  return {
+    probabilities: {
+      home: round((homeWins / simulations) * 100),
+      draw: round((draws / simulations) * 100),
+      away: round((awayWins / simulations) * 100)
+    },
+    score: bestScore,
+    htft: bestHTFT,
+    btts: round((btts / simulations) * 100),
+    over25: round((over25 / simulations) * 100)
+  };
 }
 
-    goalsFor += scored;
-    goalsAgainst += conceded;
+/* =========================
+   SCORE PREDICTION
+========================= */
 
-    if (scored > conceded) {
-      wins++;
-      form.push("W");
-    } else if (scored === conceded) {
-      draws++;
-      form.push("D");
-    } else {
-      losses++;
-      form.push("L");
+function predictScore(home, away, winner) {
+  const xg = calculateExpectedGoals(home, away);
+
+  const scores = [];
+
+  for (let h = 0; h <= 5; h++) {
+    for (let a = 0; a <= 5; a++) {
+      const p = poisson(xg.home, h) * poisson(xg.away, a);
+
+      scores.push({
+        score: `${h}-${a}`,
+        probability: round(p * 100, 3)
+      });
     }
-
-    if (scored > 0 && conceded > 0) bttsCount++;
-    if (scored + conceded >= 3) over25Count++;
-    if (conceded === 0) cleanSheets++;
   }
 
-  const matchesCount = matches.length;
+  let filtered = scores;
 
-const avgScored =
-  totalWeight > 0 ? weightedGoalsFor / totalWeight : 0;
+  if (winner === home.teamName) {
+    filtered = scores.filter(s => {
+      const [h, a] = s.score.split("-").map(Number);
+      return h > a;
+    });
+  } else if (winner === away.teamName) {
+    filtered = scores.filter(s => {
+      const [h, a] = s.score.split("-").map(Number);
+      return a > h;
+    });
+  } else {
+    filtered = scores.filter(s => {
+      const [h, a] = s.score.split("-").map(Number);
+      return h === a;
+    });
+  }
 
-const avgConceded =
-  totalWeight > 0 ? weightedGoalsAgainst / totalWeight : 0;
+  filtered.sort((a, b) => b.probability - a.probability);
 
-const homeAttack =
-  homeMatches > 0 ? homeGoals / homeMatches : 0;
+  return {
+    best: filtered[0]?.score || "0-0",
+    top3: filtered.slice(0, 3)
+  };
+}
 
-const awayAttack =
-  awayMatches > 0 ? awayGoals / awayMatches : 0;
+/* =========================
+   BTTS
+========================= */
 
-const homeDefense =
-  homeMatches > 0 ? homeConceded / homeMatches : 0;
+function predictBTTS(home, away) {
+  const xg = calculateExpectedGoals(home, away);
 
-const awayDefense =
-  awayMatches > 0 ? awayConceded / awayMatches : 0;
+  const homeP = 1 - Math.exp(-xg.home);
+  const awayP = 1 - Math.exp(-xg.away);
 
-const bttsRate =
-  matchesCount > 0 ? (bttsCount / matchesCount) * 100 : 0;
+  const prob = homeP * awayP;
 
-const over25Rate =
-  matchesCount > 0 ? (over25Count / matchesCount) * 100 : 0;
+  return {
+    prediction: prob >= 0.52 ? "YES" : "NO",
+    confidence: round(prob * 100)
+  };
+}
 
-const formPoints = wins * 3 + draws;
+/* =========================
+   CONFIDENCE ENGINE
+========================= */
+
+function getConfidence(xg) {
+  const diff = Math.abs(xg.home - xg.away);
+  return clamp(Math.round(58 + diff * 16), 50, 88);
+}
+
+/* =========================
+   MAIN ENGINE
+========================= */
+
+async function analyzeMatch(match) {
+  const homeStats = await analyzeTeam(match.homeTeam);
+  const awayStats = await analyzeTeam(match.awayTeam);
+
+  if (!homeStats || !awayStats) {
+    return {
+      match: `${match.homeTeam?.name} vs ${match.awayTeam?.name}`,
+      predictions: {
+        winner: "DRAW",
+        winnerConfidence: 50,
+        btts: "NO",
+        bttsConfidence: 50,
+        over25: "UNDER 2.5",
+        over25Confidence: 50,
+        correctScore: "0-0",
+        topScores: [],
+        htft: "X/X",
+        htftConfidence: 50,
+        probabilities: { home: 33, draw: 34, away: 33 }
+      },
+      teamStats: null,
+      model: {}
+    };
+  }
 
   /* =========================
-     INDICES V17
+     MONTE CARLO
   ========================= */
 
-  const attackIndex = clamp((avgScored / 3) * 100, 0, 100);
-  const defenseIndex = clamp(((3 - avgConceded) / 3) * 100, 0, 100);
-  const formIndex = (formPoints / (matchesCount * 3)) * 100;
+  const mc = runMonteCarlo(homeStats, awayStats, 12000);
+  const probabilities = mc.probabilities;
 
-const reliability = clamp(matchesCount / 15, 0.4, 1);
+  const xg = calculateExpectedGoals(homeStats, awayStats);
 
-const rawStrength =
-  (attackIndex * 0.35) +
-  (defenseIndex * 0.35) +
-  (formIndex * 0.30);
+  /* =========================
+     WINNER STABLE
+  ========================= */
 
-const strength = clamp(
-  round(rawStrength * reliability, 1),
-  0,
-  100
-);
+  let finalWinner = "DRAW";
 
-   console.log("===== DEBUG STRENGTH =====");
+  const max = Math.max(probabilities.home, probabilities.draw, probabilities.away);
 
-console.log({
-  team: team.name,
-  attackIndex,
-  defenseIndex,
-  formIndex,
-  reliability,
-  rawStrength,
-  strength
-});
-   
-  const result = {
-    teamId: team.id,
-    teamName: team.name,
+  if (probabilities.home === max && probabilities.home >= 52) {
+    finalWinner = homeStats.teamName;
+  } else if (probabilities.away === max && probabilities.away >= 52) {
+    finalWinner = awayStats.teamName;
+  }
 
-    matchesAnalyzed: matchesCount,
+  const winnerConfidence = max;
 
-    wins,
-    draws,
-    losses,
+  /* =========================
+     SCORE
+  ========================= */
 
-    avgScored: round(avgScored, 2),
-    avgConceded: round(avgConceded, 2),
+  const scorePrediction = predictScore(homeStats, awayStats, finalWinner);
 
-     homeAttack: round(homeAttack, 2),
-awayAttack: round(awayAttack, 2),
+  /* =========================
+     BTTS + OVER
+  ========================= */
 
-homeDefense: round(homeDefense, 2),
-awayDefense: round(awayDefense, 2),
+  const btts = predictBTTS(homeStats, awayStats);
 
-homeWins,
-awayWins,
+  const over25 = mc.over25 >= 53 ? "OVER 2.5" : "UNDER 2.5";
 
-failedToScore,
+  /* =========================
+     CONFIDENCE FINAL
+  ========================= */
 
-recentGoals: recentGoals.slice(0, 5),
-recentConceded: recentConceded.slice(0, 5),
+  let confidence = getConfidence(xg);
+  confidence = adjustLowQualityMatch(homeStats, awayStats, confidence);
+  confidence = clamp(confidence, 50, 88);
 
-    cleanSheets,
-    bttsRate: round(bttsRate, 1),
-    over25Rate: round(over25Rate, 1),
+  return {
+    match: `${homeStats.teamName} vs ${awayStats.teamName}`,
 
-    formPoints,
+    predictions: {
+      winner: finalWinner,
+      winnerConfidence,
 
-    attackIndex: round(attackIndex, 1),
-    defenseIndex: round(defenseIndex, 1),
+      probabilities,
 
-    strength,
+      btts: btts.prediction,
+      bttsConfidence: btts.confidence,
 
-    recentForm: form.slice(0, 5)
+      over25,
+      over25Confidence: mc.over25,
+
+      correctScore: scorePrediction.best,
+      topScores: scorePrediction.top3,
+
+      htft: mc.htft,
+      htftConfidence: confidence
+    },
+
+    teamStats: {
+      home: homeStats,
+      away: awayStats
+    },
+
+    model: {
+      expectedGoals: round(xg.home + xg.away, 2),
+      expectedHomeGoals: round(xg.home, 2),
+      expectedAwayGoals: round(xg.away, 2)
+    }
   };
-
-  CACHE[team.id] = {
-    data: result,
-    expiresAt: now + TTL
-  };
-
-  return result;
 }
 
 module.exports = {
-  analyzeTeam
+  analyzeMatch
 };
