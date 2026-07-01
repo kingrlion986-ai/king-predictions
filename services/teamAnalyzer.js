@@ -47,74 +47,46 @@ function buildStats(matches, teamId) {
 
   matches.forEach(match => {
 
-    const isHome = match.homeTeam.id === teamId;
+  const isHome = match.homeTeam.id === teamId;
 
-    const gf = isHome
-      ? safe(match.score.fullTime.home)
-      : safe(match.score.fullTime.away);
+  const gf = isHome
+    ? safe(match.score.fullTime.home)
+    : safe(match.score.fullTime.away);
 
-    const ga = isHome
-      ? safe(match.score.fullTime.away)
-      : safe(match.score.fullTime.home);
+  const ga = isHome
+    ? safe(match.score.fullTime.away)
+    : safe(match.score.fullTime.home);
 
-    scored += gf;
-    conceded += ga;
+  scored += gf;
+  conceded += ga;
 
-    if (isHome) {
-      homeGames++;
-      homeScored += gf;
-      homeConceded += ga;
-    } else {
-      awayGames++;
-      awayScored += gf;
-      awayConceded += ga;
-    }
+  if (isHome) {
+    homeGames++;
+    homeScored += gf;
+    homeConceded += ga;
+  } else {
+    awayGames++;
+    awayScored += gf;
+    awayConceded += ga;
+  }
 
-    if (gf > ga) wins++;
-    else if (gf === ga) draws++;
-    else losses++;
+  if (gf > ga) wins++;
+  else if (gf === ga) draws++;
+  else losses++;
 
-    if (ga === 0) cleanSheets++;
-    if (gf === 0) failedToScore++;
+  if (ga === 0) cleanSheets++;
+  if (gf === 0) failedToScore++;
 
-  });
+  /* ✅ AJOUT ICI */
+  const totalGoals = gf + ga;
 
-   const totalGoals = gf + ga;
+  if (totalGoals >= 3) over25++;
+  else under25++;
 
-if (totalGoals >= 3) over25++;
-else under25++;
+  if (gf > 0 && ga > 0) btts++;
 
-if (gf > 0 && ga > 0) btts++;
-
-  const played = matches.length || 1;
-
-  return {
-
-    played,
-
-    wins,
-    draws,
-    losses,
-
-    cleanSheets,
-    failedToScore,
-
-     over25Rate: round((over25 / played) * 100),
-    under25Rate: round((under25 / played) * 100),
-    bttsRate: round((btts / played) * 100),
-
-    avgScored: round(scored / played),
-    avgConceded: round(conceded / played),
-
-    homeAttack: round(homeScored / Math.max(homeGames,1)),
-    awayAttack: round(awayScored / Math.max(awayGames,1)),
-
-    homeDefense: round(homeConceded / Math.max(homeGames,1)),
-    awayDefense: round(awayConceded / Math.max(awayGames,1))
-
-  };
-
-}
+});
+   
 /* =========================
    FORM + STRENGTH VIP
 ========================= */
