@@ -355,36 +355,110 @@ async function analyzeMatch(match) {
   const homeStats = await analyzeTeam(match.homeTeam);
   const awayStats = await analyzeTeam(match.awayTeam);
 
-  /* =========================
-     VIP PRO MAX ENGINE
-  ========================= */
+  if (!homeStats || !awayStats) {
+    return {
+      match: `${match.homeTeam?.name} vs ${match.awayTeam?.name}`,
+      predictions: {
+        winner: "DRAW",
+        winnerConfidence: 50,
+        btts: "NO",
+        bttsConfidence: 50,
+        over25: "UNDER 2.5",
+        over25Confidence: 50,
+        correctScore: "0-0",
+        topScores: [],
+        htft: "X/X",
+        htftConfidence: 50,
+        probabilities: { home: 33, draw: 34, away: 33 }
+      },
+      teamStats: { home: homeStats, away: awayStats },
+      model: {}
+    };
+  }
 
-  const strengthDiff =
-    Math.abs(homeStats.strength - awayStats.strength);
+  // =========================
+  // MONTE CARLO
+  // =========================
+  const mc = runMonteCarlo(homeStats, awayStats, 15000);
+  const probabilities = mc.probabilities;
 
-  const goalIndex =
-    (homeStats.avgScored + awayStats.avgScored) -
-    (homeStats.avgConceded + awayStats.avgConceded);
+  // =========================
+  // WINNER (UNE SEULE LOGIQUE)
+  // =========================
+  let finalWinner = "DRAW";
 
-  let vipScore =
-    (strengthDiff * 1.2) +
-    (goalIndex * 2.5) +
-    (homeStats.formPoints + awayStats.formPoints);
+  const maxProb = Math.max(
+    probabilities.home,
+    probabilities.draw,
+    probabilities.away
+  );
 
-  vipScore = round(vipScore, 1);
+  if (maxProb === probabilities.home && probabilities.home >= 50) {
+    finalWinner = homeStats.teamName;
+  } else if (maxProb === probabilities.away && probabilities.away >= 50) {
+    finalWinner = awayStats.teamName;
+  }
 
-  let riskLevel = "MEDIUM";
+  const winnerConfidence = maxProb;
 
-  if (vipScore >= 40) riskLevel = "SAFE BET";
-  else if (vipScore >= 25) riskLevel = "HIGH CONFIDENCE";
-  else if (vipScore < 15) riskLevel = "RISKY";
+  // =========================
+  // SCORE (APRÈS WINNER UNIQUEMENT)
+  // =========================
+  const scorePrediction = predictScore(homeStats, awayStats, finalWinner);
+  const score = scorePrediction.best || "0-0";
 
-  const valuePick =
-    vipScore >= 35
-      ? "STRONG BET"
-      : vipScore >= 20
-      ? "NORMAL BET"
-      : "AVOID";
+  // =========================
+  // BTTS + OVER
+  // =========================
+  const bttsResult = predictBTTS(homeStats, awayStats);
+
+  const over25 =
+    mc.over25 >= 55 ? "OVER 2.5" : "UNDER 2.5";
+
+  // =========================
+  // CONFIDENCE FINAL (STABLE)
+  // =========================
+  let confidence = getConfidence(
+    calculateExpectedGoals(homeStats, awayStats)
+  );
+
+  confidence = adjustLowQualityMatch(homeStats, awayStats, confidence);
+  confidence = clamp(confidence, 50, 90);
+
+  return {
+    match: `${homeStats.teamName} vs ${awayStats.teamName}`,
+
+    predictions: {
+      winner: finalWinner,
+      winnerConfidence,
+
+      probabilities,
+
+      btts: bttsResult.prediction,
+      bttsConfidence: bttsResult.confidence,
+
+      over25,
+      over25Confidence: mc.over25,
+
+      correctScore: score,
+      topScores: scorePrediction.top3,
+
+      htft: mc.htft,
+      htftConfidence: 60
+    },
+
+    teamStats: {
+      home: homeStats,
+      away: awayStats
+    },
+
+    model: {
+      expectedGoals: round(mc.probabilities.home + mc.probabilities.away, 2),
+      expectedHomeGoals: round(homeStats.avgScored, 2),
+      expectedAwayGoals: round(awayStats.avgScored, 2)
+    }
+  };
+}
 
   /* =========================
      SAFETY FALLBACK
