@@ -41,6 +41,10 @@ function buildStats(matches, teamId) {
   let cleanSheets = 0;
   let failedToScore = 0;
 
+  let over25 = 0;
+  let under25 = 0;
+  let btts = 0;
+
   matches.forEach(match => {
 
     const isHome = match.homeTeam.id === teamId;
@@ -75,6 +79,13 @@ function buildStats(matches, teamId) {
 
   });
 
+   const totalGoals = gf + ga;
+
+if (totalGoals >= 3) over25++;
+else under25++;
+
+if (gf > 0 && ga > 0) btts++;
+
   const played = matches.length || 1;
 
   return {
@@ -87,6 +98,10 @@ function buildStats(matches, teamId) {
 
     cleanSheets,
     failedToScore,
+
+     over25Rate: round((over25 / played) * 100),
+    under25Rate: round((under25 / played) * 100),
+    bttsRate: round((btts / played) * 100),
 
     avgScored: round(scored / played),
     avgConceded: round(conceded / played),
