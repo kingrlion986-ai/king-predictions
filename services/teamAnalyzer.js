@@ -6,126 +6,236 @@ const { getTeamRecentMatches } = require("./footballApi");
 const CACHE = new Map();
 
 /* =========================
-   SAFE NUMBER
+   HELPERS
 ========================= */
+
 function safe(n) {
   return typeof n === "number" && !isNaN(n) ? n : 0;
 }
 
-/* =========================
-   FORM ANALYSIS
-========================= */
-function computeForm(matches) {
-  let points = 0;
-
-  matches.forEach(m => {
-    const home = m.score?.fullTime?.home ?? 0;
-    const away = m.score?.fullTime?.away ?? 0;
-
-    if (home > away) points += 3;
-    else if (home === away) points += 1;
-  });
-
-  return matches.length ? points / (matches.length * 3) : 0.5;
+function round(n) {
+  return Number(n.toFixed(2));
 }
 
 /* =========================
-   ATTACK / DEFENSE
+   TEAM STATS
 ========================= */
-function computeStats(matches, teamId) {
+
+function buildStats(matches, teamId) {
+
   let scored = 0;
   let conceded = 0;
 
-  matches.forEach(m => {
-    const isHome = m.homeTeam.id === teamId;
+  let homeScored = 0;
+  let homeConceded = 0;
+  let awayScored = 0;
+  let awayConceded = 0;
 
-    const goalsFor = isHome
-      ? safe(m.score?.fullTime?.home)
-      : safe(m.score?.fullTime?.away);
+  let homeGames = 0;
+  let awayGames = 0;
 
-    const goalsAgainst = isHome
-      ? safe(m.score?.fullTime?.away)
-      : safe(m.score?.fullTime?.home);
+  let wins = 0;
+  let draws = 0;
+  let losses = 0;
 
-    scored += goalsFor;
-    conceded += goalsAgainst;
+  let cleanSheets = 0;
+  let failedToScore = 0;
+
+  matches.forEach(match => {
+
+    const isHome = match.homeTeam.id === teamId;
+
+    const gf = isHome
+      ? safe(match.score.fullTime.home)
+      : safe(match.score.fullTime.away);
+
+    const ga = isHome
+      ? safe(match.score.fullTime.away)
+      : safe(match.score.fullTime.home);
+
+    scored += gf;
+    conceded += ga;
+
+    if (isHome) {
+      homeGames++;
+      homeScored += gf;
+      homeConceded += ga;
+    } else {
+      awayGames++;
+      awayScored += gf;
+      awayConceded += ga;
+    }
+
+    if (gf > ga) wins++;
+    else if (gf === ga) draws++;
+    else losses++;
+
+    if (ga === 0) cleanSheets++;
+    if (gf === 0) failedToScore++;
+
   });
 
   const played = matches.length || 1;
 
   return {
-    avgScored: scored / played,
-    avgConceded: conceded / played
-  };
-}
 
+    played,
+
+    wins,
+    draws,
+    losses,
+
+    cleanSheets,
+    failedToScore,
+
+    avgScored: round(scored / played),
+    avgConceded: round(conceded / played),
+
+    homeAttack: round(homeScored / Math.max(homeGames,1)),
+    awayAttack: round(awayScored / Math.max(awayGames,1)),
+
+    homeDefense: round(homeConceded / Math.max(homeGames,1)),
+    awayDefense: round(awayConceded / Math.max(awayGames,1))
+
+  };
+
+}
 /* =========================
-   STRENGTH ENGINE VIP
+   FORM + STRENGTH VIP
 ========================= */
-function computeStrength(stats, form) {
-  const attack = stats.avgScored * 35;
-  const defense = (2 - stats.avgConceded) * 30;
-  const formBonus = form * 35;
 
-  const raw = attack + defense + formBonus;
+function computeStrength(stats) {
 
-  return {
-    rawStrength: raw,
-    strength: Math.min(100, Math.max(10, raw))
-  };
+  const attackIndex =
+    stats.avgScored * 25;
+
+  const defenseIndex =
+    (2 - stats.avgConceded) * 20;
+
+  const homeBonus =
+    stats.homeAttack * 8;
+
+  const awayBonus =
+    stats.awayAttack * 8;
+
+  const cleanSheetBonus =
+    stats.cleanSheets * 2;
+
+  const formIndex =
+    (
+      stats.wins * 3 +
+      stats.draws
+    ) / Math.max(stats.played * 3, 1) * 30;
+
+  let strength =
+    attackIndex +
+    defenseIndex +
+    homeBonus +
+    awayBonus +
+    cleanSheetBonus +
+    formIndex;
+
+  strength = Math.max(10, Math.min(100, strength));
+
+  return Number(strength.toFixed(1));
 }
 
+function computeReliability(stats) {
+
+  let reliability =
+    stats.played / 8;
+
+  reliability = Math.max(
+    0.30,
+    Math.min(1, reliability)
+  );
+
+  return Number(reliability.toFixed(2));
+}
 /* =========================
    MAIN ANALYZER
 ========================= */
-async function analyzeTeam(team) {
-  const cacheKey = team.id;
 
-  if (CACHE.has(cacheKey)) {
-    return CACHE.get(cacheKey);
+async function analyzeTeam(team) {
+
+  if (CACHE.has(team.id)) {
+    return CACHE.get(team.id);
   }
 
   const matches = await getTeamRecentMatches(team.id, 8);
 
-  if (!matches || matches.length < 2) {
+  if (!matches || matches.length === 0) {
+
     const fallback = {
       teamName: team.name,
+      teamId: team.id,
+
       strength: 50,
       rawStrength: 50,
+      reliability: 0.30,
+
       avgScored: 1,
       avgConceded: 1,
-      formPoints: 0.5,
-      reliability: 0.2
+
+      homeAttack: 1,
+      awayAttack: 1,
+
+      homeDefense: 1,
+      awayDefense: 1,
+
+      wins: 0,
+      draws: 0,
+      losses: 0,
+
+      cleanSheets: 0,
+      failedToScore: 0,
+
+      formPoints: 0
     };
 
-    CACHE.set(cacheKey, fallback);
+    CACHE.set(team.id, fallback);
     return fallback;
   }
 
-  const form = computeForm(matches);
-  const stats = computeStats(matches, team.id);
-  const strength = computeStrength(stats, form);
+  const stats = buildStats(matches, team.id);
 
   const result = {
+
     teamName: team.name,
     teamId: team.id,
+
+    strength: computeStrength(stats),
+    rawStrength: computeStrength(stats),
+
+    reliability: computeReliability(stats),
 
     avgScored: stats.avgScored,
     avgConceded: stats.avgConceded,
 
-    formPoints: form,
-    reliability: matches.length / 8,
+    homeAttack: stats.homeAttack,
+    awayAttack: stats.awayAttack,
 
-    ...strength
+    homeDefense: stats.homeDefense,
+    awayDefense: stats.awayDefense,
+
+    wins: stats.wins,
+    draws: stats.draws,
+    losses: stats.losses,
+
+    cleanSheets: stats.cleanSheets,
+    failedToScore: stats.failedToScore,
+
+    formPoints:
+      (stats.wins * 3 + stats.draws) /
+      (stats.played * 3)
+
   };
 
-  CACHE.set(cacheKey, result);
-  return result;
-}
+  CACHE.set(team.id, result);
 
-/* =========================
-   EXPORT FIX IMPORTANT
-========================= */
+  return result;
+
+}
 module.exports = {
   analyzeTeam
 };
