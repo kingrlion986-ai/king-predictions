@@ -47,6 +47,20 @@ function poisson(l, k) {
   return (Math.exp(-l) * Math.pow(l, k)) / factorial(k);
 }
 
+function simulatePoisson(lambda) {
+  const L = Math.exp(-lambda);
+
+  let p = 1;
+  let k = 0;
+
+  do {
+    k++;
+    p *= Math.random();
+  } while (p > L);
+
+  return k - 1;
+}
+
 /* =========================
    MONTE CARLO
 ========================= */
@@ -62,12 +76,9 @@ function runMonteCarlo(home, away, sims = 10000) {
   const scores = {};
 
   for (let i = 0; i < sims; i++) {
-    const hg = Math.round(xg.home);
-    const ag = Math.round(xg.away);
-
-    const homeGoals = hg;
-    const awayGoals = ag;
-
+    const homeGoals = simulatePoisson(xg.home);
+    const awayGoals = simulatePoisson(xg.away);
+     
     const key = `${homeGoals}-${awayGoals}`;
     scores[key] = (scores[key] || 0) + 1;
 
@@ -178,7 +189,9 @@ async function analyzeMatch(match) {
   if (mc.probabilities.home === max && max >= 55) winner = home.teamName;
   if (mc.probabilities.away === max && max >= 55) winner = away.teamName;
 
-  const score = predictScore(home, away, winner).best;
+  const scorePrediction = predictScore(home, away, winner);
+
+const score = scorePrediction.best;
 
   const btts = predictBTTS(home, away);
 
@@ -198,7 +211,7 @@ async function analyzeMatch(match) {
       over25Confidence: mc.over25,
 
       correctScore: score,
-      topScores: predictScore(home, away, winner).top3,
+      topScores: scorePrediction.top3,
 
       htft: "X/X",
       htftConfidence: 60
@@ -209,9 +222,20 @@ async function analyzeMatch(match) {
     model: {
       expectedGoals: round(xg.home + xg.away, 2),
       expectedHomeGoals: round(xg.home, 2),
-      expectedAwayGoals: round(xg.away, 2)
+      expectedAwayGoals: round(xg.away, 2),
+
+      homeStrength: home.strength,
+      awayStrength: away.strength,
+
+      reliability: round(
+        ((home.reliability || 0.5) +
+         (away.reliability || 0.5)) / 2,
+        2
+      )
     }
   };
 }
 
-module.exports = { analyzeMatch };
+module.exports = {
+  analyzeMatch
+};
