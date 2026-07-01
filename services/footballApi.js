@@ -88,23 +88,27 @@ async function getTeamRecentMatches(teamId, limit = 50) {
   }
 
   const data = await apiGet(
-    `/teams/${teamId}/matches?status=FINISHED&limit=${limit}`
+    `/teams/${teamId}/matches?status=FINISHED`
   );
 
    console.log("TEAM API RESPONSE");
 console.log(JSON.stringify(data, null, 2));
 
   const matches = (data?.matches || []).filter(
-    m =>
-      m &&
-      m.homeTeam &&
-      m.awayTeam &&
-      m.score &&
-      m.score.fullTime
-  );
+  m =>
+    m &&
+    m.homeTeam &&
+    m.awayTeam &&
+    m.score &&
+    m.score.fullTime
+);
 
+const recentMatches = matches
+  .sort((a, b) => new Date(b.utcDate) - new Date(a.utcDate))
+  .slice(0, limit);
+   
   CACHE.teamRecentMatches[cacheKey] = {
-    data: matches,
+    data: recentMatches,
     expiresAt: now + TEAM_MATCHES_TTL
   };
 
@@ -131,7 +135,7 @@ console.log(JSON.stringify(data, null, 2));
   }))
 );
 
-  return matches;
+  return recentMatches;
 }
 
 /* =========================
