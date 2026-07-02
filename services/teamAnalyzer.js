@@ -23,6 +23,8 @@ function round(n) {
 
 function buildStats(matches, teamId) {
 
+function buildStats(matches, teamId) {
+
   let scored = 0;
   let conceded = 0;
 
@@ -47,50 +49,71 @@ function buildStats(matches, teamId) {
 
   matches.forEach(match => {
 
-  const isHome = match.homeTeam.id === teamId;
+    const isHome = match.homeTeam.id === teamId;
 
-  const gf = isHome
-matches.forEach(match => {
+    const gf = isHome
+      ? safe(match.score.fullTime.home)
+      : safe(match.score.fullTime.away);
 
-  const isHome = match.homeTeam.id === teamId;
+    const ga = isHome
+      ? safe(match.score.fullTime.away)
+      : safe(match.score.fullTime.home);
 
-  const gf = isHome
-    ? safe(match.score.fullTime.home)
-    : safe(match.score.fullTime.away);
+    scored += gf;
+    conceded += ga;
 
-  const ga = isHome
-    ? safe(match.score.fullTime.away)
-    : safe(match.score.fullTime.home);
+    if (isHome) {
+      homeGames++;
+      homeScored += gf;
+      homeConceded += ga;
+    } else {
+      awayGames++;
+      awayScored += gf;
+      awayConceded += ga;
+    }
 
-  scored += gf;
-  conceded += ga;
+    if (gf > ga) wins++;
+    else if (gf === ga) draws++;
+    else losses++;
 
-  if (isHome) {
-    homeGames++;
-    homeScored += gf;
-    homeConceded += ga;
-  } else {
-    awayGames++;
-    awayScored += gf;
-    awayConceded += ga;
-  }
+    if (ga === 0) cleanSheets++;
+    if (gf === 0) failedToScore++;
 
-  if (gf > ga) wins++;
-  else if (gf === ga) draws++;
-  else losses++;
+    const totalGoals = gf + ga;
 
-  if (ga === 0) cleanSheets++;
-  if (gf === 0) failedToScore++;
+    if (totalGoals >= 3) over25++;
+    else under25++;
 
-  // ✅ OVER / UNDER + BTTS DOIT ÊTRE ICI
-  const totalGoals = gf + ga;
+    if (gf > 0 && ga > 0) btts++;
 
-  if (totalGoals >= 3) over25++;
-  else under25++;
+  });
 
-  if (gf > 0 && ga > 0) btts++;
+  const played = matches.length || 1;
 
-});
+  return {
+    played,
+
+    wins,
+    draws,
+    losses,
+
+    cleanSheets,
+    failedToScore,
+
+    over25Rate: round((over25 / played) * 100),
+    under25Rate: round((under25 / played) * 100),
+    bttsRate: round((btts / played) * 100),
+
+    avgScored: round(scored / played),
+    avgConceded: round(conceded / played),
+
+    homeAttack: round(homeScored / Math.max(homeGames, 1)),
+    awayAttack: round(awayScored / Math.max(awayGames, 1)),
+
+    homeDefense: round(homeConceded / Math.max(homeGames, 1)),
+    awayDefense: round(awayConceded / Math.max(awayGames, 1))
+  };
+}
    
 /* =========================
    FORM + STRENGTH VIP
@@ -216,6 +239,10 @@ async function analyzeTeam(team) {
 
     cleanSheets: stats.cleanSheets,
     failedToScore: stats.failedToScore,
+
+    over25Rate: stats.over25Rate,
+    under25Rate: stats.under25Rate,
+    bttsRate: stats.bttsRate,
 
     formPoints:
       (stats.wins * 3 + stats.draws) /
