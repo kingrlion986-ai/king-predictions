@@ -22,9 +22,7 @@ function round(n) {
 ========================= */
 
 function buildStats(matches, teamId) {
-
-function buildStats(matches, teamId) {
-
+  
   let scored = 0;
   let conceded = 0;
 
