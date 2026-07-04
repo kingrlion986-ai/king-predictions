@@ -57,7 +57,7 @@ async function rankMatches(matches) {
 function rankOver25Matches(matches) {
   return rankMatches(matches).sort(
     (a, b) =>
-      b.predictions.over25Confidence -
+      (b.predictions?.over25Confidence || 50) -
       a.predictions.over25Confidence
   );
 }
@@ -65,7 +65,7 @@ function rankOver25Matches(matches) {
 function rankBTTSMatches(matches) {
   return rankMatches(matches).sort(
     (a, b) =>
-      b.predictions.bttsConfidence -
+      (b.predictions?.bttsConfidence || 50) -
       a.predictions.bttsConfidence
   );
 }
@@ -73,7 +73,7 @@ function rankBTTSMatches(matches) {
 function rankScoreMatches(matches) {
   return rankMatches(matches).sort(
     (a, b) =>
-      b.model.expectedGoals -
+      (b.model?.expectedGoals || 0) -
       a.model.expectedGoals
   );
 }
@@ -81,7 +81,7 @@ function rankScoreMatches(matches) {
 function rankHTFTMatches(matches) {
   return rankMatches(matches).sort(
     (a, b) =>
-      b.predictions.htftConfidence -
+      (b.predictions?.htftConfidence || 50) -
       a.predictions.htftConfidence
   );
 }
