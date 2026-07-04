@@ -8,6 +8,7 @@ const path = require("path");
 
 const { getMatches } = require("./services/footballApi");
 const { analyzeMatch } = require("./services/predictionEngine");
+const { rankMatches } = require("./services/rankingEngine");
 
 const app = express();
 app.use(cors());
@@ -167,15 +168,13 @@ const futureMatches = matches.filter(
   m => m.status === "TIMED"
 );
 
-const selected = futureMatches.slice(
+const analyses = await rankMatches(futureMatches);
+
+const selected = analyses.slice(
   0,
   SETTINGS.maxVIP_1X2
 );
-
-const analyses = await Promise.all(
-  selected.map(analyzeMatch)
-);
-    const result = analyses
+    const result = selected
       .map(a => ({
         match: a.match,
         pick: a.predictions.winner,
@@ -207,23 +206,21 @@ const futureMatches = matches.filter(
   m => m.status === "TIMED"
 );
 
-const selected = futureMatches.slice(
+const analyses = await rankMatches(futureMatches);
+
+const selected = analyses.slice(
   0,
   SETTINGS.maxVIP_1X2
 );
 
-const analyses = await Promise.all(
-  selected.map(analyzeMatch)
-);
-
-    const result = analyses.map(a => ({
-      match: a.match,
-      market: a.predictions.over25,
-      confidence: a.predictions.over25Confidence,
-      expectedGoals: a.model.expectedGoals,
-      homeOver25Rate: a.teamStats.home.over25Rate,
-      awayOver25Rate: a.teamStats.away.over25Rate
-    }));
+    const result = selected.map(a => ({
+  match: a.match,
+  market: a.predictions.over25,
+  confidence: a.predictions.over25Confidence,
+  expectedGoals: a.model.expectedGoals,
+  homeOver25Rate: a.teamStats.home.over25Rate,
+  awayOver25Rate: a.teamStats.away.over25Rate
+}));
 
     res.json(result);
   } catch (err) {
@@ -243,22 +240,20 @@ const futureMatches = matches.filter(
   m => m.status === "TIMED"
 );
 
-const selected = futureMatches.slice(
+const analyses = await rankMatches(futureMatches);
+
+const selected = analyses.slice(
   0,
   SETTINGS.maxVIP_1X2
 );
 
-const analyses = await Promise.all(
-  selected.map(analyzeMatch)
-);
-
-    const result = analyses.map(a => ({
-      match: a.match,
-      pick: a.predictions.btts,
-      confidence: a.predictions.bttsConfidence,
-      homeBTTSRate: a.teamStats.home.bttsRate,
-      awayBTTSRate: a.teamStats.away.bttsRate
-    }));
+    const result = selected.map(a => ({
+  match: a.match,
+  pick: a.predictions.btts,
+  confidence: a.predictions.bttsConfidence,
+  homeBTTSRate: a.teamStats.home.bttsRate,
+  awayBTTSRate: a.teamStats.away.bttsRate
+}));
 
     res.json(result);
   } catch (err) {
@@ -278,21 +273,19 @@ const futureMatches = matches.filter(
   m => m.status === "TIMED"
 );
 
-const selected = futureMatches.slice(
+const analyses = await rankMatches(futureMatches);
+
+const selected = analyses.slice(
   0,
   SETTINGS.maxVIP_1X2
 );
 
-const analyses = await Promise.all(
-  selected.map(analyzeMatch)
-);
-
-    const result = analyses.map(a => ({
-      match: a.match,
-      score: a.predictions.correctScore,
-      expectedHomeGoals: a.model.expectedHomeGoals,
-      expectedAwayGoals: a.model.expectedAwayGoals
-    }));
+    const result = selected.map(a => ({
+  match: a.match,
+  score: a.predictions.correctScore,
+  expectedHomeGoals: a.model.expectedHomeGoals,
+  expectedAwayGoals: a.model.expectedAwayGoals
+}));
 
     res.json(result);
   } catch (err) {
