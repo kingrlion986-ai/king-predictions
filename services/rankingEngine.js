@@ -2,26 +2,33 @@ const { analyzeMatch } = require("./predictionEngine");
 
 function calculateRankingScore(match) {
 
+  const home = match.teamStats.home;
+  const away = match.teamStats.away;
+
   let score = 0;
 
-  // Confiance 1X2
-  score += match.predictions.winnerConfidence * 0.45;
-
-  // Fiabilité des statistiques
-  score +=
-    (match.teamStats.home.reliability * 100) * 0.20;
-
-  score +=
-    (match.teamStats.away.reliability * 100) * 0.20;
+  // Confiance du marché 1X2
+  score += match.predictions.winnerConfidence * 0.30;
 
   // Différence de niveau
-  const strengthGap =
-    Math.abs(
-      match.teamStats.home.strength -
-      match.teamStats.away.strength
-    );
+  score += Math.abs(home.strength - away.strength) * 0.20;
 
-  score += strengthGap * 0.15;
+  // Forme récente
+  score += home.formPoints * 100 * 0.10;
+  score += away.formPoints * 100 * 0.10;
+
+  // Fiabilité
+  score += home.reliability * 100 * 0.10;
+  score += away.reliability * 100 * 0.10;
+
+  // Puissance offensive
+  score += (home.avgScored + away.avgScored) * 4;
+
+  // Solidité défensive
+  score += (home.cleanSheets + away.cleanSheets);
+
+  // Bonus si les deux équipes marquent souvent
+  score += (home.bttsRate + away.bttsRate) / 20;
 
   return Number(score.toFixed(2));
 }
