@@ -54,6 +54,42 @@ async function rankMatches(matches) {
 
 }
 
+function rankOver25Matches(matches) {
+  return rankMatches(matches).sort(
+    (a, b) =>
+      b.predictions.over25Confidence -
+      a.predictions.over25Confidence
+  );
+}
+
+function rankBTTSMatches(matches) {
+  return rankMatches(matches).sort(
+    (a, b) =>
+      b.predictions.bttsConfidence -
+      a.predictions.bttsConfidence
+  );
+}
+
+function rankScoreMatches(matches) {
+  return rankMatches(matches).sort(
+    (a, b) =>
+      b.model.expectedGoals -
+      a.model.expectedGoals
+  );
+}
+
+function rankHTFTMatches(matches) {
+  return rankMatches(matches).sort(
+    (a, b) =>
+      b.predictions.htftConfidence -
+      a.predictions.htftConfidence
+  );
+}
+
 module.exports = {
-  rankMatches
+  rankMatches,
+  rankOver25Matches,
+  rankBTTSMatches,
+  rankScoreMatches,
+  rankHTFTMatches
 };
