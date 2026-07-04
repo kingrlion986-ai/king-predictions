@@ -8,7 +8,13 @@ const path = require("path");
 
 const { getMatches } = require("./services/footballApi");
 const { analyzeMatch } = require("./services/predictionEngine");
-const { rankMatches } = require("./services/rankingEngine");
+const {
+  rankMatches,
+  rankOver25Matches,
+  rankBTTSMatches,
+  rankScoreMatches,
+  rankHTFTMatches
+} = require("./services/rankingEngine");
 
 const app = express();
 app.use(cors());
@@ -206,7 +212,7 @@ const futureMatches = matches.filter(
   m => m.status === "TIMED"
 );
 
-const analyses = await rankMatches(futureMatches);
+const analyses = await rankOver25Matches(futureMatches);
 
 const selected = analyses.slice(
   0,
@@ -240,7 +246,7 @@ const futureMatches = matches.filter(
   m => m.status === "TIMED"
 );
 
-const analyses = await rankMatches(futureMatches);
+const analyses = await rankBTTSMatches(futureMatches);
 
 const selected = analyses.slice(
   0,
@@ -273,7 +279,7 @@ const futureMatches = matches.filter(
   m => m.status === "TIMED"
 );
 
-const analyses = await rankMatches(futureMatches);
+const analyses = await rankScoreMatches(futureMatches);
 
 const selected = analyses.slice(
   0,
@@ -305,7 +311,7 @@ const futureMatches = matches.filter(
   m => m.status === "TIMED"
 );
 
-const analyses = await rankMatches(futureMatches);
+const analyses = await rankHTFTMatches(futureMatches);
 
 const selected = analyses.slice(
   0,
