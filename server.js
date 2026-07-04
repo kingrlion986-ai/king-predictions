@@ -305,16 +305,14 @@ const futureMatches = matches.filter(
   m => m.status === "TIMED"
 );
 
-const selected = futureMatches.slice(
+const analyses = await rankMatches(futureMatches);
+
+const selected = analyses.slice(
   0,
   SETTINGS.maxVIP_1X2
 );
 
-const analyses = await Promise.all(
-  selected.map(analyzeMatch)
-);
-
-    const result = analyses.map(a => ({
+    const result = selected.map(a => ({
       match: a.match,
       pick: a.predictions?.htft || "N/A",
 confidence: a.predictions?.htftConfidence || 60
@@ -338,16 +336,14 @@ const futureMatches = matches.filter(
   m => m.status === "TIMED"
 );
 
-const selected = futureMatches.slice(
+const analyses = await rankMatches(futureMatches);
+
+const selected = analyses.slice(
   0,
   SETTINGS.maxVIP_1X2
 );
 
-const analyses = await Promise.all(
-  selected.map(analyzeMatch)
-);
-
-    const result = analyses.map(a => ({
+    const result = selected.map(a => ({
       match: a.match,
       pick: `${a.predictions.winner} + ${a.predictions.over25}`,
       confidence: Math.round(
@@ -373,16 +369,14 @@ const futureMatches = matches.filter(
   m => m.status === "TIMED"
 );
 
-const selected = futureMatches.slice(
+const analyses = await rankMatches(futureMatches);
+
+const selected = analyses.slice(
   0,
-  SETTINGS.maxJACKPOT
+  SETTINGS.maxVIP_1X2
 );
 
-const analyses = await Promise.all(
-  selected.map(analyzeMatch)
-);
-
-    const result = analyses.map(a => ({
+    const result = selected.map(a => ({
       match: a.match,
       winner: a.predictions.winner,
       btts: a.predictions.btts,
