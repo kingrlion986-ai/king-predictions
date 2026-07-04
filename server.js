@@ -216,7 +216,7 @@ const analyses = await rankOver25Matches(futureMatches);
 
 const selected = analyses.slice(
   0,
-  SETTINGS.maxVIP_1X2
+  SETTINGS.maxOVER
 );
 
     const result = selected.map(a => ({
@@ -250,7 +250,7 @@ const analyses = await rankBTTSMatches(futureMatches);
 
 const selected = analyses.slice(
   0,
-  SETTINGS.maxVIP_1X2
+  SETTINGS.maxBTTS
 );
 
     const result = selected.map(a => ({
@@ -283,14 +283,15 @@ const analyses = await rankScoreMatches(futureMatches);
 
 const selected = analyses.slice(
   0,
-  SETTINGS.maxVIP_1X2
+  SETTINGS.maxSCORE
 );
 
     const result = selected.map(a => ({
   match: a.match,
   score: a.predictions.correctScore,
-  expectedHomeGoals: a.model.expectedHomeGoals,
-  expectedAwayGoals: a.model.expectedAwayGoals
+  expectedHomeGoals: a.model?.expectedHomeGoals ?? 0,
+  expectedAwayGoals: a.model?.expectedAwayGoals ?? 0
+      
 }));
 
     res.json(result);
@@ -315,7 +316,7 @@ const analyses = await rankHTFTMatches(futureMatches);
 
 const selected = analyses.slice(
   0,
-  SETTINGS.maxVIP_1X2
+  SETTINGS.maxHTFT
 );
 
     const result = selected.map(a => ({
@@ -346,7 +347,7 @@ const analyses = await rankMatches(futureMatches);
 
 const selected = analyses.slice(
   0,
-  SETTINGS.maxVIP_1X2
+  SETTINGS.maxCOMBI
 );
 
     const result = selected.map(a => ({
@@ -379,7 +380,7 @@ const analyses = await rankMatches(futureMatches);
 
 const selected = analyses.slice(
   0,
-  SETTINGS.maxVIP_1X2
+  SETTINGS.maxJACKPOT
 );
 
     const result = selected.map(a => ({
@@ -426,9 +427,7 @@ app.get("/vip/top", async (req, res) => {
       m => m.status === "TIMED"
     );
 
-    const analyses = await Promise.all(
-      futureMatches.map(analyzeMatch)
-    );
+    const analyses = await rankMatches(futureMatches);
 
     const topMatches = analyses
       .sort(
