@@ -27,7 +27,7 @@ function calculateRankingScore(match) {
   // Solidité défensive
   score += (home.cleanSheets + away.cleanSheets);
 
-  // Bonus si les deux équipes marquent souvent
+  // Bonus BTTS
   score += (home.bttsRate + away.bttsRate) / 20;
 
   return Number(score.toFixed(2));
@@ -35,54 +35,62 @@ function calculateRankingScore(match) {
 
 async function rankMatches(matches) {
 
-  const analyses =
-    await Promise.all(
-      matches.map(analyzeMatch)
-    );
+  const analyses = await Promise.all(
+    matches.map(analyzeMatch)
+  );
 
   return analyses
     .map(match => ({
       ...match,
-      rankingScore:
-        calculateRankingScore(match)
+      rankingScore: calculateRankingScore(match)
     }))
     .sort(
       (a, b) =>
-        b.rankingScore -
-        a.rankingScore
+        b.rankingScore - a.rankingScore
     );
-
 }
 
-function rankOver25Matches(matches) {
-  return rankMatches(matches).sort(
+async function rankOver25Matches(matches) {
+
+  const ranked = await rankMatches(matches);
+
+  return ranked.sort(
     (a, b) =>
-      (b.predictions?.over25Confidence || 50) -
-      a.predictions.over25Confidence
+      (b.predictions?.over25Confidence ?? 0) -
+      (a.predictions?.over25Confidence ?? 0)
   );
 }
 
-function rankBTTSMatches(matches) {
-  return rankMatches(matches).sort(
+async function rankBTTSMatches(matches) {
+
+  const ranked = await rankMatches(matches);
+
+  return ranked.sort(
     (a, b) =>
-      (b.predictions?.bttsConfidence || 50) -
-      a.predictions.bttsConfidence
+      (b.predictions?.bttsConfidence ?? 0) -
+      (a.predictions?.bttsConfidence ?? 0)
   );
 }
 
-function rankScoreMatches(matches) {
-  return rankMatches(matches).sort(
+async function rankScoreMatches(matches) {
+
+  const ranked = await rankMatches(matches);
+
+  return ranked.sort(
     (a, b) =>
-      (b.model?.expectedGoals || 0) -
-      a.model.expectedGoals
+      (b.model?.expectedGoals ?? 0) -
+      (a.model?.expectedGoals ?? 0)
   );
 }
 
-function rankHTFTMatches(matches) {
-  return rankMatches(matches).sort(
+async function rankHTFTMatches(matches) {
+
+  const ranked = await rankMatches(matches);
+
+  return ranked.sort(
     (a, b) =>
-      (b.predictions?.htftConfidence || 50) -
-      a.predictions.htftConfidence
+      (b.predictions?.htftConfidence ?? 0) -
+      (a.predictions?.htftConfidence ?? 0)
   );
 }
 
