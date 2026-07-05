@@ -469,5 +469,5 @@ app.get("/debug", async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log("KING PREDICTIONS V16 RUNNING ⚽🔥");
+  console.log("KING PREDICTIONS V1 RUNNING ⚽🔥");
 });
