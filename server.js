@@ -127,7 +127,7 @@ const analysis = await analyzeMatch(match);
       }
     });
   } catch (err) {
-    console.log("FREE ERROR:", err.message);
+    console.error(err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -163,9 +163,8 @@ app.get("/vip/predictions", async (req, res) => {
     });
 
   } catch (error) {
-    console.log("VIP PREDICTIONS ERROR:", error);
-
-    res.status(500).json({
+    console.error(err);
+      res.status(500).json({
       success: false,
       error: "VIP prediction error"
     });
@@ -205,7 +204,7 @@ const selected = analyses.slice(
 
     res.json(result);
   } catch (err) {
-    console.log("VIP 1X2 ERROR:", err.message);
+    console.error(err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -239,7 +238,7 @@ const selected = analyses.slice(
 
     res.json(result);
   } catch (err) {
-    console.log("OVER25 ERROR:", err.message);
+    console.error(err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -272,7 +271,7 @@ const selected = analyses.slice(
 
     res.json(result);
   } catch (err) {
-    console.log("BTTS ERROR:", err.message);
+    console.error(err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -305,7 +304,7 @@ const selected = analyses.slice(
 
     res.json(result);
   } catch (err) {
-    console.log("SCORE ERROR:", err.message);
+    console.error(err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
