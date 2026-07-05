@@ -111,11 +111,27 @@ async function getTeamMatches(teamId) {
   }
 
   const matches = data.matches.map(m => ({
-    date: m.utcDate,
-    home: m.homeTeam.name,
-    away: m.awayTeam.name,
-    score: `${m.score.fullTime.home}-${m.score.fullTime.away}`
-  }));
+  id: m.id,
+  utcDate: m.utcDate,
+  status: m.status,
+
+  homeTeam: {
+    id: m.homeTeam.id,
+    name: m.homeTeam.name
+  },
+
+  awayTeam: {
+    id: m.awayTeam.id,
+    name: m.awayTeam.name
+  },
+
+  score: {
+    fullTime: {
+      home: m.score.fullTime.home ?? 0,
+      away: m.score.fullTime.away ?? 0
+    }
+  }
+}));
 
   CACHE.teamRecentMatches[teamId] = {
     data: matches,
