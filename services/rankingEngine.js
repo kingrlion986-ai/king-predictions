@@ -98,6 +98,5 @@ module.exports = {
   rankMatches,
   rankOver25Matches,
   rankBTTSMatches,
-  rankScoreMatches,
-  rankHTFTMatches
+  rankScoreMatches
 };
