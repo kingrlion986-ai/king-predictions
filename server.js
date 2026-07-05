@@ -94,6 +94,9 @@ app.get("/free", async (req, res) => {
   try {
     const matches = await getMatches();
 
+    console.log("TOTAL MATCHS:", matches.length);
+    console.log("STATUTS:", matches.map(m => m.status));
+
     matches.forEach(match => {
   console.log(
     `${match.homeTeam.name} (${match.homeTeam.id}) vs ${match.awayTeam.name} (${match.awayTeam.id})`
@@ -101,7 +104,7 @@ app.get("/free", async (req, res) => {
 });
 
 const futureMatches = matches.filter(
-  m => m.status === "TIMED"
+  m => ["TIMED", "SCHEDULED", "UPCOMING"].includes(m.status)
 );
 
 if (!futureMatches.length) {
