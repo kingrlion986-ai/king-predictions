@@ -32,15 +32,6 @@ function calculateExpectedGoals(home, away) {
   homeXG = clamp(homeXG, 0.2, 3.5);
   awayXG = clamp(awayXG, 0.2, 3.5);
 
-  console.log({
-    home: home.teamName,
-    away: away.teamName,
-    homeStrength: home.strength,
-    awayStrength: away.strength,
-    homeXG,
-    awayXG
-  });
-
   return {
     home: homeXG,
     away: awayXG
@@ -91,7 +82,7 @@ function runMonteCarlo(home, away, sims = 10000) {
   for (let i = 0; i < sims; i++) {
     const homeGoals = simulatePoisson(xg.home);
     const awayGoals = simulatePoisson(xg.away);
-     
+
     const key = `${homeGoals}-${awayGoals}`;
     scores[key] = (scores[key] || 0) + 1;
 
@@ -119,7 +110,7 @@ function runMonteCarlo(home, away, sims = 10000) {
 }
 
 /* =========================
-   SCORE (FIXED)
+   SCORE
 ========================= */
 function predictScore(home, away, winner) {
   const xg = calculateExpectedGoals(home, away);
@@ -127,6 +118,7 @@ function predictScore(home, away, winner) {
 
   for (let h = 0; h <= 5; h++) {
     for (let a = 0; a <= 5; a++) {
+
       let p = poisson(xg.home, h) * poisson(xg.away, a);
 
       if (winner !== "DRAW") {
@@ -164,7 +156,7 @@ function predictBTTS(home, away) {
 }
 
 /* =========================
-   MAIN ENGINE (CLEAN VIP)
+   MAIN ENGINE
 ========================= */
 async function analyzeMatch(match) {
   const home = await analyzeTeam(match.homeTeam);
@@ -182,8 +174,6 @@ async function analyzeMatch(match) {
         over25Confidence: 50,
         correctScore: "0-0",
         topScores: [],
-        htft: "X/X",
-        htftConfidence: 50,
         probabilities: { home: 33, draw: 34, away: 33 }
       },
       teamStats: null,
@@ -194,7 +184,6 @@ async function analyzeMatch(match) {
   const mc = runMonteCarlo(home, away, 15000);
   const xg = calculateExpectedGoals(home, away);
 
-  /* WINNER */
   let winner = "DRAW";
 
   const max = Math.max(mc.probabilities.home, mc.probabilities.away);
@@ -204,8 +193,6 @@ async function analyzeMatch(match) {
 
   const scorePrediction = predictScore(home, away, winner);
 
-const score = scorePrediction.best;
-
   const btts = predictBTTS(home, away);
 
   return {
@@ -214,7 +201,6 @@ const score = scorePrediction.best;
     predictions: {
       winner,
       winnerConfidence: max,
-
       probabilities: mc.probabilities,
 
       btts: btts.prediction,
@@ -223,11 +209,8 @@ const score = scorePrediction.best;
       over25: mc.over25 >= 50 ? "OVER 2.5" : "UNDER 2.5",
       over25Confidence: mc.over25,
 
-      correctScore: score,
-      topScores: scorePrediction.top3,
-
-      htft: "X/X",
-      htftConfidence: 60
+      correctScore: scorePrediction.best,
+      topScores: scorePrediction.top3
     },
 
     teamStats: { home, away },
@@ -242,7 +225,7 @@ const score = scorePrediction.best;
 
       reliability: round(
         ((home.reliability || 0.5) +
-         (away.reliability || 0.5)) / 2,
+          (away.reliability || 0.5)) / 2,
         2
       )
     }
