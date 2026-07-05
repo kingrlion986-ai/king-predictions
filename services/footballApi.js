@@ -102,8 +102,7 @@ async function getMatches() {
   }
 
   // IMPORTANT: un seul appel API
-  const data = await apiGet(
-    `/matches?competitions=${ALLOWED_COMPETITIONS.join(",")}`
+  const data = await apiGet("/matches");
   );
 
   if (!data || !data.matches) {
@@ -112,10 +111,11 @@ async function getMatches() {
   }
 
   let allMatches = data.matches
-    .filter(m =>
-      m.homeTeam?.id &&
-      m.awayTeam?.id
-    )
+    ..filter(m =>
+  m.homeTeam?.id != null &&
+  m.awayTeam?.id != null &&
+  m.competition?.code
+)
     .map(m => ({
       id: m.id,
       utcDate: m.utcDate,
@@ -138,6 +138,11 @@ async function getMatches() {
 
       score: m.score
     }));
+
+  allMatches = allMatches.filter(m =>
+  m.competition?.code &&
+  ALLOWED_COMPETITIONS.includes(m.competition.code)
+);
 
   // filtre date (7-14 jours OK)
   const now = new Date();
