@@ -21,6 +21,7 @@ const TEAM_MATCHES_TTL = 15 * 60 * 1000; // 15 min
    API CORE
 ========================= */
 async function apiGet(endpoint) {
+   console.log("📡 CALL API:", endpoint);
   try {
     const res = await fetch(`${BASE_URL}${endpoint}`, {
       headers: {
@@ -33,7 +34,11 @@ async function apiGet(endpoint) {
       return null;
     }
 
-    return await res.json();
+    const data = await res.json();
+
+console.log("📊 API RESPONSE KEYS:", Object.keys(data));
+
+return data;
   } catch (err) {
     console.log("FOOTBALL API ERROR:", err.message);
     return null;
