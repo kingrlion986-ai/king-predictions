@@ -3,6 +3,20 @@ const fetch = require("node-fetch");
 const API_KEY = process.env.API_KEY;
 const BASE_URL = "https://api.football-data.org/v4";
 
+const COMPETITIONS = [
+  "PL",   // Premier League
+  "PD",   // LaLiga
+  "SA",   // Serie A
+  "BL1",  // Bundesliga
+  "FL1",  // Ligue 1
+  "DED",  // Eredivisie
+  "PPL",  // Primeira Liga
+  "ELC",  // Championship
+  "BSA",  // Brasileirão
+  "CL",   // Champions League
+  "WC"    // Coupe du Monde
+];
+
 /* =========================
    CACHE CONFIG
 ========================= */
@@ -54,41 +68,55 @@ async function getMatches() {
 
   const cached = CACHE.matches;
 
-  // cache actif
   if (cached.data && Date.now() < cached.expiresAt) {
     console.log("⚡ MATCHES FROM CACHE");
     return cached.data;
   }
 
-  const data = await apiGet("/matches");
+  let allMatches = [];
 
-  if (!data || !data.matches) {
-    console.log("⚠️ No matches returned by API");
-    return [];
+  for (const code of COMPETITIONS) {
+
+    console.log("📡 Competition :", code);
+
+    const data = await apiGet(
+      `/competitions/${code}/matches`
+    );
+
+    if (!data || !data.matches) continue;
+
+    const formatted = data.matches.map(m => ({
+      id: m.id,
+      utcDate: m.utcDate,
+      status: m.status,
+      competition: code,
+      stage: m.stage,
+
+      homeTeam: {
+        id: m.homeTeam.id,
+        name: m.homeTeam.name
+      },
+
+      awayTeam: {
+        id: m.awayTeam.id,
+        name: m.awayTeam.name
+      },
+
+      score: m.score
+    }));
+
+    allMatches.push(...formatted);
+
   }
 
-  const matches = data.matches.map(m => ({
-    id: m.id,
-    utcDate: m.utcDate,
-    status: m.status,
-    stage: m.stage,
-    homeTeam: {
-      id: m.homeTeam.id,
-      name: m.homeTeam.name
-    },
-    awayTeam: {
-      id: m.awayTeam.id,
-      name: m.awayTeam.name
-    },
-    score: m.score
-  }));
-
   CACHE.matches = {
-    data: matches,
+    data: allMatches,
     expiresAt: Date.now() + MATCHES_TTL
   };
 
-  return matches;
+  console.log("🔥 TOTAL MATCHES :", allMatches.length);
+
+  return allMatches;
 }
 
 /* =========================
