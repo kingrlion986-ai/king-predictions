@@ -94,9 +94,12 @@ app.get("/free", async (req, res) => {
   try {
     const matches = await getMatches();
 
-    console.log("TOTAL MATCHS:", matches.length);
-    console.log("STATUTS:", matches.map(m => m.status));
+console.log("TOTAL MATCHS:", matches.length);
 
+console.log(
+  "STATUTS UNIQUES:",
+  [...new Set(matches.map(m => m.status))]
+);
     matches.forEach(match => {
   console.log(
     `${match.homeTeam.name} (${match.homeTeam.id}) vs ${match.awayTeam.name} (${match.awayTeam.id})`
@@ -472,5 +475,5 @@ app.get("/debug", async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log("KING PREDICTIONS V1 RUNNING ⚽🔥");
+  console.log("KING PREDICTIONS V16 RUNNING ⚽🔥");
 });
