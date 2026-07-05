@@ -61,8 +61,9 @@ async function apiGet(endpoint) {
   }
 }
 
+
 /* =========================
-   GET MATCHES (V17)
+   GET MATCHES (FIX V17 CLEAN)
 ========================= */
 async function getMatches() {
 
@@ -73,49 +74,61 @@ async function getMatches() {
     return cached.data;
   }
 
-  const data = await apiGet("/matches");
+  // IMPORTANT: un seul appel API
+  const data = await apiGet(
+    `/matches?competitions=${ALLOWED_COMPETITIONS.join(",")}`
+  );
 
   if (!data || !data.matches) {
+    console.log("⚠️ No matches returned");
     return [];
   }
 
-  const ALLOWED_COMPETITIONS = [
-    "PL","PD","SA","BL1","FL1","DED","PPL","ELC","BSA","CL","WC"
-  ];
-
-  const now = new Date();
-  const maxDate = new Date();
-  maxDate.setDate(now.getDate() + 7); // 👈 IMPORTANT : 7 jours (pas 14)
-
   let allMatches = data.matches
     .filter(m =>
-      m?.homeTeam &&
-      m?.awayTeam &&
       m.homeTeam?.id &&
-      m.awayTeam?.id &&
-      m.competition?.code
+      m.awayTeam?.id
     )
-    .filter(m =>
-      ALLOWED_COMPETITIONS.includes(m.competition.code)
-    )
-    .filter(m => {
-      const d = new Date(m.utcDate);
-      return (
-        ["TIMED", "SCHEDULED"].includes(m.status) &&
-        d >= now &&
-        d <= maxDate
-      );
-    })
     .map(m => ({
       id: m.id,
       utcDate: m.utcDate,
       status: m.status,
-      competition: m.competition.code,
-      homeTeam: m.homeTeam,
-      awayTeam: m.awayTeam,
+
+      competition: {
+        code: m.competition?.code,
+        name: m.competition?.name
+      },
+
+      homeTeam: {
+        id: m.homeTeam.id,
+        name: m.homeTeam.name
+      },
+
+      awayTeam: {
+        id: m.awayTeam.id,
+        name: m.awayTeam.name
+      },
+
       score: m.score
-    }))
-    .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
+    }));
+
+  // filtre date (7-14 jours OK)
+  const now = new Date();
+  const maxDate = new Date();
+  maxDate.setDate(now.getDate() + 14);
+
+  allMatches = allMatches.filter(match => {
+    const d = new Date(match.utcDate);
+    return (
+      ["TIMED", "SCHEDULED"].includes(match.status) &&
+      d >= now &&
+      d <= maxDate
+    );
+  });
+
+  allMatches.sort((a, b) =>
+    new Date(a.utcDate) - new Date(b.utcDate)
+  );
 
   CACHE.matches = {
     data: allMatches,
