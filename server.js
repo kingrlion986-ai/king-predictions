@@ -306,8 +306,6 @@ app.get("/", (req, res) => {
     res.sendFile(__dirname + "/public/index.html");
 });
 
-Connexion de l'interface au serveur
-  
 /* =========================
    ACCURACY
 ========================= */
