@@ -1,4 +1,4 @@
-const { getTeamRecentMatches } = require("./footballApi");
+const { getTeamMatches } = require("./footballApi");
 
 /* =========================
    CACHE
@@ -175,7 +175,7 @@ async function analyzeTeam(team) {
     return CACHE.get(team.id);
   }
 
-  const matches = await getTeamRecentMatches(team.id, 8);
+  const matches = await getTeamMatches(team.id);
 
   if (!matches || matches.length === 0) {
 
