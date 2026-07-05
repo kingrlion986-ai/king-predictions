@@ -1,0 +1,96 @@
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'Poppins',sans-serif;
+}
+
+body{
+    background:#0b1220;
+    color:white;
+    min-height:100vh;
+}
+
+header{
+    background:linear-gradient(135deg,#1e3a8a,#2563eb);
+    padding:20px;
+    box-shadow:0 4px 15px rgba(0,0,0,.3);
+}
+
+.logo{
+    display:flex;
+    align-items:center;
+    gap:15px;
+}
+
+.logo h1{
+    font-size:28px;
+    font-weight:700;
+}
+
+.logo p{
+    color:#dbeafe;
+    font-size:14px;
+}
+
+.dashboard{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:20px;
+    padding:20px;
+}
+
+.card{
+    background:#162033;
+    border-radius:16px;
+    padding:20px;
+    text-align:center;
+    transition:.3s;
+}
+
+.card:hover{
+    transform:translateY(-5px);
+}
+
+.card span{
+    display:block;
+    margin-top:10px;
+    font-size:28px;
+    font-weight:bold;
+    color:#38bdf8;
+}
+
+.title{
+    padding:20px;
+    font-size:24px;
+    font-weight:bold;
+}
+
+.buttons{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:15px;
+    padding:20px;
+}
+
+.buttons button{
+    border:none;
+    border-radius:14px;
+    padding:18px;
+    font-size:18px;
+    cursor:pointer;
+    background:#2563eb;
+    color:white;
+    transition:.3s;
+}
+
+.buttons button:hover{
+    background:#1d4ed8;
+    transform:scale(1.03);
+}
+
+#results{
+    padding:20px;
+}
+
+Ajout du style de l'interface
