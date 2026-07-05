@@ -18,6 +18,7 @@ const {
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(express.static("public"));
 
 app.get("/vip/matches", async (req, res) => {
   try {
@@ -301,41 +302,12 @@ const selected = analyses.slice(
 /* =========================
    UI
 ========================= */
-app.get("/ui", (req, res) => {
-  res.send(`
-<!DOCTYPE html>
-<html>
-<head>
-<title>KING PREDICTIONS V16</title>
-</head>
-
-<body style="background:#0b0f14;color:white;font-family:Arial;text-align:center">
-
-<h1>KING PREDICTIONS V16 ⚽🔥</h1>
-
-<button onclick="load('/free')">FREE</button>
-<button onclick="load('/vip/1x2')">1X2</button>
-<button onclick="load('/vip/over25')">OVER/UNDER</button>
-<button onclick="load('/vip/btts')">BTTS</button>
-<button onclick="load('/vip/score')">SCORE</button>
-
-
-<pre id="data" style="text-align:left;max-width:900px;margin:20px auto;white-space:pre-wrap;"></pre>
-
-<script>
-async function load(url){
-  const r = await fetch(url);
-  const d = await r.json();
-  document.getElementById("data").innerText =
-    JSON.stringify(d, null, 2);
-}
-</script>
-
-</body>
-</html>
-  `);
+app.get("/", (req, res) => {
+    res.sendFile(__dirname + "/public/index.html");
 });
 
+Connexion de l'interface au serveur
+  
 /* =========================
    ACCURACY
 ========================= */
