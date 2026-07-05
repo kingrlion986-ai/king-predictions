@@ -21,7 +21,8 @@ const TEAM_MATCHES_TTL = 15 * 60 * 1000; // 15 min
    API CORE
 ========================= */
 async function apiGet(endpoint) {
-   console.log("📡 CALL API:", endpoint);
+  console.log("📡 CALL API:", endpoint);
+
   try {
     const res = await fetch(`${BASE_URL}${endpoint}`, {
       headers: {
@@ -30,131 +31,105 @@ async function apiGet(endpoint) {
     });
 
     if (!res.ok) {
-      console.log(`API ERROR ${res.status} on ${endpoint}`);
+      console.log(`❌ API ERROR ${res.status} on ${endpoint}`);
       return null;
     }
 
     const data = await res.json();
 
-console.log("📊 API RESPONSE KEYS:", Object.keys(data));
+    console.log("📊 API RESPONSE KEYS:", Object.keys(data));
 
-return data;
+    return data;
+
   } catch (err) {
-    console.log("FOOTBALL API ERROR:", err.message);
+    console.log("❌ FOOTBALL API ERROR:", err.message);
     return null;
   }
 }
 
 /* =========================
-   MATCHES
+   GET MATCHES (SAFE VERSION)
 ========================= */
 async function getMatches() {
-  const now = Date.now();
 
-  if (CACHE.matches.data && CACHE.matches.expiresAt > now) {
-    return CACHE.matches.data;
+  const cached = CACHE.matches;
+
+  // cache actif
+  if (cached.data && Date.now() < cached.expiresAt) {
+    console.log("⚡ MATCHES FROM CACHE");
+    return cached.data;
   }
 
   const data = await apiGet("/matches");
-  const matches = (data?.matches || []).filter(
-    m =>
-      m &&
-      m.homeTeam &&
-      m.awayTeam &&
-      m.homeTeam.id &&
-      m.awayTeam.id
-  );
 
-  console.log(
-  matches.map(m => ({
-    match: `${m.homeTeam.name} vs ${m.awayTeam.name}`,
-    status: m.status
-  }))
-);
+  if (!data || !data.matches) {
+    console.log("⚠️ No matches returned by API");
+    return [];
+  }
 
-CACHE.matches = {
-  data: matches,
-  expiresAt: now + MATCHES_TTL
-};
+  const matches = data.matches.map(m => ({
+    id: m.id,
+    utcDate: m.utcDate,
+    status: m.status,
+    stage: m.stage,
+    homeTeam: {
+      id: m.homeTeam.id,
+      name: m.homeTeam.name
+    },
+    awayTeam: {
+      id: m.awayTeam.id,
+      name: m.awayTeam.name
+    },
+    score: m.score
+  }));
 
-return matches;
+  CACHE.matches = {
+    data: matches,
+    expiresAt: Date.now() + MATCHES_TTL
+  };
+
+  return matches;
 }
 
 /* =========================
-   TEAM RECENT MATCHES
+   TEAM MATCHES (FIXED)
 ========================= */
-async function getTeamRecentMatches(teamId, limit = 50) {
-  const now = Date.now();
-  const cacheKey = `${teamId}_${limit}`;
+async function getTeamMatches(teamId) {
 
-  const cached = CACHE.teamRecentMatches[cacheKey];
-  if (cached && cached.expiresAt > now) {
-    return cached.data;
+  const cache = CACHE.teamRecentMatches[teamId];
+
+  if (cache && Date.now() < cache.expiresAt) {
+    return cache.data;
   }
 
   const data = await apiGet(
     `/teams/${teamId}/matches?status=FINISHED`
   );
 
-   console.log("TEAM API RESPONSE");
-console.log(JSON.stringify(data, null, 2));
+  if (!data || !data.matches) {
+    return [];
+  }
 
-  const matches = (data?.matches || []).filter(
-  m =>
-    m &&
-    m.homeTeam &&
-    m.awayTeam &&
-    m.score &&
-    m.score.fullTime
-);
-
-const recentMatches = matches
-  .sort((a, b) => new Date(b.utcDate) - new Date(a.utcDate))
-  .slice(0, limit);
-   
-  CACHE.teamRecentMatches[cacheKey] = {
-    data: recentMatches,
-    expiresAt: now + TEAM_MATCHES_TTL
-  };
-
-   console.log(
-  matches.slice(0, 5).map(m => ({
-    home: m.homeTeam.name,
-    away: m.awayTeam.name,
-    status: m.status
-  }))
-);
-
-   console.log({
-  teamId,
-  requested: limit,
-  received: matches.length
-});
-
-   console.log(
-  matches.map(m => ({
+  const matches = data.matches.map(m => ({
     date: m.utcDate,
     home: m.homeTeam.name,
     away: m.awayTeam.name,
     score: `${m.score.fullTime.home}-${m.score.fullTime.away}`
-  }))
-);
+  }));
 
-  return recentMatches;
+  CACHE.teamRecentMatches[teamId] = {
+    data: matches,
+    expiresAt: Date.now() + TEAM_MATCHES_TTL
+  };
+
+  return matches;
 }
 
 /* =========================
-   OPTIONAL DEBUG
+   EXPORTS
 ========================= */
-function getCacheStats() {
-  return {
-    matchesCached: !!CACHE.matches.data,
-    teamCaches: Object.keys(CACHE.teamRecentMatches).length
-  };
-}
-
 module.exports = {
+  apiGet,
   getMatches,
-  getTeamRecentMatches,
-  getCacheStats
+  getTeamMatches
 };
