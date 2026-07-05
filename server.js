@@ -80,6 +80,7 @@ const SETTINGS = {
   maxOVER: 3,
   maxBTTS: 3,
   maxSCORE: 3,
+  maxHTFT: 3,
   maxCOMBI: 3,
   maxJACKPOT: 4
 };
