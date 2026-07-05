@@ -61,6 +61,33 @@ async function apiGet(endpoint) {
   }
 }
 
+/* =========================
+   TEAM MATCHES (SAFE)
+========================= */
+async function getTeamMatches(teamId) {
+  const data = await apiGet(`/teams/${teamId}/matches?status=FINISHED`);
+
+  if (!data || !data.matches) return [];
+
+  return data.matches.map(m => ({
+    id: m.id,
+    utcDate: m.utcDate,
+    status: m.status,
+
+    homeTeam: {
+      id: m.homeTeam.id,
+      name: m.homeTeam.name
+    },
+
+    awayTeam: {
+      id: m.awayTeam.id,
+      name: m.awayTeam.name
+    },
+
+    score: m.score
+  }));
+}
+
 
 /* =========================
    GET MATCHES (FIX V17 CLEAN)
