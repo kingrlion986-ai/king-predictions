@@ -1,3 +1,4 @@
+console.log("APP JS LOADED");
 async function loadPredictions(url){
 
     const results = document.getElementById("results");
@@ -8,12 +9,23 @@ async function loadPredictions(url){
 
         const response = await fetch(url);
 
+        if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+        }
+
         const data = await response.json();
 
-        results.innerHTML = "";
+results.innerHTML = "";
 
-        const list = Array.isArray(data) ? data : [data];
+let list = [];
 
+if (Array.isArray(data)) {
+    list = data;
+} else if (Array.isArray(data.data)) {
+    list = data.data;
+} else {
+    list = [data];
+}
         document.getElementById("matches").innerText = list.length;
         document.getElementById("predictions").innerText = list.length;
 
@@ -45,9 +57,14 @@ async function loadPredictions(url){
 
     }
 
-    catch(e){
+    catch (e) {
 
-        results.innerHTML="<h2>❌ Impossible de charger les données.</h2>";
+    console.error(e);
+
+    results.innerHTML = `
+        <h2>❌ Impossible de charger les données.</h2>
+        <p>${e.message}</p>
+    `;
 
     }
 
