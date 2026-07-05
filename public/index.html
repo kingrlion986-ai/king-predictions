@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>KING PREDICTIONS AI</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+<header>
+
+    <div class="logo">
+
+        👑
+
+        <div>
+
+            <h1>KING PREDICTIONS AI</h1>
+
+            <p>Football Prediction Engine</p>
+
+        </div>
+
+    </div>
+
+</header>
+
+<section class="dashboard">
+
+    <div class="card">
+
+        <h3>⚽ Matchs</h3>
+
+        <span id="matches">0</span>
+
+    </div>
+
+    <div class="card">
+
+        <h3>🎯 Pronostics</h3>
+
+        <span id="predictions">0</span>
+
+    </div>
+
+    <div class="card">
+
+        <h3>🔥 IA</h3>
+
+        <span>ACTIVE</span>
+
+    </div>
+
+    <div class="card">
+
+        <h3>Version</h3>
+
+        <span>V16</span>
+
+    </div>
+
+</section>
+
+<h2 class="title">
+Marchés
+</h2>
+
+<section class="buttons">
+
+<button onclick="loadPredictions('/free')">
+🟢 FREE
+</button>
+
+<button onclick="loadPredictions('/vip/1x2')">
+🔵 VIP 1X2
+</button>
+
+<button onclick="loadPredictions('/vip/over25')">
+🟣 OVER 2.5
+</button>
+
+<button onclick="loadPredictions('/vip/btts')">
+🟠 BTTS
+</button>
+
+<button onclick="loadPredictions('/vip/score')">
+🔴 SCORE EXACT
+</button>
+
+</section>
+
+<h2 class="title">
+
+Résultats
+
+</h2>
+
+<div id="results">
+
+</div>
+
+<script src="app.js"></script>
+
+</body>
+
+</html>
+Création de l'interface web
+
