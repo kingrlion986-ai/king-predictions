@@ -12,8 +12,7 @@ const {
   rankMatches,
   rankOver25Matches,
   rankBTTSMatches,
-  rankScoreMatches,
-  rankHTFTMatches
+  rankScoreMatches
 } = require("./services/rankingEngine");
 
 const app = express();
@@ -76,13 +75,10 @@ function saveHistory(data) {
 ========================= */
 const SETTINGS = {
   maxFree: 1,
-  maxVIP_1X2: 3,
-  maxOVER: 3,
-  maxBTTS: 3,
+  maxVIP_1X2: 5,
+  maxOVER: 6,
+  maxBTTS: 5,
   maxSCORE: 3,
-  maxHTFT: 3,
-  maxCOMBI: 3,
-  maxJACKPOT: 4
 };
 
 /* =========================
