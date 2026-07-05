@@ -109,6 +109,23 @@ async function getMatches() {
 
   }
 
+  const now = new Date();
+const maxDate = new Date();
+maxDate.setDate(now.getDate() + 14);
+
+allMatches = allMatches.filter(match => {
+  const matchDate = new Date(match.utcDate);
+  return (
+    ["TIMED", "SCHEDULED"].includes(match.status) &&
+    matchDate >= now &&
+    matchDate <= maxDate
+  );
+});
+
+  allMatches.sort(
+  (a, b) => new Date(a.utcDate) - new Date(b.utcDate)
+);
+
   CACHE.matches = {
     data: allMatches,
     expiresAt: Date.now() + MATCHES_TTL
