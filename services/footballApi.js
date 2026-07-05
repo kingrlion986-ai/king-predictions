@@ -3,18 +3,18 @@ const fetch = require("node-fetch");
 const API_KEY = process.env.API_KEY;
 const BASE_URL = "https://api.football-data.org/v4";
 
-const COMPETITIONS = [
-  "PL",   // Premier League
-  "PD",   // LaLiga
-  "SA",   // Serie A
-  "BL1",  // Bundesliga
-  "FL1",  // Ligue 1
-  "DED",  // Eredivisie
-  "PPL",  // Primeira Liga
-  "ELC",  // Championship
-  "BSA",  // Brasileirão
-  "CL",   // Champions League
-  "WC"    // Coupe du Monde
+const ALLOWED_COMPETITIONS = [
+  "PL",
+  "PD",
+  "SA",
+  "BL1",
+  "FL1",
+  "DED",
+  "PPL",
+  "ELC",
+  "BSA",
+  "CL",
+  "WC"
 ];
 
 /* =========================
@@ -62,7 +62,7 @@ async function apiGet(endpoint) {
 }
 
 /* =========================
-   GET MATCHES (SAFE VERSION)
+   GET MATCHES (V17)
 ========================= */
 async function getMatches() {
 
@@ -73,23 +73,35 @@ async function getMatches() {
     return cached.data;
   }
 
-  let allMatches = [];
+  // Un seul appel API
+  const data = await apiGet("/matches");
 
-  for (const code of COMPETITIONS) {
+  if (!data || !data.matches) {
+    console.log("⚠️ No matches returned");
+    return [];
+  }
 
-    console.log("📡 Competition :", code);
+  let allMatches = data.matches
 
-    const data = await apiGet(
-      `/competitions/${code}/matches`
-    );
+    // Ignore les matchs incomplets
+    .filter(m =>
+      m.homeTeam &&
+      m.awayTeam &&
+      m.homeTeam.id &&
+      m.awayTeam.id
+    )
 
-    if (!data || !data.matches) continue;
-
-    const formatted = data.matches.map(m => ({
+    // Format interne
+    .map(m => ({
       id: m.id,
       utcDate: m.utcDate,
       status: m.status,
-      competition: code,
+
+      competition: {
+        code: m.competition?.code,
+        name: m.competition?.name
+      },
+
       stage: m.stage,
 
       homeTeam: {
@@ -105,33 +117,38 @@ async function getMatches() {
       score: m.score
     }));
 
-    allMatches.push(...formatted);
-
-  }
-
-  const now = new Date();
-const maxDate = new Date();
-maxDate.setDate(now.getDate() + 14);
-
-allMatches = allMatches.filter(match => {
-  const matchDate = new Date(match.utcDate);
-  return (
-    ["TIMED", "SCHEDULED"].includes(match.status) &&
-    matchDate >= now &&
-    matchDate <= maxDate
+  // Garde seulement les compétitions autorisées
+  allMatches = allMatches.filter(match =>
+    match.competition &&
+    ALLOWED_COMPETITIONS.includes(match.competition.code)
   );
-});
 
+  // Garde les matchs des 14 prochains jours
+  const now = new Date();
+  const maxDate = new Date();
+  maxDate.setDate(now.getDate() + 14);
+
+  allMatches = allMatches.filter(match => {
+    const matchDate = new Date(match.utcDate);
+
+    return (
+      ["TIMED", "SCHEDULED"].includes(match.status) &&
+      matchDate >= now &&
+      matchDate <= maxDate
+    );
+  });
+
+  // Tri chronologique
   allMatches.sort(
-  (a, b) => new Date(a.utcDate) - new Date(b.utcDate)
-);
+    (a, b) => new Date(a.utcDate) - new Date(b.utcDate)
+  );
 
   CACHE.matches = {
     data: allMatches,
     expiresAt: Date.now() + MATCHES_TTL
   };
 
-  console.log("🔥 TOTAL MATCHES :", allMatches.length);
+  console.log("🔥 TOTAL MATCHES:", allMatches.length);
 
   return allMatches;
 }
