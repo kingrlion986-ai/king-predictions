@@ -1,75 +1,65 @@
 console.log("APP JS LOADED");
-async function loadPredictions(url){
+
+async function loadPredictions(url) {
 
     const results = document.getElementById("results");
 
     results.innerHTML = "<h2>⏳ Chargement...</h2>";
 
-    try{
+    try {
 
         const response = await fetch(url);
 
         if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
+            throw new Error(`HTTP ${response.status}`);
         }
 
         const data = await response.json();
 
-results.innerHTML = "";
+        let list = [];
 
-let list = [];
+        if (Array.isArray(data)) {
+            list = data;
+        } else if (Array.isArray(data.data)) {
+            list = data.data;
+        } else {
+            list = [data];
+        }
 
-if (Array.isArray(data)) {
-    list = data;
-} else if (Array.isArray(data.data)) {
-    list = data.data;
-} else {
-    list = [data];
-}
         document.getElementById("matches").innerText = list.length;
         document.getElementById("predictions").innerText = list.length;
 
-        list.forEach(item=>{
+        results.innerHTML = "";
+
+        list.forEach(item => {
 
             const card = document.createElement("div");
+            card.className = "card";
+            card.style.marginBottom = "20px";
 
-            card.className="card";
-
-            card.style.marginBottom="20px";
-
-            card.innerHTML=`
-
+            card.innerHTML = `
                 <h2>${item.match ?? "Match"}</h2>
-
                 <hr style="margin:15px 0;">
-
-                <p><strong>Pronostic :</strong>
-                ${item.pick || item.market || item.score || item.prediction || "-"}</p>
-
-                <p><strong>Confiance :</strong>
-                ${item.confidence ?? "-"}%</p>
-
+                <p><strong>Pronostic :</strong> ${
+                    item.pick || item.market || item.score || item.prediction || "-"
+                }</p>
+                <p><strong>Confiance :</strong> ${
+                    item.confidence ?? "-"
+                }%</p>
             `;
 
             results.appendChild(card);
-
         });
 
+    } catch (e) {
+
+        console.error(e);
+
+        results.innerHTML = `
+            <h2>❌ Impossible de charger les données.</h2>
+            <p>${e.message}</p>
+        `;
     }
-
-    catch (e) {
-
-    console.error(e);
-
-    results.innerHTML = `
-        <h2>❌ Impossible de charger les données.</h2>
-        <p>${e.message}</p>
-    `;
-
-    }
-
 }
 
 loadPredictions("/free");
-
-Ajout du script de l'interface
