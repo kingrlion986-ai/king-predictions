@@ -73,75 +73,49 @@ async function getMatches() {
     return cached.data;
   }
 
-  // Un seul appel API
   const data = await apiGet("/matches");
 
   if (!data || !data.matches) {
-    console.log("⚠️ No matches returned");
     return [];
   }
 
+  const ALLOWED_COMPETITIONS = [
+    "PL","PD","SA","BL1","FL1","DED","PPL","ELC","BSA","CL","WC"
+  ];
+
+  const now = new Date();
+  const maxDate = new Date();
+  maxDate.setDate(now.getDate() + 7); // 👈 IMPORTANT : 7 jours (pas 14)
+
   let allMatches = data.matches
-
-    // Ignore les matchs incomplets
     .filter(m =>
-      m.homeTeam &&
-      m.awayTeam &&
-      m.homeTeam.id &&
-      m.awayTeam.id
+      m?.homeTeam &&
+      m?.awayTeam &&
+      m.homeTeam?.id &&
+      m.awayTeam?.id &&
+      m.competition?.code
     )
-
-    // Format interne
+    .filter(m =>
+      ALLOWED_COMPETITIONS.includes(m.competition.code)
+    )
+    .filter(m => {
+      const d = new Date(m.utcDate);
+      return (
+        ["TIMED", "SCHEDULED"].includes(m.status) &&
+        d >= now &&
+        d <= maxDate
+      );
+    })
     .map(m => ({
       id: m.id,
       utcDate: m.utcDate,
       status: m.status,
-
-      competition: {
-        code: m.competition?.code,
-        name: m.competition?.name
-      },
-
-      stage: m.stage,
-
-      homeTeam: {
-        id: m.homeTeam.id,
-        name: m.homeTeam.name
-      },
-
-      awayTeam: {
-        id: m.awayTeam.id,
-        name: m.awayTeam.name
-      },
-
+      competition: m.competition.code,
+      homeTeam: m.homeTeam,
+      awayTeam: m.awayTeam,
       score: m.score
-    }));
-
-  // Garde seulement les compétitions autorisées
-  allMatches = allMatches.filter(match =>
-    match.competition &&
-    ALLOWED_COMPETITIONS.includes(match.competition.code)
-  );
-
-  // Garde les matchs des 14 prochains jours
-  const now = new Date();
-  const maxDate = new Date();
-  maxDate.setDate(now.getDate() + 14);
-
-  allMatches = allMatches.filter(match => {
-    const matchDate = new Date(match.utcDate);
-
-    return (
-      ["TIMED", "SCHEDULED"].includes(match.status) &&
-      matchDate >= now &&
-      matchDate <= maxDate
-    );
-  });
-
-  // Tri chronologique
-  allMatches.sort(
-    (a, b) => new Date(a.utcDate) - new Date(b.utcDate)
-  );
+    }))
+    .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
 
   CACHE.matches = {
     data: allMatches,
@@ -151,56 +125,6 @@ async function getMatches() {
   console.log("🔥 TOTAL MATCHES:", allMatches.length);
 
   return allMatches;
-}
-
-/* =========================
-   TEAM MATCHES (FIXED)
-========================= */
-async function getTeamMatches(teamId) {
-
-  const cache = CACHE.teamRecentMatches[teamId];
-
-  if (cache && Date.now() < cache.expiresAt) {
-    return cache.data;
-  }
-
-  const data = await apiGet(
-    `/teams/${teamId}/matches?status=FINISHED`
-  );
-
-  if (!data || !data.matches) {
-    return [];
-  }
-
-  const matches = data.matches.map(m => ({
-  id: m.id,
-  utcDate: m.utcDate,
-  status: m.status,
-
-  homeTeam: {
-    id: m.homeTeam.id,
-    name: m.homeTeam.name
-  },
-
-  awayTeam: {
-    id: m.awayTeam.id,
-    name: m.awayTeam.name
-  },
-
-  score: {
-    fullTime: {
-      home: m.score.fullTime.home ?? 0,
-      away: m.score.fullTime.away ?? 0
-    }
-  }
-}));
-
-  CACHE.teamRecentMatches[teamId] = {
-    data: matches,
-    expiresAt: Date.now() + TEAM_MATCHES_TTL
-  };
-
-  return matches;
 }
 
 /* =========================
