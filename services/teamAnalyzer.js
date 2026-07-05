@@ -45,7 +45,10 @@ function buildStats(matches, teamId) {
   let under25 = 0;
   let btts = 0;
 
-  matches.forEach(match => {
+  matches.forEach((match, index) => {
+
+  // Les matchs les plus récents ont plus d'importance
+  const weight = 1 + (index / Math.max(matches.length - 1, 1));
 
     const isHome = match.homeTeam.id === teamId;
 
@@ -57,17 +60,17 @@ function buildStats(matches, teamId) {
       ? safe(match.score.fullTime.away)
       : safe(match.score.fullTime.home);
 
-    scored += gf;
-    conceded += ga;
-
+    scored += gf * weight;
+    conceded += ga * weight;
+     
     if (isHome) {
       homeGames++;
-      homeScored += gf;
-      homeConceded += ga;
+      homeScored += gf * weight;
+      homeConceded += ga * weight;
     } else {
       awayGames++;
-      awayScored += gf;
-      awayConceded += ga;
+      awayScored += gf * weight;
+      awayConceded += ga * weight;
     }
 
     if (gf > ga) wins++;
