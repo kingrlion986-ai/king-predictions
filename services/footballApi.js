@@ -90,30 +90,54 @@ function formatMatch(m) {
    FETCH COMPETITION MATCHES
 ========================= */
 async function getCompetitionMatches(code) {
-  const data = await apiGet(`/competitions/${code}/matches`);
+  const data = await apiGet(
+    `/competitions/${code}/matches?status=SCHEDULED`
+  );
 
   if (!data || !data.matches) return [];
 
-  return data.matches
-    .map(formatMatch)
-    .filter(Boolean);
+  return data.matches.map(formatMatch).filter(Boolean);
 }
-
 /* =========================
    FILTER MATCHES
 ========================= */
 function filterMatches(matches) {
   const now = new Date();
   const maxDate = new Date();
-  maxDate.setDate(now.getDate() + 14);
+  maxDate.setDate(now.getDate() + 10); // 🔥 plus strict
 
   return matches.filter(m => {
     const d = new Date(m.utcDate);
+
     return (
+      m.homeTeam &&
+      m.awayTeam &&
       ["TIMED", "SCHEDULED"].includes(m.status) &&
       d >= now &&
       d <= maxDate
     );
+  });
+}
+
+function addMatchQuality(matches) {
+  return matches.map(m => {
+    let score = 50;
+
+    const bigTeams = [
+      "Real Madrid", "Barcelona", "Liverpool",
+      "Manchester City", "Arsenal", "Bayern Munich",
+      "PSG", "Inter", "AC Milan", "Juventus"
+    ];
+
+    const home = m.homeTeam.name;
+    const away = m.awayTeam.name;
+
+    if (bigTeams.some(t => home.includes(t) || away.includes(t))) {
+      score += 30;
+    }
+
+    m.importance = score;
+    return m;
   });
 }
 
@@ -160,6 +184,7 @@ async function getMatches() {
 
   // FILTER
   allMatches = filterMatches(allMatches);
+  allMatches = addMatchQuality(allMatches);
   allMatches = removeDuplicates(allMatches);
 
   // SORT BY DATE
