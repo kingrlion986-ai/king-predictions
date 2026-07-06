@@ -3,40 +3,42 @@ const fetch = require("node-fetch");
 const API_KEY = process.env.API_KEY;
 const BASE_URL = "https://api.football-data.org/v4";
 
-const ALLOWED_COMPETITIONS = [
+/* =========================
+   COMPETITIONS PRIORITY
+========================= */
+const PRIMARY_COMPETITIONS = [
+  "CL",
   "PL",
   "PD",
   "SA",
   "BL1",
-  "FL1",
-  "DED",
-  "PPL",
+  "FL1"
+];
+
+const SECONDARY_COMPETITIONS = [
   "ELC",
+  "DED",
   "BSA",
-  "CL",
+  "PPL",
   "WC"
 ];
 
 /* =========================
-   CACHE CONFIG
+   CACHE
 ========================= */
 const CACHE = {
   matches: {
     data: null,
     expiresAt: 0
-  },
-  teamRecentMatches: {}
+  }
 };
 
-const MATCHES_TTL = 5 * 60 * 1000; // 5 min
-const TEAM_MATCHES_TTL = 15 * 60 * 1000; // 15 min
+const MATCHES_TTL = 5 * 60 * 1000;
 
 /* =========================
-   API CORE
+   API CALL
 ========================= */
 async function apiGet(endpoint) {
-  console.log("📡 CALL API:", endpoint);
-
   try {
     const res = await fetch(`${BASE_URL}${endpoint}`, {
       headers: {
@@ -45,158 +47,146 @@ async function apiGet(endpoint) {
     });
 
     if (!res.ok) {
-      console.log(`❌ API ERROR ${res.status} on ${endpoint}`);
+      console.log(`❌ API ERROR ${res.status} → ${endpoint}`);
       return null;
     }
 
     const data = await res.json();
-
-    console.log("📊 API RESPONSE KEYS:", Object.keys(data));
-
     return data;
 
   } catch (err) {
-    console.log("❌ FOOTBALL API ERROR:", err.message);
+    console.log("❌ API FAILURE:", err.message);
     return null;
   }
 }
 
 /* =========================
-   TEAM MATCHES (SAFE)
+   FORMAT MATCH
 ========================= */
-async function getTeamMatches(teamId) {
-  const data = await apiGet(`/teams/${teamId}/matches?status=FINISHED`);
+function formatMatch(m) {
+  if (!m?.homeTeam || !m?.awayTeam) return null;
 
-  if (!data || !data.matches) return [];
-
-  return data.matches.map(m => ({
+  return {
     id: m.id,
     utcDate: m.utcDate,
     status: m.status,
-
+    competition: {
+      code: m.competition?.code,
+      name: m.competition?.name
+    },
     homeTeam: {
       id: m.homeTeam.id,
       name: m.homeTeam.name
     },
-
     awayTeam: {
       id: m.awayTeam.id,
       name: m.awayTeam.name
     },
-
     score: m.score
-  }));
+  };
 }
 
+/* =========================
+   FETCH COMPETITION MATCHES
+========================= */
+async function getCompetitionMatches(code) {
+  const data = await apiGet(`/competitions/${code}/matches`);
+
+  if (!data || !data.matches) return [];
+
+  return data.matches
+    .map(formatMatch)
+    .filter(Boolean);
+}
 
 /* =========================
-   GET MATCHES (FIX V17 CLEAN)
+   FILTER MATCHES
 ========================= */
-async function getMatches() {
-
-  const cached = CACHE.matches;
-
-  if (cached.data && Date.now() < cached.expiresAt) {
-    console.log("⚡ MATCHES FROM CACHE");
-    return cached.data;
-  }
-
-  // IMPORTANT: un seul appel API
-  const data = await apiGet("/matches");
-
-  if (!data || !data.matches) {
-    console.log("⚠️ No matches returned");
-    return [];
-  }
-
-  let allMatches = data.matches
-    .filter(m =>
-  m.homeTeam?.id != null &&
-  m.awayTeam?.id != null &&
-  m.competition?.code
-)
-    .map(m => ({
-      id: m.id,
-      utcDate: m.utcDate,
-      status: m.status,
-
-      competition: {
-        code: m.competition?.code,
-        name: m.competition?.name
-      },
-
-      homeTeam: {
-        id: m.homeTeam.id,
-        name: m.homeTeam.name
-      },
-
-      awayTeam: {
-        id: m.awayTeam.id,
-        name: m.awayTeam.name
-      },
-
-      score: m.score
-    }));
-
-  allMatches = allMatches.filter(m =>
-  m.competition?.code &&
-  ALLOWED_COMPETITIONS.includes(m.competition.code)
-);
-
-  // filtre date (7-14 jours OK)
+function filterMatches(matches) {
   const now = new Date();
   const maxDate = new Date();
   maxDate.setDate(now.getDate() + 14);
 
-  allMatches = allMatches.filter(match => {
-    const d = new Date(match.utcDate);
+  return matches.filter(m => {
+    const d = new Date(m.utcDate);
     return (
-      ["TIMED", "SCHEDULED"].includes(match.status) &&
+      ["TIMED", "SCHEDULED"].includes(m.status) &&
       d >= now &&
       d <= maxDate
     );
   });
+}
 
+/* =========================
+   REMOVE DUPLICATES
+========================= */
+function removeDuplicates(matches) {
+  const seen = new Set();
+  return matches.filter(m => {
+    if (seen.has(m.id)) return false;
+    seen.add(m.id);
+    return true;
+  });
+}
+
+/* =========================
+   MAIN GET MATCHES (V18)
+========================= */
+async function getMatches() {
+
+  const cached = CACHE.matches;
+  if (cached.data && Date.now() < cached.expiresAt) {
+    console.log("⚡ CACHE MATCHES");
+    return cached.data;
+  }
+
+  let allMatches = [];
+
+  // 1. PRIMARY
+  for (const code of PRIMARY_COMPETITIONS) {
+    console.log(`📡 PRIMARY: ${code}`);
+    const matches = await getCompetitionMatches(code);
+    allMatches = allMatches.concat(matches);
+  }
+
+  // 2. IF NOT ENOUGH MATCHES → SECONDARY
+  if (allMatches.length < 25) {
+    for (const code of SECONDARY_COMPETITIONS) {
+      console.log(`📡 SECONDARY: ${code}`);
+      const matches = await getCompetitionMatches(code);
+      allMatches = allMatches.concat(matches);
+    }
+  }
+
+  // FILTER
+  allMatches = filterMatches(allMatches);
+  allMatches = removeDuplicates(allMatches);
+
+  // SORT BY DATE
   allMatches.sort((a, b) =>
     new Date(a.utcDate) - new Date(b.utcDate)
   );
 
+  // CACHE
   CACHE.matches = {
     data: allMatches,
     expiresAt: Date.now() + MATCHES_TTL
   };
 
-  console.log("🔥 TOTAL MATCHES:", allMatches.length);
+  console.log("🔥 TOTAL MATCHES V18:", allMatches.length);
 
   return allMatches;
 }
 
-async function testCompetitions() {
-  const competitions = [
-    "PL",
-    "PD",
-    "SA",
-    "BL1",
-    "FL1",
-    "DED",
-    "PPL",
-    "ELC",
-    "BSA",
-    "CL",
-    "WC"
-  ];
+/* =========================
+   TEAM MATCHES
+========================= */
+async function getTeamMatches(teamId) {
+  const data = await apiGet(`/teams/${teamId}/matches?status=FINISHED`);
 
-  for (const code of competitions) {
-    try {
-      const data = await apiGet(`/competitions/${code}/matches`);
+  if (!data?.matches) return [];
 
-      console.log(
-        `${code} : ${data?.matches?.length || 0} matchs`
-      );
-    } catch (err) {
-      console.log(`${code} : ❌ ${err.message}`);
-    }
-  }
+  return data.matches.map(formatMatch).filter(Boolean);
 }
 
 /* =========================
@@ -205,6 +195,5 @@ async function testCompetitions() {
 module.exports = {
   apiGet,
   getMatches,
-  getTeamMatches,
-  testCompetitions
+  getTeamMatches
 };
