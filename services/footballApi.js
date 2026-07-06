@@ -172,11 +172,40 @@ async function getMatches() {
   return allMatches;
 }
 
+async function testCompetitions() {
+  const competitions = [
+    "PL",
+    "PD",
+    "SA",
+    "BL1",
+    "FL1",
+    "DED",
+    "PPL",
+    "ELC",
+    "BSA",
+    "CL",
+    "WC"
+  ];
+
+  for (const code of competitions) {
+    try {
+      const data = await apiGet(`/competitions/${code}/matches`);
+
+      console.log(
+        `${code} : ${data?.matches?.length || 0} matchs`
+      );
+    } catch (err) {
+      console.log(`${code} : ❌ ${err.message}`);
+    }
+  }
+}
+
 /* =========================
    EXPORTS
 ========================= */
 module.exports = {
   apiGet,
   getMatches,
-  getTeamMatches
+  getTeamMatches,
+  testCompetitions
 };
