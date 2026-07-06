@@ -103,7 +103,6 @@ async function getMatches() {
 
   // IMPORTANT: un seul appel API
   const data = await apiGet("/matches");
-  );
 
   if (!data || !data.matches) {
     console.log("⚠️ No matches returned");
@@ -111,7 +110,7 @@ async function getMatches() {
   }
 
   let allMatches = data.matches
-    ..filter(m =>
+    .filter(m =>
   m.homeTeam?.id != null &&
   m.awayTeam?.id != null &&
   m.competition?.code
