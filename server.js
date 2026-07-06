@@ -6,7 +6,10 @@ const { filterVipMatches } = require("./services/vipFilterEngine");
 const fs = require("fs");
 const path = require("path");
 
-const { getMatches } = require("./services/footballApi");
+const {
+  getMatches,
+  testCompetitions
+} = require("./services/footballApi");
 const { analyzeMatch } = require("./services/predictionEngine");
 const {
   rankMatches,
@@ -16,6 +19,8 @@ const {
 } = require("./services/rankingEngine");
 
 const app = express();
+
+testCompetitions();
 
 app.use(cors());
 app.use(express.json());
