@@ -213,7 +213,12 @@ async function analyzeTeam(team) {
     return fallback;
   }
 
-  const stats = buildStats(matches, team.id);
+  const recentMatches = matches
+  .filter(m => m.status === "FINISHED")
+  .sort((a, b) => new Date(b.utcDate) - new Date(a.utcDate))
+  .slice(0, 5);
+
+const stats = buildStats(recentMatches, team.id);
 
   const result = {
 
