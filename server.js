@@ -182,7 +182,7 @@ app.get("/vip/1x2", async (req, res) => {
     const matches = await getMatches();
 
 const futureMatches = matches.filter(
-  ["TIMED", "SCHEDULED", "UPCOMING"].includes(m.status)
+  m => ["TIMED", "SCHEDULED", "UPCOMING"].includes(m.status)
 );
 
 const analyses = [];
@@ -226,7 +226,7 @@ app.get("/vip/over25", async (req, res) => {
     const matches = await getMatches();
 
 const futureMatches = matches.filter(
-  ["TIMED", "SCHEDULED", "UPCOMING"].includes(m.status)
+  m => ["TIMED", "SCHEDULED", "UPCOMING"].includes(m.status)
 );
 
 const analyses = await analyzeMatches(futureMatches);
@@ -261,7 +261,7 @@ app.get("/vip/btts", async (req, res) => {
     const matches = await getMatches();
 
 const futureMatches = matches.filter(
-  ["TIMED", "SCHEDULED", "UPCOMING"].includes(m.status)
+  m => ["TIMED", "SCHEDULED", "UPCOMING"].includes(m.status)
 );
 
 const analyses = await analyzeMatches(futureMatches);
@@ -296,7 +296,7 @@ app.get("/vip/score", async (req, res) => {
     const matches = await getMatches();
 
 const futureMatches = matches.filter(
-  ["TIMED", "SCHEDULED", "UPCOMING"].includes(m.status)
+  m => ["TIMED", "SCHEDULED", "UPCOMING"].includes(m.status)
 );
 
 const analyses = await analyzeMatches(futureMatches);
@@ -490,3 +490,4 @@ app.get("/debug", async (req, res) => {
 app.listen(PORT, () => {
   console.log("KING PREDICTIONS V16 RUNNING ⚽🔥");
 });
+  
