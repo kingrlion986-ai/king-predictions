@@ -43,7 +43,11 @@ async function loadPredictions(url) {
                 <h2>${item.match ?? "Match"}</h2>
                 <hr style="margin:15px 0;">
                 <p><strong>Pronostic :</strong> ${
-    item.pick || item.market || item.prediction || "-"
+    item.pick ||
+item.market ||
+item.score ||
+item.prediction ||
+"-"
 }</p>
 
 ${currentMode.startsWith("/vip") ? `
