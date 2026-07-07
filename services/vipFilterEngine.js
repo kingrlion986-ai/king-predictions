@@ -43,10 +43,15 @@ function isVipMatch(home, away) {
 /* =========================
    FILTER MATCHES
 ========================= */
-function filterVipMatches(matches) {
-  return matches.filter(m =>
-    isVipMatch(m.homeTeam, m.awayTeam)
+function filterVipMatches(analyses) {
+
+  return analyses.filter(a =>
+    isVipMatch(
+      a.teamStats.home,
+      a.teamStats.away
+    )
   );
+
 }
 
 module.exports = {
