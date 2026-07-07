@@ -32,6 +32,13 @@ const PORT = process.env.PORT || 3000;
 
 const HISTORY_FILE = path.join(__dirname, "history.json");
 
+const ANALYSIS_CACHE = {
+  data: null,
+  expiresAt: 0
+};
+
+const ANALYSIS_TTL = 5 * 60 * 1000;
+
 function loadHistory() {
   try {
     if (!fs.existsSync(HISTORY_FILE)) {
@@ -54,11 +61,23 @@ function saveHistory(data) {
 }
 
 async function analyzeMatches(matches) {
+
+  if (
+    ANALYSIS_CACHE.data &&
+    Date.now() < ANALYSIS_CACHE.expiresAt
+  ) {
+    console.log("⚡ ANALYSIS CACHE");
+    return ANALYSIS_CACHE.data;
+  }
+
   const analyses = [];
 
   for (const match of matches) {
     analyses.push(await analyzeMatch(match));
   }
+
+  ANALYSIS_CACHE.data = analyses;
+  ANALYSIS_CACHE.expiresAt = Date.now() + ANALYSIS_TTL;
 
   return analyses;
 }
