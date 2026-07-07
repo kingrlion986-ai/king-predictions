@@ -52,7 +52,9 @@ function buildStats(matches, teamId) {
   matches.forEach((match, index) => {
 
   // Les matchs les plus récents ont plus d'importance
-  const weight = 1 + (index / Math.max(matches.length - 1, 1));
+  // Les matchs les plus récents ont le poids le plus élevé
+const maxIndex = Math.max(matches.length - 1, 1);
+const weight = 2 - (index / maxIndex);
 
     const isHome = match.homeTeam.id === teamId;
 
