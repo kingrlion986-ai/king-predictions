@@ -157,6 +157,26 @@ function computeStrength(stats) {
     100
   );
 }
+
+/* =========================
+   RELIABILITY
+========================= */
+
+function computeReliability(stats) {
+
+  let reliability = 0.30;
+
+  // Plus on a de matchs, plus c'est fiable
+  reliability += Math.min(stats.played, 10) * 0.05;
+
+  // Une équipe qui gagne régulièrement est plus prévisible
+  reliability += (stats.wins / Math.max(stats.played, 1)) * 0.20;
+
+  return Number(
+    Math.min(reliability, 1).toFixed(2)
+  );
+}
+
 /* =========================
    MAIN ANALYZER
 ========================= */
