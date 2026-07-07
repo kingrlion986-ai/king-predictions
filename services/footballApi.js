@@ -29,8 +29,13 @@ const CACHE = {
   matches: {
     data: null,
     expiresAt: 0
-  }
+  },
+
+  teamMatches: {}
 };
+
+const MATCHES_TTL = 5 * 60 * 1000;
+const TEAM_MATCHES_TTL = 15 * 60 * 1000;
 
 const MATCHES_TTL = 5 * 60 * 1000;
 
@@ -218,13 +223,31 @@ async function getMatches() {
    TEAM MATCHES
 ========================= */
 async function getTeamMatches(teamId) {
+
+  const cached = CACHE.teamMatches[teamId];
+
+  if (cached && Date.now() < cached.expiresAt) {
+    console.log(`⚡ TEAM CACHE ${teamId}`);
+    return cached.data;
+  }
+
   const data = await apiGet(`/teams/${teamId}/matches?status=FINISHED`);
 
-  if (!data?.matches) return [];
+  if (!data?.matches) {
+    return [];
+  }
 
-  return data.matches.map(formatMatch).filter(Boolean);
+  const matches = data.matches
+    .map(formatMatch)
+    .filter(Boolean);
+
+  CACHE.teamMatches[teamId] = {
+    data: matches,
+    expiresAt: Date.now() + TEAM_MATCHES_TTL
+  };
+
+  return matches;
 }
-
 /* =========================
    EXPORTS
 ========================= */
