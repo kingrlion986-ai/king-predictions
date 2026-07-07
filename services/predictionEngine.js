@@ -1,3 +1,5 @@
+const { analyzeTeam } = require("./teamAnalyzer");
+
 function getBaseStrength(match) {
   let strength = 50;
 
