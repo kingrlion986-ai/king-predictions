@@ -125,7 +125,10 @@ const analysis = await analyzeMatch(match);
     res.json({
       match: analysis.match,
       prediction: "1X2",
-      pick: analysis.predictions.winner,
+      pick:
+analysis.predictions.winner === "DRAW"
+  ? "Double Chance"
+  : analysis.predictions.winner,
       confidence: analysis.predictions.winnerConfidence,
       stats: {
         homeStrength: analysis.teamStats.home.strength,
@@ -290,9 +293,13 @@ const selected = ranked.slice(
     const result = selected.map(a => ({
   match: a.match,
   score: a.predictions.correctScore,
+
+  confidence: Math.round(
+    a.model.expectedGoals * 22
+  ),
+
   expectedHomeGoals: a.model?.expectedHomeGoals ?? 0,
   expectedAwayGoals: a.model?.expectedAwayGoals ?? 0
-      
 }));
 
     res.json(result);
