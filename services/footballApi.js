@@ -228,6 +228,9 @@ async function getMatches() {
   }))
 );
 
+   console.log("MATCHES FINAL =", allMatches.length);
+   console.log(JSON.stringify(allMatches, null, 2));
+
   return allMatches;
 }
 
