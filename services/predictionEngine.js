@@ -20,41 +20,33 @@ function round(value) {
 function calculateWinner(home, away) {
 
   const homePower =
-    home.strength * 0.45 +
-    home.formPoints * 100 * 0.25 +
-    home.reliability * 100 * 0.10 +
-    home.avgScored * 10 * 0.20;
-
+    home.strength +
+    home.avgScored * 12 +
+    home.formPoints * 20 +
+    6; // avantage domicile
 
   const awayPower =
-    away.strength * 0.45 +
-    away.formPoints * 100 * 0.25 +
-    away.reliability * 100 * 0.10 +
-    away.avgScored * 10 * 0.20;
+    away.strength +
+    away.avgScored * 12 +
+    away.formPoints * 20;
 
+  const diff = Math.abs(homePower - awayPower);
 
-  // avantage terrain
-  const adjustedHome = homePower + 5;
+  let drawPower = 18 - diff / 5;
+
+  drawPower = clamp(drawPower, 6, 18);
 
   const total =
-    adjustedHome + awayPower + 40;
+    homePower +
+    awayPower +
+    drawPower;
 
-
-  const homeWin =
-    Math.round((adjustedHome / total) * 100);
-
-
-  const awayWin =
-    Math.round((awayPower / total) * 100);
-
-
-  const draw =
-    100 - homeWin - awayWin;
-
+  const homeWin = Math.round(homePower / total * 100);
+  const awayWin = Math.round(awayPower / total * 100);
+  const draw = 100 - homeWin - awayWin;
 
   let winner = "DRAW";
   let confidence = draw;
-
 
   if (homeWin > awayWin && homeWin > draw) {
     winner = home.teamName;
@@ -66,19 +58,17 @@ function calculateWinner(home, away) {
     confidence = awayWin;
   }
 
-
   return {
     winner,
-    winnerConfidence: clamp(confidence, 20, 90),
-
+    winnerConfidence: clamp(confidence, 45, 90),
     probabilities: {
       homeWin,
       draw,
       awayWin
     }
   };
-}
 
+}
 
 /* =========================
    OVER 2.5 MODEL
@@ -131,7 +121,9 @@ function calculateBTTS(home, away) {
 
 
   return {
-    value: confidence >= 55 ? "YES" : "NO",
+    value: confidence >= 55
+  ? "OVER 2.5"
+  : "UNDER 2.5",
     confidence
   };
 }
