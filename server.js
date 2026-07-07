@@ -1,16 +1,16 @@
 const express = require("express");
 const cors = require("cors");
-
-const { filterVipMatches } = require("./services/vipFilterEngine");
-
 const fs = require("fs");
 const path = require("path");
 
 const {
-  getMatches,
-  testCompetitions
+  getMatches
 } = require("./services/footballApi");
-const { analyzeMatch } = require("./services/predictionEngine");
+
+const {
+  analyzeMatch
+} = require("./services/predictionEngine");
+
 const {
   rankMatches,
   rankOver25Matches,
@@ -18,45 +18,19 @@ const {
   rankScoreMatches
 } = require("./services/rankingEngine");
 
+const {
+  filterVipMatches
+} = require("./services/vipFilterEngine");
+
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
-
-app.get("/vip/matches", async (req, res) => {
-  try {
-    const matches = await getMatches();
-
-    const vipMatches = filterVipMatches(matches);
-
-    res.json({
-      success: true,
-      totalMatches: matches.length,
-      vipMatches: vipMatches.length,
-      data: vipMatches
-    });
-
-  } catch (error) {
-    console.log("VIP MATCH ERROR:", error);
-
-    res.status(500).json({
-      success: false,
-      error: "VIP system error"
-    });
-  }
-});
-
 const PORT = process.env.PORT || 3000;
 
-const HISTORY_FILE = path.join(
-  __dirname,
-  "history.json"
-);
+const HISTORY_FILE = path.join(__dirname, "history.json");
 
 function loadHistory() {
   try {
@@ -77,6 +51,16 @@ function saveHistory(data) {
     HISTORY_FILE,
     JSON.stringify(data, null, 2)
   );
+}
+
+async function analyzeMatches(matches) {
+  const analyses = [];
+
+  for (const match of matches) {
+    analyses.push(await analyzeMatch(match));
+  }
+
+  return analyses;
 }
 
 /* =========================
@@ -179,25 +163,19 @@ app.get("/vip/predictions", async (req, res) => {
 ========================= */
 app.get("/vip/1x2", async (req, res) => {
   try {
+
     const matches = await getMatches();
 
-const futureMatches = matches.filter(
-  m => ["TIMED", "SCHEDULED", "UPCOMING"].includes(m.status)
-);
+    const futureMatches = matches.filter(
+      m => ["TIMED", "SCHEDULED", "UPCOMING"].includes(m.status)
+    );
 
-const analyses = [];
+    const analyses = await analyzeMatches(futureMatches);
 
-for (const match of futureMatches) {
-  analyses.push(await analyzeMatch(match));
-}
+    const ranked = rankMatches(analyses);
 
-const ranked = rankMatches(analyses);
-
-const selected = ranked.slice(
-  0,
-  SETTINGS.maxVIP_1X2
-);
-    const result = selected
+    const result = ranked
+      .slice(0, SETTINGS.maxVIP_1X2)
       .map(a => ({
         match: a.match,
         pick: a.predictions.winner,
@@ -208,13 +186,18 @@ const selected = ranked.slice(
           home: `${a.teamStats.home.wins}W-${a.teamStats.home.draws}D-${a.teamStats.home.losses}L`,
           away: `${a.teamStats.away.wins}W-${a.teamStats.away.draws}D-${a.teamStats.away.losses}L`
         }
-      }))
-      .sort((a, b) => b.confidence - a.confidence);
+      }));
 
     res.json(result);
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Internal server error" });
+
+    console.error("VIP 1X2 ERROR:", err);
+
+    res.status(500).json({
+      error: "Internal server error"
+    });
+
   }
 });
 
