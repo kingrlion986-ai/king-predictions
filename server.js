@@ -333,6 +333,15 @@ app.get("/accuracy", async (req, res) => {
 
     const matches = await getMatches();
 
+    console.log(
+  matches.map(m => ({
+    home: m.homeTeam.name,
+    away: m.awayTeam.name,
+    status: m.status,
+    date: m.utcDate
+  }))
+);
+
     const finishedMatches = matches.filter(
       m => m.status === "FINISHED"
     );
