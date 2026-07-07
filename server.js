@@ -112,15 +112,13 @@ console.log(
   );
 });
 
-const futureMatches = matches.filter(
-  m => ["TIMED", "SCHEDULED", "UPCOMING"].includes(m.status)
-);
-
-if (!futureMatches.length) {
-  return res.json({ error: "No future matches" });
+if (!matches.length) {
+  return res.json({
+    error: "No future matches"
+  });
 }
 
-const match = futureMatches[0];
+const match = matches[0];
 const analysis = await analyzeMatch(match);
     res.json({
       match: analysis.match,
