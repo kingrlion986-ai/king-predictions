@@ -1,104 +1,335 @@
 const { analyzeTeam } = require("./teamAnalyzer");
 
-function getBaseStrength(match) {
-  let strength = 50;
+/* =========================
+   HELPERS
+========================= */
 
-  const bigTeams = [
-    "Real Madrid", "Barcelona", "Liverpool",
-    "Manchester City", "Arsenal", "Bayern Munich",
-    "PSG", "Inter", "AC Milan", "Juventus"
-  ];
-
-  const home = match.homeTeam.name;
-  const away = match.awayTeam.name;
-
-  if (bigTeams.includes(home)) strength += 15;
-  if (bigTeams.includes(away)) strength -= 5;
-
-  if (bigTeams.includes(away)) strength += 15;
-  if (bigTeams.includes(home)) strength -= 5;
-
-  return strength;
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
 }
 
+function round(value) {
+  return Number(value.toFixed(2));
+}
+
+
 /* =========================
-   PROBABILITY ENGINE
+   WINNER MODEL
 ========================= */
-function calculateProbabilities(match) {
-  const base = getBaseStrength(match);
 
-  let homeWin = base;
-  let awayWin = 100 - base;
-  let draw = 20;
+function calculateWinner(home, away) {
 
-  // normalisation
-  const total = homeWin + awayWin + draw;
+  const homePower =
+    home.strength * 0.45 +
+    home.formPoints * 100 * 0.25 +
+    home.reliability * 100 * 0.10 +
+    home.avgScored * 10 * 0.20;
 
-  homeWin = Math.round((homeWin / total) * 100);
-  awayWin = Math.round((awayWin / total) * 100);
-  draw = 100 - homeWin - awayWin;
+
+  const awayPower =
+    away.strength * 0.45 +
+    away.formPoints * 100 * 0.25 +
+    away.reliability * 100 * 0.10 +
+    away.avgScored * 10 * 0.20;
+
+
+  // avantage terrain
+  const adjustedHome = homePower + 5;
+
+  const total =
+    adjustedHome + awayPower + 40;
+
+
+  const homeWin =
+    Math.round((adjustedHome / total) * 100);
+
+
+  const awayWin =
+    Math.round((awayPower / total) * 100);
+
+
+  const draw =
+    100 - homeWin - awayWin;
+
+
+  let winner = "DRAW";
+  let confidence = draw;
+
+
+  if (homeWin > awayWin && homeWin > draw) {
+    winner = home.teamName;
+    confidence = homeWin;
+  }
+
+  if (awayWin > homeWin && awayWin > draw) {
+    winner = away.teamName;
+    confidence = awayWin;
+  }
+
 
   return {
-    homeWin,
-    draw,
-    awayWin
-  };
-}
+    winner,
+    winnerConfidence: clamp(confidence, 20, 90),
 
-/* =========================
-   KING STATUS SYSTEM
-========================= */
-function getKingStatus(homeWin, draw, awayWin) {
-  const max = Math.max(homeWin, draw, awayWin);
-
-  if (max >= 80) return "KING SAFE";
-  if (max >= 65) return "KING SOLID";
-  if (max >= 50) return "KING RISK";
-  return "KING AVOID";
-}
-
-/* =========================
-   SCORE ESTIMATION
-========================= */
-function estimateScore(homeWin, awayWin) {
-  if (homeWin > awayWin + 20) return "2-0 / 3-1";
-  if (awayWin > homeWin + 20) return "0-2 / 1-3";
-  return "1-1 / 2-2";
-}
-
-/* =========================
-   MAIN ANALYSIS
-========================= */
-function analyzeMatch(match) {
-  const probs = calculateProbabilities(match);
-
-  const status = getKingStatus(
-    probs.homeWin,
-    probs.draw,
-    probs.awayWin
-  );
-
-  const score = estimateScore(
-    probs.homeWin,
-    probs.awayWin
-  );
-
-  return {
-    match,
-    prediction: {
-      probabilities: probs,
-      status,
-      recommended: probs.homeWin > probs.awayWin
-        ? match.homeTeam.name
-        : match.awayTeam.name,
-      scoreGuess: score
+    probabilities: {
+      homeWin,
+      draw,
+      awayWin
     }
   };
 }
 
+
+/* =========================
+   OVER 2.5 MODEL
+========================= */
+
+function calculateOver25(home, away) {
+
+  const expected =
+    home.avgScored +
+    away.avgScored +
+    home.avgConceded +
+    away.avgConceded;
+
+
+  const confidence =
+    Math.round(
+      clamp(
+        expected * 18,
+        20,
+        90
+      )
+    );
+
+
+  return {
+    value: confidence >= 55 ? "YES" : "NO",
+    confidence,
+    expectedGoals: round(expected)
+  };
+} 
+/* =========================
+   BTTS MODEL
+========================= */
+
+function calculateBTTS(home, away) {
+
+  const attack =
+    home.bttsRate +
+    away.bttsRate;
+
+
+  const confidence =
+    Math.round(
+      clamp(
+        attack / 2,
+        20,
+        90
+      )
+    );
+
+
+  return {
+    value: confidence >= 55 ? "YES" : "NO",
+    confidence
+  };
+}
+
+
+/* =========================
+   GOALS MODEL
+========================= */
+
+function calculateExpectedGoals(home, away) {
+
+  const homeGoals =
+    (
+      home.avgScored +
+      away.avgConceded +
+      home.homeAttack
+    ) / 3;
+
+
+  const awayGoals =
+    (
+      away.avgScored +
+      home.avgConceded +
+      away.awayAttack
+    ) / 3;
+
+
+  return {
+    expectedHomeGoals: round(
+      clamp(homeGoals, 0, 4)
+    ),
+
+    expectedAwayGoals: round(
+      clamp(awayGoals, 0, 4)
+    )
+  };
+}
+
+
+/* =========================
+   SCORE EXACT MODEL
+========================= */
+
+function generateScore(model, winner) {
+
+  let homeGoals =
+    Math.round(model.expectedHomeGoals);
+
+  let awayGoals =
+    Math.round(model.expectedAwayGoals);
+
+
+  // cohérence avec le vainqueur
+
+  if (winner !== "DRAW") {
+
+    if (
+      winner === model.homeTeam
+      &&
+      homeGoals <= awayGoals
+    ) {
+      homeGoals = awayGoals + 1;
+    }
+
+
+    if (
+      winner === model.awayTeam
+      &&
+      awayGoals <= homeGoals
+    ) {
+      awayGoals = homeGoals + 1;
+    }
+
+  }
+
+
+  // match nul cohérent
+
+  if (winner === "DRAW") {
+    awayGoals = homeGoals;
+  }
+
+
+  return `${homeGoals}-${awayGoals}`;
+      }
+/* =========================
+   MAIN ANALYSIS V19
+========================= */
+
+async function analyzeMatch(match) {
+
+  const homeStats = await analyzeTeam(match.homeTeam);
+  const awayStats = await analyzeTeam(match.awayTeam);
+
+
+  const winnerModel = calculateWinner(
+    homeStats,
+    awayStats
+  );
+
+
+  const over25Model = calculateOver25(
+    homeStats,
+    awayStats
+  );
+
+
+  const bttsModel = calculateBTTS(
+    homeStats,
+    awayStats
+  );
+
+
+  const goalsModel = calculateExpectedGoals(
+    homeStats,
+    awayStats
+  );
+
+
+  const scoreModel = {
+    ...goalsModel,
+    homeTeam: match.homeTeam.name,
+    awayTeam: match.awayTeam.name
+  };
+
+
+  const correctScore = generateScore(
+    scoreModel,
+    winnerModel.winner
+  );
+
+
+  return {
+
+    match: `${match.homeTeam.name} vs ${match.awayTeam.name}`,
+
+    predictions: {
+
+      winner: winnerModel.winner,
+
+      winnerConfidence:
+        winnerModel.winnerConfidence,
+
+      probabilities:
+        winnerModel.probabilities,
+
+
+      over25:
+        over25Model.value,
+
+      over25Confidence:
+        over25Model.confidence,
+
+
+      btts:
+        bttsModel.value,
+
+      bttsConfidence:
+        bttsModel.confidence,
+
+
+      correctScore
+
+    },
+
+
+    teamStats: {
+
+      home: homeStats,
+
+      away: awayStats
+
+    },
+
+
+    model: {
+
+      expectedGoals:
+        goalsModel.expectedHomeGoals +
+        goalsModel.expectedAwayGoals,
+
+      expectedHomeGoals:
+        goalsModel.expectedHomeGoals,
+
+      expectedAwayGoals:
+        goalsModel.expectedAwayGoals
+
+    }
+
+  };
+
+}
+
+
 /* =========================
    EXPORT
 ========================= */
+
 module.exports = {
   analyzeMatch
 };
