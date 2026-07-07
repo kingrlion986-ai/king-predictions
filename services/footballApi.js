@@ -6,23 +6,22 @@ const BASE_URL = "https://api.football-data.org/v4";
 /* =========================
    COMPETITIONS PRIORITY
 ========================= */
+
 const PRIMARY_COMPETITIONS = [
   "CL",
   "PL",
   "PD",
   "SA",
   "BL1",
-  "FL1"
+  "FL1",
+  "DED",
+  "BSA"
 ];
 
 const SECONDARY_COMPETITIONS = [
   "ELC",
-  "DED",
-  "BSA",
-  "PPL",
-  "WC"
+  "PPL"
 ];
-
 /* =========================
    CACHE
 ========================= */
@@ -90,13 +89,19 @@ function formatMatch(m) {
    FETCH COMPETITION MATCHES
 ========================= */
 async function getCompetitionMatches(code) {
+
   const data = await apiGet(
-    `/competitions/${code}/matches?status=SCHEDULED`
+    `/competitions/${code}/matches`
   );
 
   if (!data || !data.matches) return [];
 
-  return data.matches.map(formatMatch).filter(Boolean);
+  return data.matches
+    .filter(match =>
+      ["SCHEDULED", "TIMED"].includes(match.status)
+    )
+    .map(formatMatch)
+    .filter(Boolean);
 }
 /* =========================
    FILTER MATCHES
@@ -174,7 +179,7 @@ async function getMatches() {
   }
 
   // 2. IF NOT ENOUGH MATCHES → SECONDARY
-  if (allMatches.length < 25) {
+  if (allMatches.length < 50) {
     for (const code of SECONDARY_COMPETITIONS) {
       console.log(`📡 SECONDARY: ${code}`);
       const matches = await getCompetitionMatches(code);
@@ -183,14 +188,20 @@ async function getMatches() {
   }
 
   // FILTER
+  allMatches = removeDuplicates(allMatches);
   allMatches = filterMatches(allMatches);
   allMatches = addMatchQuality(allMatches);
-  allMatches = removeDuplicates(allMatches);
 
   // SORT BY DATE
-  allMatches.sort((a, b) =>
-    new Date(a.utcDate) - new Date(b.utcDate)
-  );
+  allMatches.sort((a,b)=>{
+
+  if (b.quality !== a.quality) {
+    return b.quality - a.quality;
+  }
+
+  return new Date(a.utcDate) - new Date(b.utcDate);
+
+});
 
   // CACHE
   CACHE.matches = {
