@@ -1,62 +1,47 @@
-function computeMatchScore(match) {
-  let score = 50;
-
-  const bigTeams = [
-    "Real Madrid", "Barcelona", "Liverpool",
-    "Manchester City", "Arsenal", "Bayern Munich",
-    "PSG", "Inter", "AC Milan", "Juventus"
-  ];
-
-  const home = match.homeTeam.name;
-  const away = match.awayTeam.name;
-
-  if (bigTeams.some(t => home.includes(t) || away.includes(t))) {
-    score += 25;
-  }
-
-  const elite = ["CL", "PL", "PD", "SA", "BL1", "FL1"];
-  if (elite.includes(match.competition?.code)) {
-    score += 15;
-  }
-
-  if (match.importance) {
-    score += match.importance * 0.2;
-  }
-
-  return score;
+function byWinnerConfidence(a, b) {
+  return (
+    b.predictions.winnerConfidence -
+    a.predictions.winnerConfidence
+  );
 }
 
-/* =========================
-   TOP 3 MATCHES (NEW)
-========================= */
-function rankMatches(matches) {
-  return matches
-    .map(m => ({
-      ...m,
-      score: computeMatchScore(m)
-    }))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3);
+function byOver25(a, b) {
+  return (
+    b.predictions.over25Confidence -
+    a.predictions.over25Confidence
+  );
 }
 
-/* =========================
-   VIP FUNCTIONS (KEEP THEM)
-========================= */
-function rankOver25Matches(matches) {
-  return matches;
+function byBTTS(a, b) {
+  return (
+    b.predictions.bttsConfidence -
+    a.predictions.bttsConfidence
+  );
 }
 
-function rankBTTSMatches(matches) {
-  return matches;
+function byScore(a, b) {
+  return (
+    b.model.expectedGoals -
+    a.model.expectedGoals
+  );
 }
 
-function rankScoreMatches(matches) {
-  return matches;
+function rankMatches(analyses) {
+  return [...analyses].sort(byWinnerConfidence);
 }
 
-/* =========================
-   EXPORTS
-========================= */
+function rankOver25Matches(analyses) {
+  return [...analyses].sort(byOver25);
+}
+
+function rankBTTSMatches(analyses) {
+  return [...analyses].sort(byBTTS);
+}
+
+function rankScoreMatches(analyses) {
+  return [...analyses].sort(byScore);
+}
+
 module.exports = {
   rankMatches,
   rankOver25Matches,
