@@ -149,9 +149,10 @@ app.get("/vip/predictions", async (req, res) => {
       data: predictions
     });
 
-  } catch (error) {
-    console.error(err);
-      res.status(500).json({
+} catch (error) {
+    console.error("VIP PREDICTIONS ERROR:", error);
+
+    res.status(500).json({
       success: false,
       error: "VIP prediction error"
     });
