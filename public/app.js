@@ -1,5 +1,7 @@
 console.log("APP JS LOADED");
 
+let currentMode = "/free";
+
 async function loadPredictions(url) {
 
     const results = document.getElementById("results");
@@ -41,8 +43,12 @@ async function loadPredictions(url) {
                 <h2>${item.match ?? "Match"}</h2>
                 <hr style="margin:15px 0;">
                 <p><strong>Pronostic :</strong> ${
-                    item.pick || item.market || item.score || item.prediction || "-"
-                }</p>
+    item.pick || item.market || item.prediction || "-"
+}</p>
+
+${currentMode.startsWith("/vip") ? `
+<p><strong>⚡ Score exact :</strong> ${item.score || "-"}</p>
+` : ""}
                 <p><strong>Confiance :</strong> ${
                     item.confidence ?? "-"
                 }%</p>
@@ -62,4 +68,5 @@ async function loadPredictions(url) {
     }
 }
 
-loadPredictions("/free");
+currentMode = "/free";
+loadPredictions(currentMode);
