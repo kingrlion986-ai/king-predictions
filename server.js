@@ -143,30 +143,26 @@ const analysis = await analyzeMatch(match);
 ========================= */
 app.get("/vip/predictions", async (req, res) => {
   try {
-    const matches = await getMatches();
+    const analyses = await analyzeMatches(
+  await getMatches()
+);
 
-    const vipMatches = filterVipMatches(matches);
+const vipMatches = filterVipMatches(analyses);
 
-    const predictions = await Promise.all(
-      vipMatches.map(async (match) => {
-        const result = await analyzeMatch(match);
+const predictions = vipMatches.map(result => ({
+  match: result.match,
+  winner: result.predictions.winner,
+  confidence: result.predictions.winnerConfidence,
+  btts: result.predictions.btts,
+  over25: result.predictions.over25,
+  score: result.predictions.correctScore
+}));
 
-        return {
-          match: result.match,
-          winner: result.predictions.winner,
-          confidence: result.predictions.winnerConfidence,
-          btts: result.predictions.btts,
-          over25: result.predictions.over25,
-          score: result.predictions.correctScore
-        };
-      })
-    );
-
-    res.json({
-      success: true,
-      count: predictions.length,
-      data: predictions
-    });
+res.json({
+  success: true,
+  count: predictions.length,
+  data: predictions
+});
 
 } catch (error) {
     console.error("VIP PREDICTIONS ERROR:", error);
