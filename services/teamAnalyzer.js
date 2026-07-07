@@ -122,51 +122,36 @@ function buildStats(matches, teamId) {
 
 function computeStrength(stats) {
 
-  const attackIndex =
-    stats.avgScored * 25;
+  let strength = 0;
 
-  const defenseIndex =
-    (2 - stats.avgConceded) * 20;
+  // Attaque
+  strength += stats.avgScored * 18;
 
-  const homeBonus =
-    stats.homeAttack * 8;
+  // Défense (moins on encaisse, mieux c'est)
+  strength += (3 - stats.avgConceded) * 15;
 
-  const awayBonus =
-    stats.awayAttack * 8;
+  // Forme
+  strength +=
+    ((stats.wins * 3 + stats.draws) /
+    (stats.played * 3)) * 30;
 
-  const cleanSheetBonus =
-    stats.cleanSheets * 2;
+  // Domicile
+  strength += stats.homeAttack * 8;
 
-  const formIndex =
-    (
-      stats.wins * 3 +
-      stats.draws
-    ) / Math.max(stats.played * 3, 1) * 30;
+  // Extérieur
+  strength += stats.awayAttack * 5;
 
-  let strength =
-    attackIndex +
-    defenseIndex +
-    homeBonus +
-    awayBonus +
-    cleanSheetBonus +
-    formIndex;
+  // Défense domicile
+  strength += (2 - stats.homeDefense) * 6;
 
-  strength = Math.max(10, Math.min(100, strength));
+  // Clean sheets
+  strength += stats.cleanSheets * 2;
 
-  return Number(strength.toFixed(1));
-}
-
-function computeReliability(stats) {
-
-  let reliability =
-    stats.played / 8;
-
-  reliability = Math.max(
-    0.30,
-    Math.min(1, reliability)
+  return clamp(
+    Math.round(strength),
+    10,
+    100
   );
-
-  return Number(reliability.toFixed(2));
 }
 /* =========================
    MAIN ANALYZER
