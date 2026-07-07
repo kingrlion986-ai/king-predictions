@@ -37,8 +37,6 @@ const CACHE = {
 const MATCHES_TTL = 5 * 60 * 1000;
 const TEAM_MATCHES_TTL = 15 * 60 * 1000;
 
-const MATCHES_TTL = 5 * 60 * 1000;
-
 /* =========================
    API CALL
 ========================= */
