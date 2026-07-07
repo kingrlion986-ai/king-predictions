@@ -217,15 +217,31 @@ function generateScore(model, winner) {
 
   return `${homeGoals}-${awayGoals}`;
       }
+
+/* =========================
+   ANALYSIS CACHE
+========================= */
+
+const ANALYSIS_CACHE = new Map();
+
+function getMatchKey(match) {
+  return `${match.homeTeam.id}_${match.awayTeam.id}_${match.utcDate}`;
+}
+
 /* =========================
    MAIN ANALYSIS V19
 ========================= */
 
 async function analyzeMatch(match) {
 
+  const key = getMatchKey(match);
+
+  if (ANALYSIS_CACHE.has(key)) {
+    return ANALYSIS_CACHE.get(key);
+  }
+
   const homeStats = await analyzeTeam(match.homeTeam);
   const awayStats = await analyzeTeam(match.awayTeam);
-
 
   const winnerModel = calculateWinner(
     homeStats,
@@ -264,66 +280,52 @@ async function analyzeMatch(match) {
   );
 
 
-  return {
+  const result = {
 
-    match: `${match.homeTeam.name} vs ${match.awayTeam.name}`,
+  match: `${match.homeTeam.name} vs ${match.awayTeam.name}`,
 
-    predictions: {
+  predictions: {
 
-      winner: winnerModel.winner,
+    winner: winnerModel.winner,
+    winnerConfidence: winnerModel.winnerConfidence,
+    probabilities: winnerModel.probabilities,
 
-      winnerConfidence:
-        winnerModel.winnerConfidence,
+    over25: over25Model.value,
+    over25Confidence: over25Model.confidence,
 
-      probabilities:
-        winnerModel.probabilities,
+    btts: bttsModel.value,
+    bttsConfidence: bttsModel.confidence,
 
+    correctScore
 
-      over25:
-        over25Model.value,
+  },
 
-      over25Confidence:
-        over25Model.confidence,
+  teamStats: {
 
+    home: homeStats,
+    away: awayStats
 
-      btts:
-        bttsModel.value,
+  },
 
-      bttsConfidence:
-        bttsModel.confidence,
+  model: {
 
+    expectedGoals:
+      goalsModel.expectedHomeGoals +
+      goalsModel.expectedAwayGoals,
 
-      correctScore
+    expectedHomeGoals:
+      goalsModel.expectedHomeGoals,
 
-    },
+    expectedAwayGoals:
+      goalsModel.expectedAwayGoals
 
+  }
 
-    teamStats: {
+};
 
-      home: homeStats,
+ANALYSIS_CACHE.set(key, result);
 
-      away: awayStats
-
-    },
-
-
-    model: {
-
-      expectedGoals:
-        goalsModel.expectedHomeGoals +
-        goalsModel.expectedAwayGoals,
-
-      expectedHomeGoals:
-        goalsModel.expectedHomeGoals,
-
-      expectedAwayGoals:
-        goalsModel.expectedAwayGoals
-
-    }
-
-  };
-
-}
+return result;
 
 
 /* =========================
