@@ -182,12 +182,18 @@ app.get("/vip/1x2", async (req, res) => {
     const matches = await getMatches();
 
 const futureMatches = matches.filter(
-  m => m.status === "TIMED"
+  ["TIMED", "SCHEDULED", "UPCOMING"].includes(m.status)
 );
 
-const analyses = await rankMatches(futureMatches);
+const analyses = [];
 
-const selected = analyses.slice(
+for (const match of futureMatches) {
+  analyses.push(await analyzeMatch(match));
+}
+
+const ranked = rankMatches(analyses);
+
+const selected = ranked.slice(
   0,
   SETTINGS.maxVIP_1X2
 );
@@ -220,16 +226,17 @@ app.get("/vip/over25", async (req, res) => {
     const matches = await getMatches();
 
 const futureMatches = matches.filter(
-  m => m.status === "TIMED"
+  ["TIMED", "SCHEDULED", "UPCOMING"].includes(m.status)
 );
 
-const analyses = await rankOver25Matches(futureMatches);
+const analyses = await analyzeMatches(futureMatches);
 
-const selected = analyses.slice(
+const ranked = rankOver25Matches(analyses);
+
+const selected = ranked.slice(
   0,
   SETTINGS.maxOVER
 );
-
     const result = selected.map(a => ({
   match: a.match,
   market: a.predictions.over25,
@@ -254,12 +261,14 @@ app.get("/vip/btts", async (req, res) => {
     const matches = await getMatches();
 
 const futureMatches = matches.filter(
-  m => m.status === "TIMED"
+  ["TIMED", "SCHEDULED", "UPCOMING"].includes(m.status)
 );
 
-const analyses = await rankBTTSMatches(futureMatches);
+const analyses = await analyzeMatches(futureMatches);
 
-const selected = analyses.slice(
+const ranked = rankBTTSMatches(analyses);
+
+const selected = ranked.slice(
   0,
   SETTINGS.maxBTTS
 );
@@ -287,12 +296,14 @@ app.get("/vip/score", async (req, res) => {
     const matches = await getMatches();
 
 const futureMatches = matches.filter(
-  m => m.status === "TIMED"
+  ["TIMED", "SCHEDULED", "UPCOMING"].includes(m.status)
 );
 
-const analyses = await rankScoreMatches(futureMatches);
+const analyses = await analyzeMatches(futureMatches);
 
-const selected = analyses.slice(
+const ranked = rankScoreMatches(analyses);
+
+const selected = ranked.slice(
   0,
   SETTINGS.maxSCORE
 );
