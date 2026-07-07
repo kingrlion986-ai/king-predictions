@@ -110,21 +110,27 @@ async function getCompetitionMatches(code) {
    FILTER MATCHES
 ========================= */
 function filterMatches(matches) {
-  const now = new Date();
-  const maxDate = new Date();
-  maxDate.setDate(now.getDate() + 10); // 🔥 plus strict
+
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  const maxDate = new Date(today);
+  maxDate.setDate(maxDate.getDate() + 10);
 
   return matches.filter(m => {
+
     const d = new Date(m.utcDate);
 
     return (
       m.homeTeam &&
       m.awayTeam &&
       ["TIMED", "SCHEDULED"].includes(m.status) &&
-      d >= now &&
+      d >= today &&
       d <= maxDate
     );
+
   });
+
 }
 
 function addMatchQuality(matches) {
@@ -144,7 +150,7 @@ function addMatchQuality(matches) {
       score += 30;
     }
 
-    m.importance = score;
+    m.quality = score;
     return m;
   });
 }
@@ -213,6 +219,14 @@ async function getMatches() {
   };
 
   console.log("🔥 TOTAL MATCHES V18:", allMatches.length);
+
+   console.log(
+  allMatches.map(m => ({
+    match: `${m.homeTeam.name} vs ${m.awayTeam.name}`,
+    status: m.status,
+    date: m.utcDate
+  }))
+);
 
   return allMatches;
 }
