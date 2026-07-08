@@ -32,10 +32,11 @@ const PORT = process.env.PORT || 3000;
 
 const HISTORY_FILE = path.join(__dirname, "history.json");
 
-const ANALYSIS_CACHE = {
-  data: null,
-  expiresAt: 0
-};
+const ANALYSIS_CACHE = new Map();
+
+const ANALYSIS_TTL = 5 * 60 * 1000;
+
+const ANALYSIS_RUNNING = new Map();
 
 const ANALYSIS_TTL = 5 * 60 * 1000;
 
@@ -62,24 +63,141 @@ function saveHistory(data) {
 
 async function analyzeMatches(matches) {
 
+
+  const key =
+    matches
+      .map(
+        m =>
+        `${m.homeTeam.id}-${m.awayTeam.id}`
+      )
+      .join("|");
+
+
+
+  const cached =
+    ANALYSIS_CACHE.get(key);
+
+
+
   if (
-    ANALYSIS_CACHE.data &&
-    Date.now() < ANALYSIS_CACHE.expiresAt
+    cached &&
+    Date.now() - cached.time
+    <
+    ANALYSIS_TTL
   ) {
-    console.log("⚡ ANALYSIS CACHE");
-    return ANALYSIS_CACHE.data;
+
+    console.log(
+      "⚡ ANALYSIS CACHE"
+    );
+
+    return cached.data;
+
   }
 
-  const analyses = [];
 
-  for (const match of matches) {
-    analyses.push(await analyzeMatch(match));
+
+
+
+  if (
+    ANALYSIS_RUNNING.has(key)
+  ) {
+
+    console.log(
+      "⏳ ANALYSIS ALREADY RUNNING"
+    );
+
+    return ANALYSIS_RUNNING.get(key);
+
   }
 
-  ANALYSIS_CACHE.data = analyses;
-  ANALYSIS_CACHE.expiresAt = Date.now() + ANALYSIS_TTL;
 
-  return analyses;
+
+
+
+  const promise =
+    (async()=>{
+
+
+      const analyses = [];
+
+
+
+      for (
+        const match of matches
+      ) {
+
+        try {
+
+
+          const result =
+            await analyzeMatch(
+              match
+            );
+
+
+          analyses.push(
+            result
+          );
+
+
+        } catch(error) {
+
+
+          console.log(
+            "MATCH ANALYSIS ERROR:",
+            error.message
+          );
+
+
+        }
+
+
+      }
+
+
+
+      ANALYSIS_CACHE.set(
+        key,
+        {
+          time: Date.now(),
+          data: analyses
+        }
+      );
+
+
+
+      return analyses;
+
+
+    })();
+
+
+
+
+
+  ANALYSIS_RUNNING.set(
+    key,
+    promise
+  );
+
+
+
+  try {
+
+    return await promise;
+
+
+  } finally {
+
+
+    ANALYSIS_RUNNING.delete(
+      key
+    );
+
+
+  }
+
+
 }
 
 /* =========================
@@ -480,7 +598,27 @@ app.get("/debug", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+app.get("/system", async(req,res)=>{
+
+  res.json({
+
+    status:"KING PREDICTIONS V17 ONLINE",
+
+    cache:
+      ANALYSIS_CACHE.size,
+
+    running:
+      ANALYSIS_RUNNING.size,
+
+    time:
+      new Date().toISOString()
+
+  });
+
+
+});
+
+app.listen(PORT, "0.0.0.0", () => {
   console.log("KING PREDICTIONS V16 RUNNING ⚽🔥");
 });
   
