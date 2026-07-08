@@ -182,9 +182,17 @@ async function getMatches() {
 
   // 1. PRIMARY
   for (const code of PRIMARY_COMPETITIONS) {
+
     console.log(`📡 PRIMARY: ${code}`);
+
     const matches = await getCompetitionMatches(code);
+
     allMatches = allMatches.concat(matches);
+
+    // éviter le blocage API 429
+    await new Promise(resolve => 
+        setTimeout(resolve, 1500)
+    );
   }
 
   // 2. IF NOT ENOUGH MATCHES → SECONDARY
