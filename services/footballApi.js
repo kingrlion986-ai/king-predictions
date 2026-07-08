@@ -1,355 +1,777 @@
 const fetch = require("node-fetch");
 
+/* =========================
+   CONFIGURATION
+========================= */
+
 const API_KEY = process.env.API_KEY;
 const BASE_URL = "https://api.football-data.org/v4";
 
+
 /* =========================
-   COMPETITIONS PRIORITY
+   COMPETITIONS
 ========================= */
 
 const PRIMARY_COMPETITIONS = [
-  "CL",
   "PL",
   "PD",
   "SA",
   "BL1",
-  "FL1",
-  "DED",
-  "BSA"
+  "FL1"
 ];
 
 const SECONDARY_COMPETITIONS = [
+  "CL",
+  "DED",
+  "BSA",
   "ELC",
   "PPL"
 ];
+
+
 /* =========================
-   CACHE
+   CACHE SYSTEM
 ========================= */
+
 const CACHE = {
+
   matches: {
     data: null,
     expiresAt: 0
   },
 
-  teamMatches: {}
+  teamMatches: new Map()
+
 };
 
-const MATCHES_TTL = 5 * 60 * 1000;
-const TEAM_MATCHES_TTL = 15 * 60 * 1000;
+
+const MATCH_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+const TEAM_CACHE_TTL = 6 * 60 * 60 * 1000; // 6 heures
+
+
 
 /* =========================
-   API CALL
+   API QUEUE SYSTEM
 ========================= */
+
+// Nombre maximum d'appels API simultanés
+const MAX_CONCURRENT_REQUESTS = 2;
+
+let activeRequests = 0;
+
+const REQUEST_QUEUE = [];
+
+
+/* =========================
+   HELPERS
+========================= */
+
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function apiGet(endpoint, retries = 3) {
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      const res = await fetch(`${BASE_URL}${endpoint}`, {
-        headers: {
-          "X-Auth-Token": API_KEY
-        }
-      });
 
-      // Gestion des erreurs 429
-      if (res.status === 429) {
-        const retryAfter = Number(res.headers.get("Retry-After")) || 5;
-        const wait = retryAfter * 1000;
+/*
+  Gestionnaire de file d'attente.
+  Empêche Football-Data de recevoir
+  trop de requêtes en même temps.
+*/
 
-        console.log(`⏳ API LIMIT 429 → attente ${wait / 1000}s`);
-        await sleep(wait);
-        continue;
-      }
+function enqueue(task) {
 
-      if (!res.ok) {
-        console.log(`❌ API ERROR ${res.status} → ${endpoint}`);
-        return null;
-      }
+  return new Promise((resolve, reject) => {
 
-      return await res.json();
+    REQUEST_QUEUE.push({
+      task,
+      resolve,
+      reject
+    });
 
-    } catch (err) {
-      console.log(`❌ API FAILURE: ${err.message}`);
+    processQueue();
 
-      if (attempt === retries) {
-        return null;
-      }
+  });
 
-      await sleep(2000);
-    }
+}
+
+
+async function processQueue() {
+
+  if (
+    activeRequests >= MAX_CONCURRENT_REQUESTS ||
+    REQUEST_QUEUE.length === 0
+  ) {
+    return;
   }
 
-  return null;
+
+  const job = REQUEST_QUEUE.shift();
+
+  activeRequests++;
+
+
+  try {
+
+    const result = await job.task();
+
+    job.resolve(result);
+
+  } catch (error) {
+
+    job.reject(error);
+
+  }
+
+
+  activeRequests--;
+
+  processQueue();
+
 }
+
+
+
+/* =========================
+   API RETRY CONFIG
+========================= */
+
+const MAX_RETRIES = 4;
+
+
+/*
+ La vraie requête API sera ajoutée
+ dans la partie 2.
+*/
+
+/* =========================
+   API REQUEST V17
+========================= */
+
+async function apiGet(endpoint) {
+
+  return enqueue(async () => {
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+
+      try {
+
+        const response = await fetch(
+          `${BASE_URL}${endpoint}`,
+          {
+            headers: {
+              "X-Auth-Token": API_KEY
+            }
+          }
+        );
+
+
+        /*
+          Gestion limite API
+        */
+
+        if (response.status === 429) {
+
+          const retryAfter =
+            Number(response.headers.get("Retry-After")) || 5;
+
+
+          const delay =
+            retryAfter * 1000 *
+            (attempt + 1);
+
+
+          console.log(
+            `⏳ 429 API LIMIT → attente ${delay / 1000}s`
+          );
+
+
+          await sleep(delay);
+
+          continue;
+        }
+
+
+
+        if (!response.ok) {
+
+          console.log(
+            `❌ API ERROR ${response.status} → ${endpoint}`
+          );
+
+          return null;
+        }
+
+
+        return await response.json();
+
+
+
+      } catch (error) {
+
+
+        console.log(
+          `❌ API FAILURE ${endpoint}:`,
+          error.message
+        );
+
+
+        if (attempt === MAX_RETRIES) {
+          return null;
+        }
+
+
+        const delay =
+          2000 * Math.pow(2, attempt);
+
+
+        await sleep(delay);
+
+      }
+
+    }
+
+
+    return null;
+
+  });
+
+}
+
+
 
 /* =========================
    FORMAT MATCH
 ========================= */
-function formatMatch(m) {
-  if (!m?.homeTeam || !m?.awayTeam) return null;
+
+function formatMatch(match) {
+
+  if (
+    !match ||
+    !match.homeTeam ||
+    !match.awayTeam
+  ) {
+    return null;
+  }
+
 
   return {
-    id: m.id,
-    utcDate: m.utcDate,
-    status: m.status,
+
+    id: match.id,
+
+    utcDate: match.utcDate,
+
+    status: match.status,
+
+
     competition: {
-      code: m.competition?.code,
-      name: m.competition?.name
+
+      code:
+        match.competition?.code,
+
+      name:
+        match.competition?.name
+
     },
+
+
     homeTeam: {
-      id: m.homeTeam.id,
-      name: m.homeTeam.name
+
+      id:
+        match.homeTeam.id,
+
+      name:
+        match.homeTeam.name
+
     },
+
+
     awayTeam: {
-      id: m.awayTeam.id,
-      name: m.awayTeam.name
+
+      id:
+        match.awayTeam.id,
+
+      name:
+        match.awayTeam.name
+
     },
-    score: m.score
+
+
+    score:
+      match.score
+
   };
+
 }
 
+
+
 /* =========================
-   FETCH COMPETITION MATCHES
+   GET COMPETITION MATCHES
 ========================= */
+
 async function getCompetitionMatches(code) {
+
 
   const data = await apiGet(
     `/competitions/${code}/matches`
   );
 
-  if (!data || !data.matches) return [];
+
+  if (
+    !data ||
+    !Array.isArray(data.matches)
+  ) {
+
+    return [];
+
+  }
+
 
   return data.matches
+
     .filter(match =>
-      ["SCHEDULED", "TIMED"].includes(match.status)
+      [
+        "SCHEDULED",
+        "TIMED"
+      ].includes(match.status)
     )
+
     .map(formatMatch)
+
     .filter(Boolean);
-}
-/* =========================
-   FILTER MATCHES
+
+  }/* =========================
+   MATCH CLEANERS
 ========================= */
-function filterMatches(matches) {
 
-  const today = new Date();
-  today.setHours(0,0,0,0);
+function removeDuplicates(matches) {
 
-  const maxDate = new Date(today);
-  maxDate.setDate(maxDate.getDate() + 10);
+  const seen = new Set();
 
-  return matches.filter(m => {
+  return matches.filter(match => {
 
-    const d = new Date(m.utcDate);
-
-    return (
-      m.homeTeam &&
-      m.awayTeam &&
-      ["TIMED", "SCHEDULED"].includes(m.status) &&
-      d >= today &&
-      d <= maxDate
-    );
-
-  });
-
-}
-
-function addMatchQuality(matches) {
-  return matches.map(m => {
-    let score = 50;
-
-    const bigTeams = [
-      "Real Madrid", "Barcelona", "Liverpool",
-      "Manchester City", "Arsenal", "Bayern Munich",
-      "PSG", "Inter", "AC Milan", "Juventus"
-    ];
-
-    const home = m.homeTeam.name;
-    const away = m.awayTeam.name;
-
-    if (bigTeams.some(t => home.includes(t) || away.includes(t))) {
-      score += 30;
+    if (seen.has(match.id)) {
+      return false;
     }
 
-    m.quality = score;
-    return m;
-  });
-}
+    seen.add(match.id);
 
-/* =========================
-   REMOVE DUPLICATES
-========================= */
-function removeDuplicates(matches) {
-  const seen = new Set();
-  return matches.filter(m => {
-    if (seen.has(m.id)) return false;
-    seen.add(m.id);
     return true;
+
   });
+
 }
 
+
+
+function filterMatches(matches) {
+
+
+  const today = new Date();
+
+  today.setHours(0,0,0,0);
+
+
+  const limit = new Date(today);
+
+  limit.setDate(
+    limit.getDate() + 10
+  );
+
+
+
+  return matches.filter(match => {
+
+
+    const date =
+      new Date(match.utcDate);
+
+
+
+    return (
+
+      match.homeTeam &&
+      match.awayTeam &&
+
+      date >= today &&
+      date <= limit
+
+    );
+
+
+  });
+
+
+}
+
+
+
+
+function addMatchQuality(matches) {
+
+
+  const bigTeams = [
+
+    "Real Madrid",
+    "Barcelona",
+    "Manchester City",
+    "Liverpool",
+    "Arsenal",
+    "Bayern",
+    "PSG",
+    "Inter",
+    "Juventus",
+    "Milan"
+
+  ];
+
+
+
+  return matches.map(match => {
+
+
+    let quality = 50;
+
+
+    if (
+      bigTeams.some(team =>
+        match.homeTeam.name.includes(team) ||
+        match.awayTeam.name.includes(team)
+      )
+    ) {
+
+      quality += 25;
+
+    }
+
+
+    return {
+
+      ...match,
+
+      quality
+
+    };
+
+
+  });
+
+
+}
+
+
+
 /* =========================
-   MAIN GET MATCHES (V18)
+   MATCH RUNNING LOCK
 ========================= */
+
+let MATCH_LOADING = null;
+
+
+
+/* =========================
+   GET ALL MATCHES V17
+========================= */
+
 async function getMatches() {
 
-  // Cache mémoire
-  const cached = CACHE.matches;
-  if (cached.data && Date.now() < cached.expiresAt) {
-    console.log("⚡ CACHE MATCHES");
-    return cached.data;
+
+  if (
+    CACHE.matches.data &&
+    Date.now() <
+    CACHE.matches.expiresAt
+  ) {
+
+    console.log(
+      "⚡ CACHE MATCHES"
+    );
+
+    return CACHE.matches.data;
+
   }
 
-  // Empêche plusieurs chargements simultanés
-  if (RUNNING_MATCHES) {
-    console.log("⏳ WAITING FOR RUNNING MATCHES...");
-    return await RUNNING_MATCHES;
+
+
+  if (MATCH_LOADING) {
+
+    console.log(
+      "⏳ WAIT MATCH LOADING"
+    );
+
+    return MATCH_LOADING;
+
   }
 
-  RUNNING_MATCHES = (async () => {
+
+
+  MATCH_LOADING =
+  (async () => {
+
+
+    let matches = [];
+
+
 
     try {
 
-      let allMatches = [];
 
-      /* =========================
-         PRIMARY COMPETITIONS
-      ========================= */
 
-      for (const code of PRIMARY_COMPETITIONS) {
+      for (
+        const competition of PRIMARY_COMPETITIONS
+      ) {
 
-        console.log(`📡 PRIMARY: ${code}`);
 
-        const matches = await getCompetitionMatches(code);
+        console.log(
+          "📡 PRIMARY:",
+          competition
+        );
 
-        if (matches.length) {
-          allMatches.push(...matches);
-        }
 
-        // Limite les appels API
-        await new Promise(resolve => setTimeout(resolve, 1800));
-      }
+        const result =
+          await getCompetitionMatches(
+            competition
+          );
 
-      /* =========================
-         SECONDARY COMPETITIONS
-      ========================= */
 
-      if (allMatches.length < 50) {
+        matches.push(
+          ...result
+        );
 
-        for (const code of SECONDARY_COMPETITIONS) {
 
-          console.log(`📡 SECONDARY: ${code}`);
+        await sleep(2000);
 
-          const matches = await getCompetitionMatches(code);
-
-          if (matches.length) {
-            allMatches.push(...matches);
-          }
-
-          await new Promise(resolve => setTimeout(resolve, 1800));
-        }
 
       }
 
-      /* =========================
-         CLEAN DATA
-      ========================= */
 
-      allMatches = removeDuplicates(allMatches);
-      allMatches = filterMatches(allMatches);
-      allMatches = addMatchQuality(allMatches);
 
-      /* =========================
-         SORT
-      ========================= */
+      /*
+        On ajoute les compétitions secondaires
+        seulement si nécessaire
+      */
 
-      allMatches.sort((a, b) => {
+      if (matches.length < 30) {
 
-        if (b.quality !== a.quality) {
+
+        for (
+          const competition of SECONDARY_COMPETITIONS
+        ) {
+
+
+          console.log(
+            "📡 SECONDARY:",
+            competition
+          );
+
+
+          const result =
+            await getCompetitionMatches(
+              competition
+            );
+
+
+          matches.push(
+            ...result
+          );
+
+
+          await sleep(2000);
+
+
+        }
+
+      }
+
+
+
+
+      matches =
+        removeDuplicates(matches);
+
+
+
+      matches =
+        filterMatches(matches);
+
+
+
+      matches =
+        addMatchQuality(matches);
+
+
+
+      matches.sort((a,b)=> {
+
+
+        if (
+          b.quality !== a.quality
+        ) {
+
           return b.quality - a.quality;
+
         }
 
-        return new Date(a.utcDate) - new Date(b.utcDate);
+
+        return (
+          new Date(a.utcDate) -
+          new Date(b.utcDate)
+        );
+
 
       });
 
-      /* =========================
-         CACHE
-      ========================= */
+
+
+
 
       CACHE.matches = {
-        data: allMatches,
-        expiresAt: Date.now() + MATCHES_TTL
+
+        data: matches,
+
+        expiresAt:
+          Date.now() + MATCH_CACHE_TTL
+
       };
 
-      console.log("🔥 TOTAL MATCHES V18:", allMatches.length);
+
 
       console.log(
-        allMatches.map(m => ({
-          match: `${m.homeTeam.name} vs ${m.awayTeam.name}`,
-          status: m.status,
-          date: m.utcDate
-        }))
+        "🔥 MATCHES TOTAL:",
+        matches.length
       );
 
-      console.log("MATCHES FINAL =", allMatches.length);
 
-      return allMatches;
+
+      return matches;
+
+
 
     } finally {
 
-      // Libère le verrou même en cas d'erreur
-      RUNNING_MATCHES = null;
+
+      MATCH_LOADING = null;
+
 
     }
 
+
+
   })();
 
-  return await RUNNING_MATCHES;
-         }
+
+
+  return MATCH_LOADING;
+
+}
+
+
+
 /* =========================
    TEAM MATCHES
 ========================= */
+
 async function getTeamMatches(teamId) {
 
-  const cached = CACHE.teamMatches[teamId];
 
-  if (cached && Date.now() < cached.expiresAt) {
-    console.log(`⚡ TEAM CACHE ${teamId}`);
+  const cached =
+    CACHE.teamMatches.get(teamId);
+
+
+
+  if (
+    cached &&
+    Date.now() <
+    cached.expiresAt
+  ) {
+
+
+    console.log(
+      "⚡ TEAM CACHE:",
+      teamId
+    );
+
+
     return cached.data;
+
   }
 
-  const data = await apiGet(`/teams/${teamId}/matches?status=FINISHED`);
 
-if (!data?.matches) {
 
-  // Si on possède déjà un cache pour cette équipe,
-  // on le réutilise au lieu de perdre toutes les statistiques.
-  if (CACHE.teamMatches[teamId]) {
-    console.log(`⚠️ USING STALE CACHE FOR TEAM ${teamId}`);
-    return CACHE.teamMatches[teamId].data;
+
+  await sleep(1200);
+
+
+
+  const data =
+    await apiGet(
+      `/teams/${teamId}/matches?status=FINISHED`
+    );
+
+
+
+  if (
+    !data ||
+    !Array.isArray(data.matches)
+  ) {
+
+
+    if (cached) {
+
+      return cached.data;
+
+    }
+
+
+    return [];
+
   }
 
-  return [];
-}
 
-  const matches = data.matches
+
+
+
+  const matches =
+    data.matches
+
     .map(formatMatch)
+
     .filter(Boolean);
 
-  CACHE.teamMatches[teamId] = {
-    data: matches,
-    expiresAt: Date.now() + TEAM_MATCHES_TTL
-  };
+
+
+
+
+  CACHE.teamMatches.set(
+    teamId,
+    {
+
+      data: matches,
+
+      expiresAt:
+        Date.now() + TEAM_CACHE_TTL
+
+    }
+
+  );
+
+
 
   return matches;
+
+
 }
+
+
+
 /* =========================
    EXPORTS
 ========================= */
+
 module.exports = {
+
   apiGet,
+
   getMatches,
+
   getTeamMatches
+
 };
