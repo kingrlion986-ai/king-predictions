@@ -245,6 +245,8 @@ const stats = buildStats(recentMatches, team.id);
     teamName: team.name,
     teamId: team.id,
 
+    played: stats.played,
+
     strength: computeStrength(stats),
     rawStrength: computeStrength(stats),
 
