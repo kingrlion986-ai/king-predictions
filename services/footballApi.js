@@ -194,76 +194,120 @@ function removeDuplicates(matches) {
 ========================= */
 async function getMatches() {
 
+  // Cache mémoire
   const cached = CACHE.matches;
   if (cached.data && Date.now() < cached.expiresAt) {
     console.log("⚡ CACHE MATCHES");
     return cached.data;
   }
 
-  let allMatches = [];
-
-  // 1. PRIMARY
-  for (const code of PRIMARY_COMPETITIONS) {
-
-    console.log(`📡 PRIMARY: ${code}`);
-
-    const matches = await getCompetitionMatches(code);
-
-    allMatches = allMatches.concat(matches);
-
-    // éviter le blocage API 429
-    await new Promise(resolve => 
-        setTimeout(resolve, 1500)
-    );
+  // Empêche plusieurs chargements simultanés
+  if (RUNNING_MATCHES) {
+    console.log("⏳ WAITING FOR RUNNING MATCHES...");
+    return await RUNNING_MATCHES;
   }
 
-  // 2. IF NOT ENOUGH MATCHES → SECONDARY
-  if (allMatches.length < 50) {
-    for (const code of SECONDARY_COMPETITIONS) {
-      console.log(`📡 SECONDARY: ${code}`);
-      const matches = await getCompetitionMatches(code);
-      allMatches = allMatches.concat(matches);
+  RUNNING_MATCHES = (async () => {
+
+    try {
+
+      let allMatches = [];
+
+      /* =========================
+         PRIMARY COMPETITIONS
+      ========================= */
+
+      for (const code of PRIMARY_COMPETITIONS) {
+
+        console.log(`📡 PRIMARY: ${code}`);
+
+        const matches = await getCompetitionMatches(code);
+
+        if (matches.length) {
+          allMatches.push(...matches);
+        }
+
+        // Limite les appels API
+        await new Promise(resolve => setTimeout(resolve, 1800));
+      }
+
+      /* =========================
+         SECONDARY COMPETITIONS
+      ========================= */
+
+      if (allMatches.length < 50) {
+
+        for (const code of SECONDARY_COMPETITIONS) {
+
+          console.log(`📡 SECONDARY: ${code}`);
+
+          const matches = await getCompetitionMatches(code);
+
+          if (matches.length) {
+            allMatches.push(...matches);
+          }
+
+          await new Promise(resolve => setTimeout(resolve, 1800));
+        }
+
+      }
+
+      /* =========================
+         CLEAN DATA
+      ========================= */
+
+      allMatches = removeDuplicates(allMatches);
+      allMatches = filterMatches(allMatches);
+      allMatches = addMatchQuality(allMatches);
+
+      /* =========================
+         SORT
+      ========================= */
+
+      allMatches.sort((a, b) => {
+
+        if (b.quality !== a.quality) {
+          return b.quality - a.quality;
+        }
+
+        return new Date(a.utcDate) - new Date(b.utcDate);
+
+      });
+
+      /* =========================
+         CACHE
+      ========================= */
+
+      CACHE.matches = {
+        data: allMatches,
+        expiresAt: Date.now() + MATCHES_TTL
+      };
+
+      console.log("🔥 TOTAL MATCHES V18:", allMatches.length);
+
+      console.log(
+        allMatches.map(m => ({
+          match: `${m.homeTeam.name} vs ${m.awayTeam.name}`,
+          status: m.status,
+          date: m.utcDate
+        }))
+      );
+
+      console.log("MATCHES FINAL =", allMatches.length);
+
+      return allMatches;
+
+    } finally {
+
+      // Libère le verrou même en cas d'erreur
+      RUNNING_MATCHES = null;
+
     }
-  }
 
-  // FILTER
-  allMatches = removeDuplicates(allMatches);
-  allMatches = filterMatches(allMatches);
-  allMatches = addMatchQuality(allMatches);
+  })();
 
-  // SORT BY DATE
-  allMatches.sort((a,b)=>{
-
-  if (b.quality !== a.quality) {
-    return b.quality - a.quality;
-  }
-
-  return new Date(a.utcDate) - new Date(b.utcDate);
-
-});
-
-  // CACHE
-  CACHE.matches = {
-    data: allMatches,
-    expiresAt: Date.now() + MATCHES_TTL
-  };
-
-  console.log("🔥 TOTAL MATCHES V18:", allMatches.length);
-
-   console.log(
-  allMatches.map(m => ({
-    match: `${m.homeTeam.name} vs ${m.awayTeam.name}`,
-    status: m.status,
-    date: m.utcDate
-  }))
-);
-
-   console.log("MATCHES FINAL =", allMatches.length);
-   console.log(JSON.stringify(allMatches, null, 2));
-
-  return allMatches;
-}
-
+  return await RUNNING_MATCHES;
+         }
 /* =========================
    TEAM MATCHES
 ========================= */
