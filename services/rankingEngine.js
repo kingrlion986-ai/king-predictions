@@ -159,7 +159,7 @@ function byScore(a,b) {
 function rankMatches(analyses) {
 
   return [...analyses]
-    .sort(byWinnerQuality);
+    .sort(byWinnerConfidence);
 
 }
 
