@@ -1,162 +1,403 @@
+const {
+  analyzeMatch
+} = require("./predictionEngine");
+
+
+/* =========================
+   HELPERS
+========================= */
+
 function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
+
+  return Math.max(
+    min,
+    Math.min(
+      max,
+      value
+    )
+  );
+
 }
 
 
 /* =========================
-   QUALITY SCORE
+   QUALITY SCORE ENGINE V17
 ========================= */
 
-function calculateQuality(a) {
 
-  const home = a.teamStats.home;
-  const away = a.teamStats.away;
-
-  if (!a.teamStats?.home || !a.teamStats?.away) {
-  return 0;
-  }
+function calculateQuality(match) {
 
 
-  // confiance du marché principal
-  let score =
-    a.predictions.winnerConfidence * 0.65;
+  const home =
+    match.teamStats.home;
 
 
-  // fiabilité des données
-  const reliability =
-    ((home.reliability || 0) +
-     (away.reliability || 0)) / 2;
-
-  score += reliability * 30;
+  const away =
+    match.teamStats.away;
 
 
-  // écart de niveau
-  const strengthDiff =
+
+  let score = 0;
+
+
+
+  /*
+    Confiance vainqueur
+  */
+
+  score +=
+    match.predictions.winnerConfidence
+    *
+    0.35;
+
+
+
+  /*
+    Fiabilité des équipes
+  */
+
+  score +=
+
+    (
+      home.reliability +
+      away.reliability
+    )
+    *
+    20;
+
+
+
+  /*
+    Stabilité
+  */
+
+  score +=
+
+    (
+      home.stability +
+      away.stability
+    )
+    *
+    0.15;
+
+
+
+  /*
+    Différence de niveau
+  */
+
+  score +=
+
     Math.abs(
       home.strength -
       away.strength
-    );
+    )
+    *
+    0.30;
 
-  // trop équilibré = plus dangereux
-  if (strengthDiff < 5) {
-    score -= 10;
-  }
 
-  if (strengthDiff > 20) {
+
+  /*
+    Cohérence xG
+  */
+
+
+  if (
+
+    match.model.expectedGoals >= 1.8
+    &&
+    match.model.expectedGoals <= 3.8
+
+  ) {
+
     score += 8;
+
   }
 
 
-  // forme récente
-  score +=
-    ((home.formPoints + away.formPoints) / 2) * 15;
+
+  /*
+    Pénalité équipes faibles
+  */
 
 
-  return clamp(
-    Math.round(score),
-    0,
-    100
+  if (
+    home.strength < 35 ||
+    away.strength < 35
+  ) {
+
+    score -= 10;
+
+  }
+
+
+
+
+  return Math.round(
+    clamp(
+      score,
+      0,
+      100
+    )
   );
+
+
 }
+
+
+
 
 
 /* =========================
-   SORT FUNCTIONS
+   PREPARE RANKING
 ========================= */
 
-function byWinnerConfidence(a, b) {
 
-  function score(match){
-
-    const home = match.teamStats.home;
-    const away = match.teamStats.away;
-
-    if(!home || !away){
-  return -999;
-    }
-
-    let quality =
-      match.predictions.winnerConfidence;
+function addQualityScores(matches) {
 
 
-    // pénalité manque de données
-    if ((home.played || 0) < 3 || (away.played || 0) < 3) {
-  quality -= 15;
-    }
+  return matches.map(match => {
 
 
-    // pénalité match trop équilibré
-    const diff =
-      Math.abs(
-        home.strength -
-        away.strength
-      );
+    return {
 
-    if(diff < 5){
-      quality -= 10;
-    }
+      ...match,
+
+      qualityScore:
+        calculateQuality(match)
+
+    };
 
 
-    // bonus fiabilité
-    quality +=
-      (
-        home.reliability +
-        away.reliability
-      ) * 5;
+  });
 
-
-    return quality;
-
-  }
-
-
-  return score(b) - score(a);
 
 }
+ /* =========================
+    GENERIC RANKING
+ ========================= */
 
 
-function byOver25(a,b) {
+function sortByQuality(matches) {
 
-  const scoreA =
-    a.predictions.over25Confidence +
-    a.model.expectedGoals * 5;
-
-  const scoreB =
-    b.predictions.over25Confidence +
-    b.model.expectedGoals * 5;
-
-
-  return scoreB - scoreA;
-
-}
-
-
-function byBTTS(a,b) {
-
-  const scoreA =
-    a.predictions.bttsConfidence +
-    ((a.teamStats.home.bttsRate +
-      a.teamStats.away.bttsRate) / 2);
-
-  const scoreB =
-    b.predictions.bttsConfidence +
-    ((b.teamStats.home.bttsRate +
-      b.teamStats.away.bttsRate) / 2);
-
-
-  return scoreB - scoreA;
-
-}
-
-
-function byScore(a,b) {
-
-  return (
-    b.model.expectedGoals -
-    a.model.expectedGoals
+  return matches.sort(
+    (a,b) =>
+      b.qualityScore -
+      a.qualityScore
   );
 
 }
+
+
+
+
+
+/* =========================
+   WINNER RANKING
+========================= */
+
+
+function rankMatches(matches) {
+
+
+  const ranked =
+    addQualityScores(
+      matches
+    );
+
+
+  return sortByQuality(
+    ranked
+  );
+
+
+}
+
+
+
+
+
+/* =========================
+   OVER 2.5 RANKING
+========================= */
+
+
+function rankOver25Matches(matches) {
+
+
+  const filtered =
+
+    matches.filter(match => {
+
+
+      return (
+        match.predictions.over25Confidence
+        >=
+        50
+      );
+
+
+    });
+
+
+
+  const ranked =
+    addQualityScores(
+      filtered
+    );
+
+
+
+  return ranked.sort(
+    (a,b) => {
+
+
+      const scoreA =
+        a.predictions.over25Confidence
+        +
+        a.qualityScore;
+
+
+      const scoreB =
+        b.predictions.over25Confidence
+        +
+        b.qualityScore;
+
+
+
+      return scoreB - scoreA;
+
+
+    }
+  );
+
+
+}
+
+
+
+
+
+/* =========================
+   BTTS RANKING
+========================= */
+
+
+function rankBTTSMatches(matches) {
+
+
+  const filtered =
+
+    matches.filter(match => {
+
+
+      return (
+
+        match.predictions
+        .bttsConfidence
+        >=
+        50
+
+      );
+
+
+    });
+
+
+
+  const ranked =
+    addQualityScores(
+      filtered
+    );
+
+
+
+  return ranked.sort(
+    (a,b)=>{
+
+
+      const scoreA =
+
+        a.predictions.bttsConfidence
+        +
+        a.qualityScore;
+
+
+
+      const scoreB =
+
+        b.predictions.bttsConfidence
+        +
+        b.qualityScore;
+
+
+
+      return scoreB - scoreA;
+
+
+    }
+  );
+
+
+}
+
+
+
+
+
+/* =========================
+   SCORE EXACT RANKING
+========================= */
+
+
+function rankScoreMatches(matches) {
+
+
+  const ranked =
+    addQualityScores(
+      matches
+    );
+
+
+
+  return ranked.sort(
+    (a,b)=>{
+
+
+      const scoreA =
+
+        a.qualityScore
+        +
+        (
+          a.model.expectedGoals
+          *
+          10
+        );
+
+
+
+      const scoreB =
+
+        b.qualityScore
+        +
+        (
+          b.model.expectedGoals
+          *
+          10
+        );
+
+
+
+      return scoreB - scoreA;
+
+
+    }
+  );
+
+
+}
+
+
 
 
 
@@ -164,46 +405,23 @@ function byScore(a,b) {
    EXPORTS
 ========================= */
 
-function rankMatches(analyses) {
-
-  return [...analyses]
-    .sort((a,b)=> 
-      calculateQuality(b) - calculateQuality(a)
-    );
-
-}
-
-
-function rankOver25Matches(analyses) {
-
-  return [...analyses]
-    .sort(byOver25);
-
-}
-
-
-function rankBTTSMatches(analyses) {
-
-  return [...analyses]
-    .sort(byBTTS);
-
-}
-
-
-function rankScoreMatches(analyses) {
-
-  return [...analyses]
-    .sort(byScore);
-
-}
-
 
 module.exports = {
 
+
   rankMatches,
+
+
   rankOver25Matches,
+
+
   rankBTTSMatches,
+
+
   rankScoreMatches,
+
+
   calculateQuality
+
 
 };
