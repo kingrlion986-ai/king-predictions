@@ -12,6 +12,10 @@ function calculateQuality(a) {
   const home = a.teamStats.home;
   const away = a.teamStats.away;
 
+  if (!a.teamStats?.home || !a.teamStats?.away) {
+  return 0;
+  }
+
 
   // confiance du marché principal
   let score =
@@ -76,8 +80,8 @@ function byWinnerConfidence(a, b) {
 
 
     // pénalité manque de données
-    if(home.played < 3 || away.played < 3){
-      quality -= 15;
+    if ((home.played || 0) < 3 || (away.played || 0) < 3) {
+  quality -= 15;
     }
 
 
