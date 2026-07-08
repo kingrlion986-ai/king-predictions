@@ -19,72 +19,89 @@ function round(value) {
 
 function calculateWinner(home, away) {
 
-  // Force globale
-  let homeScore = home.strength * 0.35;
-  let awayScore = away.strength * 0.35;
+  const homePower =
+    home.strength * 0.35 +
+    home.avgScored * 10 +
+    (3 - home.avgConceded) * 8 +
+    home.formPoints * 25 +
+    home.reliability * 20 +
+    10;
 
-  // Forme récente
-  homeScore += home.formPoints * 20;
-  awayScore += away.formPoints * 20;
 
-  // Fiabilité
-  homeScore += home.reliability * 12;
-  awayScore += away.reliability * 12;
+  const awayPower =
+    away.strength * 0.35 +
+    away.avgScored * 10 +
+    (3 - away.avgConceded) * 8 +
+    away.formPoints * 25 +
+    away.reliability * 20;
 
-  // Attaque
-  homeScore += home.avgScored * 8;
-  awayScore += away.avgScored * 8;
 
-  // Défense (moins on encaisse, mieux c'est)
-  homeScore += Math.max(0, (2.5 - home.avgConceded)) * 6;
-  awayScore += Math.max(0, (2.5 - away.avgConceded)) * 6;
+  const drawFactor =
+    15 -
+    Math.abs(homePower - awayPower) / 8;
 
-  // Avantage domicile
-  homeScore += 4;
 
-  // Faiblesse défensive adverse
-  homeScore += away.avgConceded * 2;
-  awayScore += home.avgConceded * 2;
+  const drawPower = clamp(
+    drawFactor,
+    8,
+    18
+  );
 
-  // Difficulté à marquer
-  homeScore -= home.failedToScore;
-  awayScore -= away.failedToScore;
 
-  // Clean sheets
-  homeScore += home.cleanSheets * 1.5;
-  awayScore += away.cleanSheets * 1.5;
+  const total =
+    homePower +
+    awayPower +
+    drawPower;
 
-  const diff = Math.abs(homeScore - awayScore);
 
-  // Match nul moins fréquent lorsque l'écart est important
-  let drawScore = Math.max(8, 22 - diff * 0.5);
+  const homeWin =
+    Math.round(homePower / total * 100);
 
-  const total = homeScore + awayScore + drawScore;
+  const awayWin =
+    Math.round(awayPower / total * 100);
 
-  let homeWin = Math.round((homeScore / total) * 100);
-  let awayWin = Math.round((awayScore / total) * 100);
-  let draw = 100 - homeWin - awayWin;
+
+  const draw =
+    100 - homeWin - awayWin;
+
 
   let winner = "DRAW";
   let confidence = draw;
 
-  if (homeWin > awayWin && homeWin > draw) {
+
+  if (
+    homeWin > awayWin &&
+    homeWin > draw
+  ) {
     winner = home.teamName;
     confidence = homeWin;
-  } else if (awayWin > homeWin && awayWin > draw) {
+  }
+
+
+  if (
+    awayWin > homeWin &&
+    awayWin > draw
+  ) {
     winner = away.teamName;
     confidence = awayWin;
   }
 
+
   return {
+
     winner,
-    winnerConfidence: clamp(confidence, 45, 92),
-    probabilities: {
+
+    winnerConfidence:
+      clamp(confidence,45,85),
+
+    probabilities:{
       homeWin,
       draw,
       awayWin
     }
+
   };
+
 }
 
 /* =========================
