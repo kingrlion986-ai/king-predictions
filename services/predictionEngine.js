@@ -153,57 +153,70 @@ function calculateBTTS(home, away) {
 
 function calculateExpectedGoals(home, away) {
 
-  // Potentiel offensif
+  // Attaque domicile
   const homeAttack =
-    home.homeAttack * 0.45 +
-    home.avgScored * 0.35 +
-    home.formPoints * 1.2;
+    (home.homeAttack * 0.45) +
+    (home.avgScored * 0.35) +
+    (home.formPoints * 0.20);
 
+
+  // Attaque extérieur
   const awayAttack =
-    away.awayAttack * 0.45 +
-    away.avgScored * 0.35 +
-    away.formPoints * 1.2;
+    (away.awayAttack * 0.45) +
+    (away.avgScored * 0.35) +
+    (away.formPoints * 0.20);
 
-  // Faiblesse défensive adverse
-  const homeVsDefense =
-    away.awayDefense * 0.60 +
-    away.avgConceded * 0.40;
 
-  const awayVsDefense =
-    home.homeDefense * 0.60 +
-    home.avgConceded * 0.40;
+  // Défense adverse
+  const homeDefenseFactor =
+    (away.avgConceded * 0.60) +
+    (away.awayDefense * 0.40);
 
-  // Bonus domicile
+
+  const awayDefenseFactor =
+    (home.avgConceded * 0.60) +
+    (home.homeDefense * 0.40);
+
+
+  // Calcul de base
   let expectedHomeGoals =
-    (homeAttack + homeVsDefense) / 2 + 0.25;
+    (homeAttack + homeDefenseFactor) / 2;
+
 
   let expectedAwayGoals =
-    (awayAttack + awayVsDefense) / 2;
+    (awayAttack + awayDefenseFactor) / 2;
 
-  // Bonus si l'adversaire encaisse souvent
-  if (away.avgConceded > 1.8)
-    expectedHomeGoals += 0.20;
 
-  if (home.avgConceded > 1.8)
-    expectedAwayGoals += 0.20;
+  // Avantage domicile réaliste
+  expectedHomeGoals += 0.20;
 
-  // Bonus si l'équipe garde rarement sa cage inviolée
-  if (home.cleanSheets === 0)
-    expectedAwayGoals += 0.15;
 
-  if (away.cleanSheets === 0)
-    expectedHomeGoals += 0.15;
+  // Réduction des excès offensifs
+  expectedHomeGoals =
+    expectedHomeGoals * 0.55;
+
+  expectedAwayGoals =
+    expectedAwayGoals * 0.55;
+
+
+  // Limites réalistes football
+  expectedHomeGoals =
+    clamp(expectedHomeGoals, 0.2, 3.2);
+
+  expectedAwayGoals =
+    clamp(expectedAwayGoals, 0.2, 3.0);
+
 
   return {
-    expectedHomeGoals: round(
-      clamp(expectedHomeGoals, 0.2, 4)
-    ),
-    expectedAwayGoals: round(
-      clamp(expectedAwayGoals, 0.2, 4)
-    )
+
+    expectedHomeGoals:
+      round(expectedHomeGoals),
+
+    expectedAwayGoals:
+      round(expectedAwayGoals)
+
   };
 }
-
 
 /* =========================
    SCORE EXACT MODEL
