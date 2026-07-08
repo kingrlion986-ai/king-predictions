@@ -2,47 +2,124 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
+
 /* =========================
-   VIP QUALITY SCORE
+   VIP SCORE
 ========================= */
-function getMatchQuality(home, away) {
-  const avgStrength = (home.strength + away.strength) / 2;
-  const strengthDiff = Math.abs(home.strength - away.strength);
+
+function getVipScore(home, away) {
 
   let score = 50;
 
-  // niveau global des équipes
-  score += clamp(avgStrength, 0, 40);
 
-  // équilibre du match
-  if (strengthDiff < 5) score += 20;
-  else if (strengthDiff < 10) score += 10;
-  else score -= 10;
+  // Force générale
+  const avgStrength =
+    (home.strength + away.strength) / 2;
 
-  // forme
-  const formAvg = (home.formPoints + away.formPoints) / 2;
-  score += clamp(formAvg, 0, 20);
+  score += avgStrength * 0.25;
 
-  return clamp(Math.round(score), 0, 100);
+
+  // Fiabilité des données
+  const reliability =
+    ((home.reliability || 0) +
+     (away.reliability || 0)) / 2;
+
+  score += reliability * 30;
+
+
+  // Forme récente
+  const form =
+    ((home.formPoints || 0) +
+     (away.formPoints || 0)) / 2;
+
+  score += form * 20;
+
+
+  // Écart de niveau
+  const diff =
+    Math.abs(
+      home.strength -
+      away.strength
+    );
+
+
+  // Trop équilibré = risque nul
+  if (diff < 5) {
+    score -= 15;
+  }
+
+
+  // Très gros écart = favori clair
+  if (diff > 20) {
+    score += 10;
+  }
+
+
+  // Attaque des équipes
+  score +=
+    (home.avgScored +
+     away.avgScored) * 3;
+
+
+  // Défense fragile = plus incertain
+  if (
+    home.avgConceded > 2.5 &&
+    away.avgConceded > 2.5
+  ) {
+    score -= 10;
+  }
+
+
+  return clamp(
+    Math.round(score),
+    0,
+    100
+  );
 }
+
 
 /* =========================
    VIP CHECK
 ========================= */
-function isVipMatch(home, away) {
-  const quality = getMatchQuality(home, away);
-  const avgStrength = (home.strength + away.strength) / 2;
 
-  if (avgStrength < 20) return false;
-  if (Math.abs(home.strength - away.strength) > 25) return false;
-  if (quality < 55) return false;
+function isVipMatch(home, away) {
+
+  const vipScore =
+    getVipScore(home, away);
+
+
+  const avgStrength =
+    (home.strength + away.strength) / 2;
+
+
+  const reliability =
+    ((home.reliability || 0) +
+     (away.reliability || 0)) / 2;
+
+
+  // équipes trop faibles
+  if (avgStrength < 35)
+    return false;
+
+
+  // données insuffisantes
+  if (reliability < 0.45)
+    return false;
+
+
+  // score minimum VIP
+  if (vipScore < 65)
+    return false;
+
 
   return true;
 }
 
+
 /* =========================
-   FILTER MATCHES
+   FILTER
 ========================= */
+
 function filterVipMatches(analyses) {
 
   return analyses.filter(a =>
@@ -54,8 +131,11 @@ function filterVipMatches(analyses) {
 
 }
 
+
 module.exports = {
-  getMatchQuality,
+
+  getVipScore,
   isVipMatch,
   filterVipMatches
+
 };
