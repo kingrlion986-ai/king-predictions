@@ -94,7 +94,7 @@ function calculateOver25(home, away) {
 
 
   return {
-    value: confidence >= 55 ? "YES" : "NO",
+    value: confidence >= 55 ? "OVER 2.5" : "UNDER 2.5",
     confidence,
     expectedGoals: round(expected)
   };
@@ -122,8 +122,8 @@ function calculateBTTS(home, away) {
 
   return {
     value: confidence >= 55
-  ? "OVER 2.5"
-  : "UNDER 2.5",
+  ? "YES"
+  : "NO",
     confidence
   };
 }
@@ -135,29 +135,53 @@ function calculateBTTS(home, away) {
 
 function calculateExpectedGoals(home, away) {
 
-  const homeGoals =
-    (
-      home.avgScored +
-      away.avgConceded +
-      home.homeAttack
-    ) / 3;
+  // Potentiel offensif
+  const homeAttack =
+    home.homeAttack * 0.45 +
+    home.avgScored * 0.35 +
+    home.formPoints * 1.2;
 
+  const awayAttack =
+    away.awayAttack * 0.45 +
+    away.avgScored * 0.35 +
+    away.formPoints * 1.2;
 
-  const awayGoals =
-    (
-      away.avgScored +
-      home.avgConceded +
-      away.awayAttack
-    ) / 3;
+  // Faiblesse défensive adverse
+  const homeVsDefense =
+    away.awayDefense * 0.60 +
+    away.avgConceded * 0.40;
 
+  const awayVsDefense =
+    home.homeDefense * 0.60 +
+    home.avgConceded * 0.40;
+
+  // Bonus domicile
+  let expectedHomeGoals =
+    (homeAttack + homeVsDefense) / 2 + 0.25;
+
+  let expectedAwayGoals =
+    (awayAttack + awayVsDefense) / 2;
+
+  // Bonus si l'adversaire encaisse souvent
+  if (away.avgConceded > 1.8)
+    expectedHomeGoals += 0.20;
+
+  if (home.avgConceded > 1.8)
+    expectedAwayGoals += 0.20;
+
+  // Bonus si l'équipe garde rarement sa cage inviolée
+  if (home.cleanSheets === 0)
+    expectedAwayGoals += 0.15;
+
+  if (away.cleanSheets === 0)
+    expectedHomeGoals += 0.15;
 
   return {
     expectedHomeGoals: round(
-      clamp(homeGoals, 0, 4)
+      clamp(expectedHomeGoals, 0.2, 4)
     ),
-
     expectedAwayGoals: round(
-      clamp(awayGoals, 0, 4)
+      clamp(expectedAwayGoals, 0.2, 4)
     )
   };
 }
