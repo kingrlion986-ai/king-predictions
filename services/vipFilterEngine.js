@@ -84,6 +84,11 @@ function getVipScore(home, away) {
 
 function isVipMatch(home, away) {
 
+    // Pas assez de données historiques
+  if(home.played < 3 || away.played < 3){
+    return false;
+  }
+
   const vipScore =
     getVipScore(home, away);
 
