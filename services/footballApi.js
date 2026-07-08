@@ -7,6 +7,41 @@ const fetch = require("node-fetch");
 const API_KEY = process.env.API_KEY;
 const BASE_URL = "https://api.football-data.org/v4";
 
+/* =========================
+   API QUEUE V17
+========================= */
+
+let API_QUEUE = Promise.resolve();
+
+const API_DELAY = 2200;
+
+
+function wait(ms){
+
+  return new Promise(resolve =>
+    setTimeout(resolve, ms)
+  );
+
+}
+
+
+
+function queueRequest(task){
+
+  API_QUEUE =
+    API_QUEUE.then(async()=>{
+
+      await wait(API_DELAY);
+
+      return task();
+
+    });
+
+
+  return API_QUEUE;
+
+}
+
 
 /* =========================
    COMPETITIONS
@@ -146,60 +181,110 @@ const MAX_RETRIES = 4;
    API REQUEST V17
 ========================= */
 
-async function apiGet(endpoint) {
+async function apiGet(endpoint, retry = 0) {
 
-  return enqueue(async () => {
 
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+  return queueRequest(async()=>{
 
-      try {
 
-        const response = await fetch(
-          `${BASE_URL}${endpoint}`,
-          {
-            headers: {
-              "X-Auth-Token": API_KEY
-            }
+    try {
+
+
+      const res = await fetch(
+        `${BASE_URL}${endpoint}`,
+        {
+          headers:{
+            "X-Auth-Token":API_KEY
           }
+        }
+      );
+
+
+
+      if(res.status === 429){
+
+
+        console.log(
+          "⚠️ RATE LIMIT 429:",
+          endpoint
         );
 
 
-        /*
-          Gestion limite API
-        */
 
-        if (response.status === 429) {
-
-          const retryAfter =
-            Number(response.headers.get("Retry-After")) || 5;
+        if(retry < 3){
 
 
           const delay =
-            retryAfter * 1000 *
-            (attempt + 1);
+            5000 *
+            (retry + 1);
+
 
 
           console.log(
-            `⏳ 429 API LIMIT → attente ${delay / 1000}s`
+            `⏳ RETRY ${retry+1} AFTER ${delay}ms`
           );
 
 
-          await sleep(delay);
 
-          continue;
-        }
+          await wait(delay);
 
 
 
-        if (!response.ok) {
-
-          console.log(
-            `❌ API ERROR ${response.status} → ${endpoint}`
+          return apiGet(
+            endpoint,
+            retry + 1
           );
 
-          return null;
+
         }
 
+
+        return null;
+
+      }
+
+
+
+
+
+      if(!res.ok){
+
+
+        console.log(
+          `❌ API ERROR ${res.status} → ${endpoint}`
+        );
+
+
+        return null;
+
+      }
+
+
+
+
+
+      return await res.json();
+
+
+
+    } catch(error){
+
+
+      console.log(
+        "❌ API FAILURE:",
+        error.message
+      );
+
+
+      return null;
+
+    }
+
+
+  });
+
+
+}
 
         return await response.json();
 
@@ -537,8 +622,6 @@ async function getMatches() {
         );
 
 
-        await sleep(2000);
-
 
       }
 
@@ -573,8 +656,6 @@ async function getMatches() {
             ...result
           );
 
-
-          await sleep(2000);
 
 
         }
