@@ -248,9 +248,17 @@ async function getTeamMatches(teamId) {
 
   const data = await apiGet(`/teams/${teamId}/matches?status=FINISHED`);
 
-  if (!data?.matches) {
-    return [];
+if (!data?.matches) {
+
+  // Si on possède déjà un cache pour cette équipe,
+  // on le réutilise au lieu de perdre toutes les statistiques.
+  if (CACHE.teamMatches[teamId]) {
+    console.log(`⚠️ USING STALE CACHE FOR TEAM ${teamId}`);
+    return CACHE.teamMatches[teamId].data;
   }
+
+  return [];
+}
 
   const matches = data.matches
     .map(formatMatch)
