@@ -273,9 +273,11 @@ async function analyzeTeam(team) {
     const recentMatches = matches
 .filter(m => m.status === "FINISHED")
 .sort((a, b) => new Date(b.utcDate) - new Date(a.utcDate))
-.slice(0, 5);
+.slice(0, 8);
 
     const stats = buildStats(recentMatches, team.id);
+
+    const strength = computeStrength(stats);
 
   const result = {
 
@@ -284,8 +286,8 @@ async function analyzeTeam(team) {
 
     played: stats.played,
 
-    strength: computeStrength(stats),
-    rawStrength: computeStrength(stats),
+    strength,
+    rawStrength: strength,
 
     reliability: computeReliability(stats),
 
