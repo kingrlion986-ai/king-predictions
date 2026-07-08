@@ -9,6 +9,8 @@ function clamp(value, min, max) {
 ========================= */
 const CACHE = new Map();
 
+const CACHE_TIME = 1000 * 60 * 60 * 6;
+
 /* =========================
    HELPERS
 ========================= */
@@ -195,7 +197,14 @@ function computeReliability(stats) {
 async function analyzeTeam(team) {
 
   if (CACHE.has(team.id)) {
-    return CACHE.get(team.id);
+
+  console.log(
+    "⚡ TEAM CACHE:",
+    team.name
+  );
+
+  return CACHE.get(team.id);
+
   }
 
   const matches = await getTeamMatches(team.id);
@@ -281,7 +290,10 @@ const stats = buildStats(recentMatches, team.id);
    console.log("===== TEAM ANALYZER =====");
    console.log(result);
 
-  CACHE.set(team.id, result);
+  CACHE.set(team.id,{
+  time: Date.now(),
+  data: result
+});
 
   return result;
 
