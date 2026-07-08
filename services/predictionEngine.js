@@ -19,31 +19,51 @@ function round(value) {
 
 function calculateWinner(home, away) {
 
-  const homePower =
-    home.strength +
-    home.avgScored * 12 +
-    home.formPoints * 20 +
-    6; // avantage domicile
+  // Force globale
+  let homeScore = home.strength * 0.35;
+  let awayScore = away.strength * 0.35;
 
-  const awayPower =
-    away.strength +
-    away.avgScored * 12 +
-    away.formPoints * 20;
+  // Forme récente
+  homeScore += home.formPoints * 20;
+  awayScore += away.formPoints * 20;
 
-  const diff = Math.abs(homePower - awayPower);
+  // Fiabilité
+  homeScore += home.reliability * 12;
+  awayScore += away.reliability * 12;
 
-  let drawPower = 18 - diff / 5;
+  // Attaque
+  homeScore += home.avgScored * 8;
+  awayScore += away.avgScored * 8;
 
-  drawPower = clamp(drawPower, 6, 18);
+  // Défense (moins on encaisse, mieux c'est)
+  homeScore += Math.max(0, (2.5 - home.avgConceded)) * 6;
+  awayScore += Math.max(0, (2.5 - away.avgConceded)) * 6;
 
-  const total =
-    homePower +
-    awayPower +
-    drawPower;
+  // Avantage domicile
+  homeScore += 4;
 
-  const homeWin = Math.round(homePower / total * 100);
-  const awayWin = Math.round(awayPower / total * 100);
-  const draw = 100 - homeWin - awayWin;
+  // Faiblesse défensive adverse
+  homeScore += away.avgConceded * 2;
+  awayScore += home.avgConceded * 2;
+
+  // Difficulté à marquer
+  homeScore -= home.failedToScore;
+  awayScore -= away.failedToScore;
+
+  // Clean sheets
+  homeScore += home.cleanSheets * 1.5;
+  awayScore += away.cleanSheets * 1.5;
+
+  const diff = Math.abs(homeScore - awayScore);
+
+  // Match nul moins fréquent lorsque l'écart est important
+  let drawScore = Math.max(8, 22 - diff * 0.5);
+
+  const total = homeScore + awayScore + drawScore;
+
+  let homeWin = Math.round((homeScore / total) * 100);
+  let awayWin = Math.round((awayScore / total) * 100);
+  let draw = 100 - homeWin - awayWin;
 
   let winner = "DRAW";
   let confidence = draw;
@@ -51,23 +71,20 @@ function calculateWinner(home, away) {
   if (homeWin > awayWin && homeWin > draw) {
     winner = home.teamName;
     confidence = homeWin;
-  }
-
-  if (awayWin > homeWin && awayWin > draw) {
+  } else if (awayWin > homeWin && awayWin > draw) {
     winner = away.teamName;
     confidence = awayWin;
   }
 
   return {
     winner,
-    winnerConfidence: clamp(confidence, 45, 90),
+    winnerConfidence: clamp(confidence, 45, 92),
     probabilities: {
       homeWin,
       draw,
       awayWin
     }
   };
-
 }
 
 /* =========================
@@ -105,25 +122,26 @@ function calculateOver25(home, away) {
 
 function calculateBTTS(home, away) {
 
-  const attack =
-    home.bttsRate +
-    away.bttsRate;
+  let score = 0;
 
+  // Les deux équipes marquent souvent
+  score += (home.bttsRate + away.bttsRate) * 0.35;
 
-  const confidence =
-    Math.round(
-      clamp(
-        attack / 2,
-        20,
-        90
-      )
-    );
+  // Les deux équipes savent marquer
+  score += (home.avgScored + away.avgScored) * 8;
 
+  // Les deux équipes encaissent
+  score += (home.avgConceded + away.avgConceded) * 6;
+
+  // Équipes qui gardent rarement leur cage inviolée
+  score -= (home.cleanSheets + away.cleanSheets) * 3;
+
+  const confidence = Math.round(
+    clamp(score, 15, 90)
+  );
 
   return {
-    value: confidence >= 55
-  ? "YES"
-  : "NO",
+    value: confidence >= 55 ? "YES" : "NO",
     confidence
   };
 }
