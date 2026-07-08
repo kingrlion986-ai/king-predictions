@@ -60,12 +60,49 @@ function calculateQuality(a) {
    SORT FUNCTIONS
 ========================= */
 
-function byWinnerQuality(a,b) {
+function byWinnerConfidence(a, b) {
 
-  return (
-    calculateQuality(b) -
-    calculateQuality(a)
-  );
+  function score(match){
+
+    const home = match.teamStats.home;
+    const away = match.teamStats.away;
+
+    let quality =
+      match.predictions.winnerConfidence;
+
+
+    // pénalité manque de données
+    if(home.played < 3 || away.played < 3){
+      quality -= 15;
+    }
+
+
+    // pénalité match trop équilibré
+    const diff =
+      Math.abs(
+        home.strength -
+        away.strength
+      );
+
+    if(diff < 5){
+      quality -= 10;
+    }
+
+
+    // bonus fiabilité
+    quality +=
+      (
+        home.reliability +
+        away.reliability
+      ) * 5;
+
+
+    return quality;
+
+  }
+
+
+  return score(b) - score(a);
 
 }
 
