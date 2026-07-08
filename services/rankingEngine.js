@@ -15,7 +15,7 @@ function calculateQuality(a) {
 
   // confiance du marché principal
   let score =
-    a.predictions.winnerConfidence * 0.45;
+    a.predictions.winnerConfidence * 0.65;
 
 
   // fiabilité des données
@@ -23,7 +23,7 @@ function calculateQuality(a) {
     ((home.reliability || 0) +
      (away.reliability || 0)) / 2;
 
-  score += reliability * 25;
+  score += reliability * 30;
 
 
   // écart de niveau
@@ -66,6 +66,10 @@ function byWinnerConfidence(a, b) {
 
     const home = match.teamStats.home;
     const away = match.teamStats.away;
+
+    if(!home || !away){
+  return -999;
+    }
 
     let quality =
       match.predictions.winnerConfidence;
@@ -159,7 +163,9 @@ function byScore(a,b) {
 function rankMatches(analyses) {
 
   return [...analyses]
-    .sort(byWinnerConfidence);
+    .sort((a,b)=> 
+      calculateQuality(b) - calculateQuality(a)
+    );
 
 }
 
