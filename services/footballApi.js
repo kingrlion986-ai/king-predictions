@@ -40,26 +40,48 @@ const TEAM_MATCHES_TTL = 15 * 60 * 1000;
 /* =========================
    API CALL
 ========================= */
-async function apiGet(endpoint) {
-  try {
-    const res = await fetch(`${BASE_URL}${endpoint}`, {
-      headers: {
-        "X-Auth-Token": API_KEY
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function apiGet(endpoint, retries = 3) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(`${BASE_URL}${endpoint}`, {
+        headers: {
+          "X-Auth-Token": API_KEY
+        }
+      });
+
+      // Gestion des erreurs 429
+      if (res.status === 429) {
+        const retryAfter = Number(res.headers.get("Retry-After")) || 5;
+        const wait = retryAfter * 1000;
+
+        console.log(`⏳ API LIMIT 429 → attente ${wait / 1000}s`);
+        await sleep(wait);
+        continue;
       }
-    });
 
-    if (!res.ok) {
-      console.log(`❌ API ERROR ${res.status} → ${endpoint}`);
-      return null;
+      if (!res.ok) {
+        console.log(`❌ API ERROR ${res.status} → ${endpoint}`);
+        return null;
+      }
+
+      return await res.json();
+
+    } catch (err) {
+      console.log(`❌ API FAILURE: ${err.message}`);
+
+      if (attempt === retries) {
+        return null;
+      }
+
+      await sleep(2000);
     }
-
-    const data = await res.json();
-    return data;
-
-  } catch (err) {
-    console.log("❌ API FAILURE:", err.message);
-    return null;
   }
+
+  return null;
 }
 
 /* =========================
