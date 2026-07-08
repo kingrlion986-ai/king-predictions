@@ -400,6 +400,9 @@ async function getCompetitionMatches(code) {
     `/competitions/${code}/matches`
   );
 
+   console.log("COMPETITION:", code);
+   console.log("MATCHES API:", data?.matches?.length);
+
 
   if (
     !data ||
