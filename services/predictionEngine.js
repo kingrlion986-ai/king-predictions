@@ -20,19 +20,19 @@ function round(value) {
 function calculateWinner(home, away) {
 
   const homePower =
-    home.strength * 0.35 +
+    home.strength * 0.30 +
     home.avgScored * 10 +
     (3 - home.avgConceded) * 8 +
-    home.formPoints * 25 +
+    home.formPoints * 30 +
     home.reliability * 20 +
-    10;
+    12;
 
 
   const awayPower =
-    away.strength * 0.35 +
+    away.strength * 0.30 +
     away.avgScored * 10 +
     (3 - away.avgConceded) * 8 +
-    away.formPoints * 25 +
+    away.formPoints * 30 +
     away.reliability * 20;
 
 
@@ -41,11 +41,21 @@ function calculateWinner(home, away) {
     Math.abs(homePower - awayPower) / 8;
 
 
-  const drawPower = clamp(
+  let drawPower = clamp(
     drawFactor,
     8,
     18
-  );
+);
+
+const strengthDiff = Math.abs(
+    home.strength - away.strength
+);
+
+if (strengthDiff < 8) {
+    drawPower += 3;
+}
+
+drawPower = clamp(drawPower, 8, 20);
 
 
   const total =
@@ -92,7 +102,7 @@ function calculateWinner(home, away) {
     winner,
 
     winnerConfidence:
-      clamp(confidence,45,85),
+        clamp(confidence, 45, 90),
 
     probabilities:{
       homeWin,
@@ -153,12 +163,15 @@ function calculateBTTS(home, away) {
   // Équipes qui gardent rarement leur cage inviolée
   score -= (home.cleanSheets + away.cleanSheets) * 3;
 
+   // Forme récente
+score += (home.formPoints + away.formPoints) * 8;
+
   const confidence = Math.round(
     clamp(score, 15, 90)
   );
 
   return {
-    value: confidence >= 55 ? "YES" : "NO",
+    value: confidence >= 60 ? "OUI" : "NON",
     confidence
   };
 }
@@ -194,35 +207,30 @@ function calculateExpectedGoals(home, away) {
     (home.avgConceded * 0.60) +
     (home.homeDefense * 0.40);
 
+   
+  // Calcul de base amélioré
+let expectedHomeGoals =
+    (homeAttack * 0.60) +
+    (homeDefenseFactor * 0.40);
 
-  // Calcul de base
-  let expectedHomeGoals =
-    (homeAttack + homeDefenseFactor) / 2;
-
-
-  let expectedAwayGoals =
-    (awayAttack + awayDefenseFactor) / 2;
-
+let expectedAwayGoals =
+    (awayAttack * 0.60) +
+    (awayDefenseFactor * 0.40);
 
   // Avantage domicile réaliste
   expectedHomeGoals += 0.20;
 
 
-  // Réduction des excès offensifs
+// Réduction des excès offensifs
+expectedHomeGoals *= 0.75;
+expectedAwayGoals *= 0.75;
+
+
   expectedHomeGoals =
-    expectedHomeGoals * 0.55;
+    clamp(expectedHomeGoals, 0.3, 2.8);
 
   expectedAwayGoals =
-    expectedAwayGoals * 0.55;
-
-
-  // Limites réalistes football
-  expectedHomeGoals =
-    clamp(expectedHomeGoals, 0.2, 3.2);
-
-  expectedAwayGoals =
-    clamp(expectedAwayGoals, 0.2, 3.0);
-
+    clamp(expectedAwayGoals, 0.3, 2.8);
 
   return {
 
@@ -241,46 +249,42 @@ function calculateExpectedGoals(home, away) {
 
 function generateScore(model, winner) {
 
-  let homeGoals =
-    Math.round(model.expectedHomeGoals);
+  let homeGoals = Math.round(model.expectedHomeGoals);
+  let awayGoals = Math.round(model.expectedAwayGoals);
 
-  let awayGoals =
-    Math.round(model.expectedAwayGoals);
+  // Empêcher des scores trop élevés
+  homeGoals = clamp(homeGoals, 0, 3);
+  awayGoals = clamp(awayGoals, 0, 3);
 
+  if (winner === "DRAW") {
 
-  // cohérence avec le vainqueur
+    const avg = Math.round(
+      (homeGoals + awayGoals) / 2
+    );
 
-  if (winner !== "DRAW") {
+    homeGoals = avg;
+    awayGoals = avg;
 
-    if (
-      winner === model.homeTeam
-      &&
-      homeGoals <= awayGoals
-    ) {
+  } else if (winner === model.homeTeam) {
+
+    if (homeGoals <= awayGoals) {
       homeGoals = awayGoals + 1;
     }
 
+  } else if (winner === model.awayTeam) {
 
-    if (
-      winner === model.awayTeam
-      &&
-      awayGoals <= homeGoals
-    ) {
+    if (awayGoals <= homeGoals) {
       awayGoals = homeGoals + 1;
     }
 
   }
 
-
-  // match nul cohérent
-
-  if (winner === "DRAW") {
-    awayGoals = homeGoals;
-  }
-
+  // Limiter les scores finaux
+  homeGoals = clamp(homeGoals, 0, 3);
+  awayGoals = clamp(awayGoals, 0, 3);
 
   return `${homeGoals}-${awayGoals}`;
-      }
+}
 
 /* =========================
    ANALYSIS CACHE
