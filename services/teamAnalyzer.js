@@ -8,8 +8,7 @@ function clamp(value, min, max) {
    CACHE
 ========================= */
 const CACHE = new Map();
-
-const CACHE_TIME = 1000 * 60 * 60 * 6;
+const RUNNING = new Map();
 
 /* =========================
    HELPERS
@@ -198,20 +197,44 @@ async function analyzeTeam(team) {
 
   if (CACHE.has(team.id)) {
 
-  console.log(
-    "⚡ TEAM CACHE:",
-    team.name
-  );
+    const cached = CACHE.get(team.id);
 
-  return CACHE.get(team.id);
+    console.log(
+      "⚡ TEAM CACHE:",
+      team.name
+    );
+
+    // cache encore valide 6h
+    if (Date.now() - cached.time < 1000 * 60 * 60 * 6) {
+        return cached.data;
+    }
+
+    // cache expiré
+    CACHE.delete(team.id);
+  }
+
+
+  // Empêche plusieurs appels API en même temps pour la même équipe
+  if (RUNNING.has(team.id)) {
+
+    console.log(
+      "⏳ ANALYSE EN COURS:",
+      team.name
+    );
+
+    return RUNNING.get(team.id);
 
   }
 
-  const matches = await getTeamMatches(team.id);
 
-  if (!matches || matches.length === 0) {
+  const analysisPromise = (async () => {
 
-    const fallback = {
+    const matches = await getTeamMatches(team.id);
+
+
+    if (!matches || matches.length === 0) {
+
+      const fallback = {
       teamName: team.name,
       teamId: team.id,
 
@@ -238,16 +261,21 @@ async function analyzeTeam(team) {
       formPoints: 0
     };
 
-    CACHE.set(team.id, fallback);
-    return fallback;
-  }
+              CACHE.set(team.id,{
+        time: Date.now(),
+        data: fallback
+      });
 
-  const recentMatches = matches
-  .filter(m => m.status === "FINISHED")
-  .sort((a, b) => new Date(b.utcDate) - new Date(a.utcDate))
-  .slice(0, 5);
+      return fallback;
 
-const stats = buildStats(recentMatches, team.id);
+    }
+
+    const recentMatches = matches
+.filter(m => m.status === "FINISHED")
+.sort((a, b) => new Date(b.utcDate) - new Date(a.utcDate))
+.slice(0, 5);
+
+    const stats = buildStats(recentMatches, team.id);
 
   const result = {
 
@@ -296,6 +324,22 @@ const stats = buildStats(recentMatches, team.id);
 });
 
   return result;
+
+      })();
+
+
+  RUNNING.set(team.id, analysisPromise);
+
+
+  try {
+
+    return await analysisPromise;
+
+  } finally {
+
+    RUNNING.delete(team.id);
+
+  }
 
 }
 module.exports = {
