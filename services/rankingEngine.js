@@ -1,50 +1,162 @@
-function byWinnerConfidence(a, b) {
-  return (
-    b.predictions.winnerConfidence -
-    a.predictions.winnerConfidence
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+
+/* =========================
+   QUALITY SCORE
+========================= */
+
+function calculateQuality(a) {
+
+  const home = a.teamStats.home;
+  const away = a.teamStats.away;
+
+
+  // confiance du marché principal
+  let score =
+    a.predictions.winnerConfidence * 0.45;
+
+
+  // fiabilité des données
+  const reliability =
+    ((home.reliability || 0) +
+     (away.reliability || 0)) / 2;
+
+  score += reliability * 25;
+
+
+  // écart de niveau
+  const strengthDiff =
+    Math.abs(
+      home.strength -
+      away.strength
+    );
+
+  // trop équilibré = plus dangereux
+  if (strengthDiff < 5) {
+    score -= 10;
+  }
+
+  if (strengthDiff > 20) {
+    score += 8;
+  }
+
+
+  // forme récente
+  score +=
+    ((home.formPoints + away.formPoints) / 2) * 15;
+
+
+  return clamp(
+    Math.round(score),
+    0,
+    100
   );
 }
 
-function byOver25(a, b) {
+
+/* =========================
+   SORT FUNCTIONS
+========================= */
+
+function byWinnerQuality(a,b) {
+
   return (
-    b.predictions.over25Confidence -
-    a.predictions.over25Confidence
+    calculateQuality(b) -
+    calculateQuality(a)
   );
+
 }
 
-function byBTTS(a, b) {
-  return (
-    b.predictions.bttsConfidence -
-    a.predictions.bttsConfidence
-  );
+
+function byOver25(a,b) {
+
+  const scoreA =
+    a.predictions.over25Confidence +
+    a.model.expectedGoals * 5;
+
+  const scoreB =
+    b.predictions.over25Confidence +
+    b.model.expectedGoals * 5;
+
+
+  return scoreB - scoreA;
+
 }
 
-function byScore(a, b) {
+
+function byBTTS(a,b) {
+
+  const scoreA =
+    a.predictions.bttsConfidence +
+    ((a.teamStats.home.bttsRate +
+      a.teamStats.away.bttsRate) / 2);
+
+  const scoreB =
+    b.predictions.bttsConfidence +
+    ((b.teamStats.home.bttsRate +
+      b.teamStats.away.bttsRate) / 2);
+
+
+  return scoreB - scoreA;
+
+}
+
+
+function byScore(a,b) {
+
   return (
     b.model.expectedGoals -
     a.model.expectedGoals
   );
+
 }
+
+
+
+/* =========================
+   EXPORTS
+========================= */
 
 function rankMatches(analyses) {
-  return [...analyses].sort(byWinnerConfidence);
+
+  return [...analyses]
+    .sort(byWinnerQuality);
+
 }
+
 
 function rankOver25Matches(analyses) {
-  return [...analyses].sort(byOver25);
+
+  return [...analyses]
+    .sort(byOver25);
+
 }
+
 
 function rankBTTSMatches(analyses) {
-  return [...analyses].sort(byBTTS);
+
+  return [...analyses]
+    .sort(byBTTS);
+
 }
+
 
 function rankScoreMatches(analyses) {
-  return [...analyses].sort(byScore);
+
+  return [...analyses]
+    .sort(byScore);
+
 }
 
+
 module.exports = {
+
   rankMatches,
   rankOver25Matches,
   rankBTTSMatches,
-  rankScoreMatches
+  rankScoreMatches,
+  calculateQuality
+
 };
