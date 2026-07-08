@@ -130,28 +130,37 @@ function computeStrength(stats) {
 
   let strength = 0;
 
-  // Attaque
-  strength += stats.avgScored * 18;
+  // Puissance offensive
+  strength += stats.avgScored * 20;
 
-  // Défense (moins on encaisse, mieux c'est)
-  strength += (3 - stats.avgConceded) * 15;
+  // Solidité défensive
+  strength += Math.max(0, (2.5 - stats.avgConceded)) * 18;
 
-  // Forme
-  strength +=
-    ((stats.wins * 3 + stats.draws) /
-    (stats.played * 3)) * 30;
+  // Forme (victoires et nuls)
+  const formRate =
+    (stats.wins * 3 + stats.draws) /
+    (stats.played * 3);
+  strength += formRate * 25;
 
-  // Domicile
-  strength += stats.homeAttack * 8;
+  // Performances domicile / extérieur
+  strength += stats.homeAttack * 6;
+  strength += stats.awayAttack * 6;
 
-  // Extérieur
-  strength += stats.awayAttack * 5;
-
-  // Défense domicile
-  strength += (2 - stats.homeDefense) * 6;
+  // Défense domicile / extérieur
+  strength += Math.max(0, (2 - stats.homeDefense)) * 5;
+  strength += Math.max(0, (2 - stats.awayDefense)) * 5;
 
   // Clean sheets
-  strength += stats.cleanSheets * 2;
+  strength += (stats.cleanSheets / stats.played) * 10;
+
+  // Capacité à marquer régulièrement
+  strength -= (stats.failedToScore / stats.played) * 10;
+
+  // Profil offensif
+  strength += (stats.over25Rate / 100) * 5;
+
+  // Légère pénalité pour une équipe très souvent en Under
+  strength -= (stats.under25Rate / 100) * 2;
 
   return clamp(
     Math.round(strength),
