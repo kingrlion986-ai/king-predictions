@@ -287,6 +287,15 @@ async function getCompetitionMatches(code) {
   );
 
    console.log(
+  data.matches.slice(0,5).map(m => ({
+    date: m.utcDate,
+    status: m.status,
+    home: m.homeTeam.name,
+    away: m.awayTeam.name
+  }))
+);
+
+   console.log(
   "Premier statut :",
   data.matches[0]?.status
 );
