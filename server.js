@@ -38,8 +38,6 @@ const ANALYSIS_TTL = 5 * 60 * 1000;
 
 const ANALYSIS_RUNNING = new Map();
 
-const ANALYSIS_TTL = 5 * 60 * 1000;
-
 function loadHistory() {
   try {
     if (!fs.existsSync(HISTORY_FILE)) {
