@@ -959,9 +959,13 @@ async function analyzeMatch(match) {
   const result = {
 
 
-    match:
-
-      `${match.homeTeam.name} vs ${match.awayTeam.name}`,
+    match: {
+    id: match.id,
+    utcDate: match.utcDate,
+    competition: match.competition,
+    homeTeam: match.homeTeam,
+    awayTeam: match.awayTeam
+},
 
 
 
