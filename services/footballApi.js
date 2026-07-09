@@ -333,43 +333,23 @@ function filterMatches(matches) {
   console.log("Avant filter :", matches.length);
 
   const filtered = matches.filter(match => {
+
+    if (!match.homeTeam || !match.awayTeam) {
+      return false;
+    }
+
     const date = new Date(match.utcDate);
+
     return date > new Date();
+
   });
 
   console.log("Après filter :", filtered.length);
 
   return filtered;
-}
-
-
-
-  return matches.filter(match => {
-
-
-    const date =
-      new Date(match.utcDate);
-
-
-
-    return (
-
-      match.homeTeam &&
-      match.awayTeam &&
-
-      date >= today &&
-      date <= limit
-
-    );
-
-
-  });
-
 
 }
-
-
-
+  
 
 function addMatchQuality(matches) {
 
