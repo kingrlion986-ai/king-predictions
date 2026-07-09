@@ -259,6 +259,9 @@ analysis.predictions.winner === "DRAW"
    VIP PREDICTIONS
 ========================= */
 app.get("/vip/predictions", async (req, res) => {
+
+  console.log("VIP ROUTE CALLED");
+
   try {
     const analyses = await analyzeMatches(
   await getMatches()
