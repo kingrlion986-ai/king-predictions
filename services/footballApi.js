@@ -273,6 +273,8 @@ function formatMatch(match) {
 
 }
 
+console.log("FORMAT MATCH TYPE =", typeof formatMatch);
+
 /* =========================
    GET COMPETITION MATCHES
 ========================= */
@@ -311,7 +313,9 @@ async function getCompetitionMatches(code) {
 
     .filter(Boolean);
 
-  }/* =========================
+}
+
+/* =========================
    MATCH CLEANERS
 ========================= */
 
