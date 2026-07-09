@@ -281,56 +281,19 @@ console.log("FORMAT MATCH TYPE =", typeof formatMatch);
 
 async function getCompetitionMatches(code) {
 
+  console.log(">>> GET COMPETITION", code);
 
-  const data = await apiGet(
-    `/competitions/${code}/matches`
-  );
+  const data = await apiGet(`/competitions/${code}/matches`);
 
-   console.log(
-  data.matches.slice(0,5).map(m => ({
-    date: m.utcDate,
-    status: m.status,
-    home: m.homeTeam.name,
-    away: m.awayTeam.name
-  }))
-);
+  console.log("DATA =", !!data);
 
-   console.log(
-  "Premier statut :",
-  data.matches[0]?.status
-);
-
-console.log(
-  "5 premiers statuts :",
-  data.matches.slice(0,5).map(m => m.status)
-);
-
-   console.log("COMPETITION:", code);
-   console.log("MATCHES API:", data?.matches?.length);
-
-
-  if (
-    !data ||
-    !Array.isArray(data.matches)
-  ) {
-
-     const filtered = data.matches.filter(match =>
-  ["SCHEDULED", "TIMED"].includes(match.status)
-);
-
-console.log(
-  code,
-  "MATCHS FUTURS =",
-  filtered.length
-);
-
-return filtered
-  .map(formatMatch)
-  .filter(Boolean);
-
-    return [];
-
+  if (data) {
+    console.log("MATCHES =", data.matches?.length);
+    console.log(data.matches?.[0]);
   }
+
+  ...
+}
 
 
   return data.matches
