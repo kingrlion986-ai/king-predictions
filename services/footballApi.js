@@ -611,7 +611,8 @@ async function getMatches() {
         matches.length
       );
 
-
+console.log("TOTAL MATCHES RETURNED =", matches.length);
+console.log(matches.slice(0,3));
 
       return matches;
 
