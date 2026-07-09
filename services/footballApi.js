@@ -286,6 +286,16 @@ async function getCompetitionMatches(code) {
     `/competitions/${code}/matches`
   );
 
+   console.log(
+  "Premier statut :",
+  data.matches[0]?.status
+);
+
+console.log(
+  "5 premiers statuts :",
+  data.matches.slice(0,5).map(m => m.status)
+);
+
    console.log("COMPETITION:", code);
    console.log("MATCHES API:", data?.matches?.length);
 
@@ -294,6 +304,20 @@ async function getCompetitionMatches(code) {
     !data ||
     !Array.isArray(data.matches)
   ) {
+
+     const filtered = data.matches.filter(match =>
+  ["SCHEDULED", "TIMED"].includes(match.status)
+);
+
+console.log(
+  code,
+  "MATCHS FUTURS =",
+  filtered.length
+);
+
+return filtered
+  .map(formatMatch)
+  .filter(Boolean);
 
     return [];
 
