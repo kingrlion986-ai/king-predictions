@@ -292,25 +292,18 @@ async function getCompetitionMatches(code) {
     console.log(data.matches?.[0]);
   }
 
-  ...
-}
-
+  if (!data || !Array.isArray(data.matches)) {
+    return [];
+  }
 
   return data.matches
-
     .filter(match =>
-      [
-        "SCHEDULED",
-        "TIMED"
-      ].includes(match.status)
+      ["SCHEDULED", "TIMED"].includes(match.status)
     )
-
     .map(formatMatch)
-
     .filter(Boolean);
 
 }
-
 /* =========================
    MATCH CLEANERS
 ========================= */
