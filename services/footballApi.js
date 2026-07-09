@@ -460,27 +460,19 @@ async function getMatches() {
 
 
 
-      for (
-        const competition of PRIMARY_COMPETITIONS
-      ) {
+      for (const competition of PRIMARY_COMPETITIONS) {
 
+  console.log("📡 PRIMARY:", competition);
 
-        console.log(
-          "📡 PRIMARY:",
-          competition
-        );
+  const result = await getCompetitionMatches(competition);
 
+  console.log(competition, "=>", result.length);
 
-        const result =
-          await getCompetitionMatches(
-            competition
-          );
+  matches.push(...result);
 
+  console.log("TOTAL =", matches.length);
 
-        matches.push(
-          ...result
-        );
-
+      }
 
 
       }
@@ -523,21 +515,17 @@ async function getMatches() {
       }
 
 
+     console.log("AVANT removeDuplicates =", matches.length);
 
+matches = removeDuplicates(matches);
 
-      matches =
-        removeDuplicates(matches);
+console.log("APRÈS removeDuplicates =", matches.length);
 
+matches = filterMatches(matches);
 
+console.log("APRÈS filterMatches =", matches.length);
 
-      matches =
-        filterMatches(matches);
-
-
-
-      matches =
-        addMatchQuality(matches);
-
+matches = addMatchQuality(matches);
 
 
       matches.sort((a,b)=> {
@@ -562,8 +550,6 @@ async function getMatches() {
 
 
 
-
-
       CACHE.matches = {
 
         data: matches,
@@ -582,13 +568,7 @@ async function getMatches() {
 
 console.log("TOTAL MATCHES RETURNED =", matches.length);
 console.log(matches.slice(0,3));
-
-       console.log("Avant filter :", matches.length);
-
-matches = filterMatches(matches);
-
-console.log("Après filter :", matches.length);
-
+       
       return matches;
 
 
