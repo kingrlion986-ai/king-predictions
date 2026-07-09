@@ -614,6 +614,12 @@ async function getMatches() {
 console.log("TOTAL MATCHES RETURNED =", matches.length);
 console.log(matches.slice(0,3));
 
+       console.log("Avant filter :", matches.length);
+
+matches = filterMatches(matches);
+
+console.log("Après filter :", matches.length);
+
       return matches;
 
 
