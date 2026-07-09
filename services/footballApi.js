@@ -235,6 +235,45 @@ async function apiGet(endpoint, retry = 0) {
 }
 
 /* =========================
+   FORMAT MATCH
+========================= */
+
+function formatMatch(match) {
+
+  if (!match || !match.homeTeam || !match.awayTeam) {
+    return null;
+  }
+
+  return {
+
+    id: match.id,
+
+    utcDate: match.utcDate,
+
+    status: match.status,
+
+    competition: {
+      code: match.competition?.code,
+      name: match.competition?.name
+    },
+
+    homeTeam: {
+      id: match.homeTeam.id,
+      name: match.homeTeam.name
+    },
+
+    awayTeam: {
+      id: match.awayTeam.id,
+      name: match.awayTeam.name
+    },
+
+    score: match.score
+
+  };
+
+}
+
+/* =========================
    GET COMPETITION MATCHES
 ========================= */
 
