@@ -330,17 +330,17 @@ function removeDuplicates(matches) {
 
 function filterMatches(matches) {
 
+  console.log("Avant filter :", matches.length);
 
-  const today = new Date();
+  const filtered = matches.filter(match => {
+    const date = new Date(match.utcDate);
+    return date > new Date();
+  });
 
-  today.setHours(0,0,0,0);
+  console.log("Après filter :", filtered.length);
 
-
-  const limit = new Date(today);
-
-  limit.setDate(
-    limit.getDate() + 10
-  );
+  return filtered;
+}
 
 
 
