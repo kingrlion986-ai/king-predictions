@@ -59,212 +59,93 @@ function poisson(lambda, goals) {
    WINNER ENGINE V17
 ========================= */
 
-
 function calculateWinner(home, away) {
 
+  const homeScore =
+      home.strength * 0.30 +
+      home.formPoints * 25 +
+      home.reliability * 15 +
+      home.stability * 0.15 +
+      home.homeAttack * 8 -
+      home.avgConceded * 5 +
+      6;
 
-  /*
-    Puissance offensive
-  */
+  const awayScore =
+      away.strength * 0.30 +
+      away.formPoints * 25 +
+      away.reliability * 15 +
+      away.stability * 0.15 +
+      away.awayAttack * 8 -
+      away.avgConceded * 5;
 
-  const homeAttack =
-    home.avgScored * 18;
+  const diff = homeScore - awayScore;
 
+  let homeWin;
+  let draw;
+  let awayWin;
 
-  const awayAttack =
-    away.avgScored * 18;
+  if (Math.abs(diff) <= 4) {
 
+    homeWin = 37;
+    draw = 28;
+    awayWin = 35;
 
+  } else {
 
+    const sigmoid = 1 / (1 + Math.exp(-diff / 12));
 
-  /*
-    Défense
-  */
+    homeWin = Math.round(sigmoid * 75);
+    awayWin = Math.round((1 - sigmoid) * 75);
 
-  const homeDefense =
-    Math.max(
-      0,
-      2.5 - home.avgConceded
-    )
-    * 12;
+    draw = 100 - homeWin - awayWin;
 
+    if (draw < 12) {
 
-  const awayDefense =
-    Math.max(
-      0,
-      2.5 - away.avgConceded
-    )
-    * 12;
+      const missing = 12 - draw;
 
+      draw = 12;
 
+      if (homeWin > awayWin)
+        homeWin -= missing;
+      else
+        awayWin -= missing;
 
-
-  /*
-    Force globale
-  */
-
-  const homePower =
-
-    home.strength * 0.45 +
-
-    homeAttack * 0.15 +
-
-    homeDefense * 0.10 +
-
-    home.formPoints * 20 +
-
-    home.reliability * 10 +
-
-    8; // avantage domicile
-
-
-
-  const awayPower =
-
-    away.strength * 0.45 +
-
-    awayAttack * 0.15 +
-
-    awayDefense * 0.10 +
-
-    away.formPoints * 20 +
-
-    away.reliability * 10;
-
-
-
-
-  /*
-    Probabilité nul
-  */
-
-  let drawPower =
-    18 -
-    (
-      Math.abs(
-        homePower - awayPower
-      )
-      / 8
-    );
-
-
-  if (
-    Math.abs(
-      home.strength -
-      away.strength
-    )
-    < 10
-  ) {
-
-    drawPower += 4;
+    }
 
   }
-
-
-  drawPower =
-    clamp(
-      drawPower,
-      8,
-      25
-    );
-
-
-
-
-  const total =
-
-    homePower +
-    awayPower +
-    drawPower;
-
-
-
-  let homeWin =
-    Math.round(
-      homePower /
-      total *
-      100
-    );
-
-
-  let awayWin =
-    Math.round(
-      awayPower /
-      total *
-      100
-    );
-
-
-  let draw =
-    100 -
-    homeWin -
-    awayWin;
-
-
 
   let winner = "DRAW";
-
   let confidence = draw;
 
-
-
-  if (
-    homeWin > awayWin &&
-    homeWin > draw
-  ) {
-
-    winner =
-      home.teamName;
-
-    confidence =
-      homeWin;
-
+  if (homeWin > awayWin && homeWin > draw) {
+    winner = home.teamName;
+    confidence = homeWin;
   }
 
-
-
-  if (
-    awayWin > homeWin &&
-    awayWin > draw
-  ) {
-
-    winner =
-      away.teamName;
-
-    confidence =
-      awayWin;
-
+  if (awayWin > homeWin && awayWin > draw) {
+    winner = away.teamName;
+    confidence = awayWin;
   }
-
-
 
   return {
 
     winner,
 
+    winnerConfidence: clamp(confidence, 50, 92),
 
-    winnerConfidence:
-      clamp(
-        confidence,
-        45,
-        90
-      ),
-
-
-    probabilities:{
+    probabilities: {
 
       homeWin,
-
       draw,
-
       awayWin
 
     }
 
   };
 
-
 }
+
+
 
  /* =========================
     EXPECTED GOALS ENGINE V17
