@@ -183,148 +183,56 @@ const MAX_RETRIES = 4;
 
 async function apiGet(endpoint, retry = 0) {
 
-
-  return queueRequest(async()=>{
-
+  return queueRequest(async () => {
 
     try {
-
 
       const res = await fetch(
         `${BASE_URL}${endpoint}`,
         {
-          headers:{
-            "X-Auth-Token":API_KEY
+          headers: {
+            "X-Auth-Token": API_KEY
           }
         }
       );
 
+      if (res.status === 429) {
 
+        console.log("⚠️ RATE LIMIT 429:", endpoint);
 
-      if(res.status === 429){
+        if (retry < 3) {
 
+          const delay = 5000 * (retry + 1);
 
-        console.log(
-          "⚠️ RATE LIMIT 429:",
-          endpoint
-        );
-
-
-
-        if(retry < 3){
-
-
-          const delay =
-            5000 *
-            (retry + 1);
-
-
-
-          console.log(
-            `⏳ RETRY ${retry+1} AFTER ${delay}ms`
-          );
-
-
+          console.log(`⏳ RETRY ${retry + 1} AFTER ${delay}ms`);
 
           await wait(delay);
 
-
-
-          return apiGet(
-            endpoint,
-            retry + 1
-          );
-
-
+          return apiGet(endpoint, retry + 1);
         }
 
-
         return null;
-
       }
 
+      if (!res.ok) {
 
-
-
-
-      if(!res.ok){
-
-
-        console.log(
-          `❌ API ERROR ${res.status} → ${endpoint}`
-        );
-
+        console.log(`❌ API ERROR ${res.status} → ${endpoint}`);
 
         return null;
-
       }
 
+      return await res.json();
 
-/* =========================
-   FORMAT MATCH
-========================= */
+    } catch (error) {
 
-function formatMatch(match) {
+      console.log("❌ API FAILURE:", error.message);
 
-  if (
-    !match ||
-    !match.homeTeam ||
-    !match.awayTeam
-  ) {
-    return null;
-  }
+      return null;
+    }
 
-
-  return {
-
-    id: match.id,
-
-    utcDate: match.utcDate,
-
-    status: match.status,
-
-
-    competition: {
-
-      code:
-        match.competition?.code,
-
-      name:
-        match.competition?.name
-
-    },
-
-
-    homeTeam: {
-
-      id:
-        match.homeTeam.id,
-
-      name:
-        match.homeTeam.name
-
-    },
-
-
-    awayTeam: {
-
-      id:
-        match.awayTeam.id,
-
-      name:
-        match.awayTeam.name
-
-    },
-
-
-    score:
-      match.score
-
-  };
+  });
 
 }
-
-
 
 /* =========================
    GET COMPETITION MATCHES
