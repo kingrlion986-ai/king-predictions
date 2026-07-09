@@ -260,69 +260,6 @@ async function apiGet(endpoint, retry = 0) {
       }
 
 
-
-
-
-      return await res.json();
-
-
-
-    } catch(error){
-
-
-      console.log(
-        "❌ API FAILURE:",
-        error.message
-      );
-
-
-      return null;
-
-    }
-
-
-  });
-
-
-}
-
-        return await response.json();
-
-
-
-      } catch (error) {
-
-
-        console.log(
-          `❌ API FAILURE ${endpoint}:`,
-          error.message
-        );
-
-
-        if (attempt === MAX_RETRIES) {
-          return null;
-        }
-
-
-        const delay =
-          2000 * Math.pow(2, attempt);
-
-
-        await sleep(delay);
-
-      }
-
-    }
-
-
-    return null;
-
-  });
-
-}
-
-
-
 /* =========================
    FORMAT MATCH
 ========================= */
