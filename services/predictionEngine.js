@@ -944,6 +944,11 @@ async function analyzeMatch(match) {
     }
   );
 
+console.log(
+  "RESULT MATCH:",
+  JSON.stringify(result.match, null, 2)
+);
+
 
 
   return result;
