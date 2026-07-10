@@ -696,10 +696,6 @@ function generateScore(xg, winner, homeName, awayName) {
 }
 
 
-
-
-
-
 /* =========================
    ANALYSIS CACHE
 ========================= */
@@ -730,9 +726,6 @@ function getMatchKey(match) {
   );
 
 }
-
-
-
 
 
 /* =========================
@@ -943,8 +936,6 @@ async function analyzeMatch(match) {
 
 
 
-
-
   ANALYSIS_CACHE.set(
     key,
     {
@@ -959,10 +950,6 @@ async function analyzeMatch(match) {
 
 
 }
-
-
-
-
 
 module.exports = {
 
