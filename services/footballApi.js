@@ -283,7 +283,15 @@ async function getCompetitionMatches(code) {
 
   console.log(">>> GET COMPETITION", code);
 
-  const data = await apiGet(`/competitions/${code}/matches`);
+  const today = new Date().toISOString().split("T")[0];
+
+const in7days = new Date(
+  Date.now() + 7 * 24 * 60 * 60 * 1000
+).toISOString().split("T")[0];
+
+const data = await apiGet(
+  `/competitions/${code}/matches?dateFrom=${today}&dateTo=${in7days}`
+);
 
   console.log("DATA =", !!data);
 
