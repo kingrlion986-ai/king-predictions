@@ -742,6 +742,13 @@ function getMatchKey(match) {
 
 async function analyzeMatch(match) {
 
+   console.log(
+  "START ANALYSIS:",
+  match.homeTeam.name,
+  "vs",
+  match.awayTeam.name
+);
+
 
   const key =
     getMatchKey(match);
@@ -778,6 +785,12 @@ async function analyzeMatch(match) {
     await analyzeTeam(
       match.awayTeam
     );
+
+       console.log(
+  "TEAMS DONE:",
+  match.homeTeam.name,
+  match.awayTeam.name
+);
 
 
 
