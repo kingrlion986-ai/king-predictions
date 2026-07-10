@@ -49,6 +49,9 @@ const CACHE_DURATION =
 
 function buildStats(matches, teamId) {
 
+   let homeWeight = 0;
+   let awayWeight = 0;
+
 
   let weightedScored = 0;
   let weightedConceded = 0;
@@ -244,34 +247,11 @@ function buildStats(matches, teamId) {
       ),
 
 
-    homeAttack:
-      round(
-        homeScored /
-        Math.max(homeGames,1)
-      ),
-
-
-    awayAttack:
-      round(
-        awayScored /
-        Math.max(awayGames,1)
-      ),
-
-
-    homeDefense:
-      round(
-        homeConceded /
-        Math.max(homeGames,1)
-      ),
-
-
-    awayDefense:
-      round(
-        awayConceded /
-        Math.max(awayGames,1)
-      ),
-
-
+    homeAttack: round(homeScored / Math.max(homeWeight, 1)),
+    awayAttack: round(awayScored / Math.max(awayWeight, 1)),
+    homeDefense: round(homeConceded / Math.max(homeWeight, 1)),
+    awayDefense: round(awayConceded / Math.max(awayWeight, 1)),
+     
     cleanSheets,
 
     failedToScore,
