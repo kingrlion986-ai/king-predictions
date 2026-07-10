@@ -600,14 +600,6 @@ console.log(
   const promise =
   (async()=>{
 
-
-    const matches =
-      await getTeamMatches(
-        team.id
-      );
-
-
-
     /*
       FALLBACK
       Si l'API ne donne aucune donnée
