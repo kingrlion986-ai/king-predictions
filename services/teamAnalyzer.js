@@ -524,11 +524,32 @@ function computeReliability(stats) {
   );
 
 }
+
+console.log("GET TEAM MATCHES START:", team.name);
+
+const matches = await getTeamMatches(team.id);
+
+console.log(
+  "GET TEAM MATCHES END:",
+  team.name,
+  matches.length
+);
+
  /* =========================
     MAIN ANALYZER V17
  ========================= */
 
 async function analyzeTeam(team) {
+
+   console.log("GET TEAM MATCHES START:", team.name);
+
+const matches = await getTeamMatches(team.id);
+
+console.log(
+  "GET TEAM MATCHES END:",
+  team.name,
+  matches.length
+);
 
 
   /*
