@@ -193,6 +193,7 @@ const timeout = setTimeout(
   () => controller.abort(),
   10000
 );
+       console.log("➡️ API CALL:", endpoint);
 
 
 const res = await fetch(
@@ -204,6 +205,7 @@ const res = await fetch(
    signal: controller.signal
  }
 );
+       console.log("✅ API RESPONSE:", endpoint, res.status);
 
 
 clearTimeout(timeout);
@@ -640,27 +642,6 @@ async function getTeamMatches(teamId) {
     return cached.data;
 
   }
-
-
-
-  const data =
-    await apiGet(
-      `/teams/${teamId}/matches?status=FINISHED`
-    );
-
-
-
-  if (
-    !data ||
-    !Array.isArray(data.matches)
-  ) {
-
-
-    if (cached) {
-
-      return cached.data;
-
-    }
 
 
     return [];
