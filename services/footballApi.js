@@ -187,14 +187,26 @@ async function apiGet(endpoint, retry = 0) {
 
     try {
 
-      const res = await fetch(
-        `${BASE_URL}${endpoint}`,
-        {
-          headers: {
-            "X-Auth-Token": API_KEY
-          }
-        }
-      );
+      const controller = new AbortController();
+
+const timeout = setTimeout(
+  () => controller.abort(),
+  10000
+);
+
+
+const res = await fetch(
+ `${BASE_URL}${endpoint}`,
+ {
+   headers:{
+    "X-Auth-Token": API_KEY
+   },
+   signal: controller.signal
+ }
+);
+
+
+clearTimeout(timeout);
 
       if (res.status === 429) {
 
