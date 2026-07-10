@@ -240,6 +240,10 @@ if (!matches.length) {
 
 const match = matches[0];
 const analysis = await analyzeMatch(match);
+    console.log(
+  "RESULT MATCH:",
+  JSON.stringify(result.match, null, 2)
+);
     res.json({
       match: analysis.match,
       prediction: "1X2",
