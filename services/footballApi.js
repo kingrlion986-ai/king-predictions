@@ -8,42 +8,6 @@ const API_KEY = process.env.API_KEY;
 const BASE_URL = "https://api.football-data.org/v4";
 
 /* =========================
-   API QUEUE V17
-========================= */
-
-let API_QUEUE = Promise.resolve();
-
-const API_DELAY = 5000;
-
-
-function wait(ms){
-
-  return new Promise(resolve =>
-    setTimeout(resolve, ms)
-  );
-
-}
-
-
-
-function queueRequest(task){
-
-  API_QUEUE =
-    API_QUEUE.then(async()=>{
-
-      await wait(API_DELAY);
-
-      return task();
-
-    });
-
-
-  return API_QUEUE;
-
-}
-
-
-/* =========================
    COMPETITIONS
 ========================= */
 
@@ -146,6 +110,8 @@ async function processQueue() {
 
   try {
 
+     await wait(5000);
+
     const result = await job.task();
 
     job.resolve(result);
@@ -183,7 +149,7 @@ const MAX_RETRIES = 4;
 
 async function apiGet(endpoint, retry = 0) {
 
-  return queueRequest(async () => {
+  return enqueue(async () => {
 
     try {
 
@@ -613,77 +579,32 @@ console.log(matches.slice(0,3));
 /* =========================
    TEAM MATCHES
 ========================= */
-
 async function getTeamMatches(teamId) {
 
-   if (CACHE.teamMatches.has(teamId)) {
-  return CACHE.teamMatches.get(teamId).data;
-   }
+  const cached = CACHE.teamMatches.get(teamId);
 
-
-  const cached =
-    CACHE.teamMatches.get(teamId);
-
-
-
-  if (
-    cached &&
-    Date.now() <
-    cached.expiresAt
-  ) {
-
-
-    console.log(
-      "⚡ TEAM CACHE:",
-      teamId
-    );
-
-
+  if (cached && Date.now() < cached.expiresAt) {
+    console.log("⚡ TEAM CACHE:", teamId);
     return cached.data;
-
   }
 
+  const data = await apiGet(`/teams/${teamId}/matches?status=FINISHED`);
 
-    return [];
-
+  if (!data || !Array.isArray(data.matches)) {
+    return cached ? cached.data : [];
   }
 
-
-
-
-
-  const matches =
-    data.matches
-
+  const matches = data.matches
     .map(formatMatch)
-
     .filter(Boolean);
 
-
-
-
-
-  CACHE.teamMatches.set(
-    teamId,
-    {
-
-      data: matches,
-
-      expiresAt:
-        Date.now() + TEAM_CACHE_TTL
-
-    }
-
-  );
-
-
+  CACHE.teamMatches.set(teamId, {
+    data: matches,
+    expiresAt: Date.now() + TEAM_CACHE_TTL
+  });
 
   return matches;
-
-
 }
-
-
 
 /* =========================
    EXPORTS
