@@ -148,6 +148,8 @@ function buildStats(matches, teamId) {
 
       if (isHome) {
 
+         homeWeight += weight;
+
         homeGames++;
 
         homeScored +=
@@ -158,6 +160,8 @@ function buildStats(matches, teamId) {
 
 
       } else {
+
+         homeWeight += weight;
 
 
         awayGames++;
