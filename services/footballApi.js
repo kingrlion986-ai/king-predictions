@@ -13,7 +13,7 @@ const BASE_URL = "https://api.football-data.org/v4";
 
 let API_QUEUE = Promise.resolve();
 
-const API_DELAY = 2200;
+const API_DELAY = 5000;
 
 
 function wait(ms){
@@ -220,7 +220,7 @@ clearTimeout(timeout);
 
           await wait(delay);
 
-          return apiGet(endpoint, retry + 1);
+          return await apiGet(endpoint, retry + 1);
         }
 
         return null;
@@ -614,6 +614,10 @@ console.log(matches.slice(0,3));
 
 async function getTeamMatches(teamId) {
 
+   if (CACHE.teamMatches.has(teamId)) {
+  return CACHE.teamMatches.get(teamId).data;
+   }
+
 
   const cached =
     CACHE.teamMatches.get(teamId);
@@ -636,11 +640,6 @@ async function getTeamMatches(teamId) {
     return cached.data;
 
   }
-
-
-
-
-  await sleep(1200);
 
 
 
