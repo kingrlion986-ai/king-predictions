@@ -571,9 +571,7 @@ console.log(matches.slice(0,3));
        
       return matches;
 
-
-
-     finally {
+} finally {
 
 
       MATCH_LOADING = null;
