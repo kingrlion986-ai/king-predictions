@@ -475,9 +475,6 @@ async function getMatches() {
       }
 
 
-      }
-
-
 
       /*
         On ajoute les compétitions secondaires
