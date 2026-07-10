@@ -61,6 +61,14 @@ function saveHistory(data) {
 
 async function analyzeMatches(matches) {
 
+  const uniqueMatches = [
+ ...new Map(
+ matches.map(
+ m => [m.id,m]
+ )
+ ).values()
+];
+
 
   const key =
     matches
@@ -110,8 +118,6 @@ async function analyzeMatches(matches) {
 
 
 
-
-
   const promise =
     (async()=>{
 
@@ -120,9 +126,7 @@ async function analyzeMatches(matches) {
 
 
 
-      for (
-        const match of matches
-      ) {
+      for (const match of uniqueMatches) {
 
         try {
 
