@@ -1,4 +1,5 @@
 const { analyzeTeam } = require("./teamAnalyzer");
+const { buildPoissonMatrix } = require("./poissonEngine");
 
 
 /* =========================
@@ -802,6 +803,12 @@ async function analyzeMatch(match) {
       awayStats
     );
 
+   const poisson =
+    buildPoissonMatrix(
+        xg.expectedHomeGoals,
+        xg.expectedAwayGoals
+    );
+
 
 
 
@@ -857,7 +864,13 @@ async function analyzeMatch(match) {
 
 
       winner:
-        winner.winner,
+    poisson.probabilities.homeWin >
+    poisson.probabilities.awayWin
+        ? match.homeTeam.name
+        : poisson.probabilities.awayWin >
+          poisson.probabilities.homeWin
+            ? match.awayTeam.name
+            : "DRAW",
 
 
       winnerConfidence:
@@ -866,30 +879,31 @@ async function analyzeMatch(match) {
 
 
       probabilities:
-        winner.probabilities,
+    poisson.probabilities,
 
 
 
       over25:
-        over25.value,
+    poisson.over25 >= 50
+        ? "OVER 2.5"
+        : "UNDER 2.5",
 
-
-      over25Confidence:
-        over25.confidence,
-
+over25Confidence:
+    Math.round(poisson.over25),
 
 
       btts:
-        btts.value,
+    poisson.btts >= 50
+        ? "OUI"
+        : "NON",
 
-
-      bttsConfidence:
-        btts.confidence,
+bttsConfidence:
+    Math.round(poisson.btts),
 
 
 
       correctScore:
-        score
+    poisson.exactScore.score,
 
 
     },
