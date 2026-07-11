@@ -781,6 +781,24 @@ async function analyzeMatch(match) {
       match.awayTeam
     );
 
+    const homeElo =
+    getTeamElo(
+        match.homeTeam.id
+    );
+
+
+const awayElo =
+    getTeamElo(
+        match.awayTeam.id
+    );
+
+
+const eloProbability =
+    calculateEloProbability(
+        homeElo,
+        awayElo
+    );
+
        console.log(
   "TEAMS DONE:",
   match.homeTeam.name,
@@ -930,6 +948,15 @@ bttsConfidence:
 
 
     model:{
+
+        elo:{
+    home: homeElo,
+    away: awayElo,
+    homeProbability:
+        Math.round(
+            eloProbability * 100
+        )
+        }
 
 
       expectedGoals:
