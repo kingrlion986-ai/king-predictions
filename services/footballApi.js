@@ -110,7 +110,7 @@ async function processQueue() {
 
   try {
 
-     await wait(5000);
+     await sleep(5000);
 
     const result = await job.task();
 
@@ -186,7 +186,7 @@ clearTimeout(timeout);
 
           console.log(`⏳ RETRY ${retry + 1} AFTER ${delay}ms`);
 
-          await wait(delay);
+          await sleep(delay);
 
           return await apiGet(endpoint, retry + 1);
         }
