@@ -100,11 +100,8 @@ function buildStats(matches, teamId) {
       */
 
       const weight =
-        1 +
-        (
-          index /
-          totalMatches
-        );
+  2 -
+  (index / totalMatches);
 
 
 
@@ -158,20 +155,15 @@ function buildStats(matches, teamId) {
         homeConceded +=
           goalsAgainst * weight;
 
+} else {
 
-      } else {
+    awayWeight += weight;
 
-         homeWeight += weight;
+    awayGames++;
 
+    awayScored += goalsFor * weight;
 
-        awayGames++;
-
-        awayScored +=
-          goalsFor * weight;
-
-        awayConceded +=
-          goalsAgainst * weight;
-
+    awayConceded += goalsAgainst * weight;
 
       }
 
@@ -692,10 +684,6 @@ console.log(
       return fallback;
 
     }
-
-
-
-
 
     /*
       On garde uniquement
