@@ -10,6 +10,9 @@ const {
 const {
     calculateConfidence
 } = require("./confidenceEngine");
+const {
+    savePrediction
+} = require("./historyEngine");
 
 
 /* =========================
@@ -1022,6 +1025,20 @@ console.log(JSON.stringify(result.match, null, 2));
 
   return result;
 
+
+}
+savePrediction(result);
+
+const exists =
+    history.some(
+        h =>
+        h.id === prediction.match.id
+    );
+
+
+if (exists) {
+
+    return;
 
 }
 
