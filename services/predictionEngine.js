@@ -203,9 +203,6 @@ function calculateExpectedGoals(home, away) {
     );
 
 
-
-
-
   /*
     Faiblesse défensive adverse
   */
@@ -948,6 +945,9 @@ console.log(
   "RESULT MATCH:",
   JSON.stringify(result.match, null, 2)
 );
+
+   console.log("MATCH AVANT RETURN:");
+console.log(JSON.stringify(result.match, null, 2));
 
 
 
