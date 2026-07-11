@@ -1,5 +1,9 @@
 const { analyzeTeam } = require("./teamAnalyzer");
 const { buildPoissonMatrix } = require("./poissonEngine");
+const {
+    getTeamElo,
+    calculateEloProbability
+} = require("./eloEngine");
 
 
 /* =========================
