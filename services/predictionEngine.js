@@ -7,6 +7,9 @@ const {
 const {
     calculateExpectedGoals
 } = require("./expectedGoals");
+const {
+    calculateConfidence
+} = require("./confidenceEngine");
 
 
 /* =========================
@@ -838,6 +841,20 @@ const eloProbability =
         xg.expectedAwayGoals
     );
 
+    const confidence =
+    calculateConfidence({
+
+        probabilities:
+            poisson.probabilities,
+
+        homeStats,
+
+        awayStats,
+
+        eloProbability
+
+    });
+
 
 
 
@@ -902,8 +919,8 @@ const eloProbability =
             : "DRAW",
 
 
-      winnerConfidence:
-        winner.winnerConfidence,
+      confidence:
+    confidence,
 
 
 
