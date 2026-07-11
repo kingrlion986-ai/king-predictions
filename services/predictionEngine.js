@@ -4,6 +4,9 @@ const {
     getTeamElo,
     calculateEloProbability
 } = require("./eloEngine");
+const {
+    calculateExpectedGoals
+} = require("./expectedGoals");
 
 
 /* =========================
@@ -821,8 +824,12 @@ const eloProbability =
 
   const xg =
     calculateExpectedGoals(
-      homeStats,
-      awayStats
+        homeStats,
+        awayStats,
+        {
+            home: homeElo,
+            away: awayElo
+        }
     );
 
    const poisson =
