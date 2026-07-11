@@ -23,8 +23,6 @@ function clamp(value, min, max) {
 /* =========================
    QUALITY SCORE ENGINE V17
 ========================= */
-
-
 function calculateQuality(match) {
 
 
@@ -36,39 +34,107 @@ function calculateQuality(match) {
     match.teamStats.away;
 
 
+  const probabilities =
+    match.predictions.probabilities;
+
 
   let score = 0;
+
+  if (match.model.elo) {
+
+    const eloDiff =
+        Math.abs(
+            match.model.elo.home -
+            match.model.elo.away
+        );
+
+
+    score +=
+        Math.min(
+            eloDiff / 20,
+            10
+        );
+
+  }
 
 
 
   /*
-    Confiance vainqueur
+     Confiance du modèle
   */
 
   score +=
-    match.predictions.winnerConfidence
+    (
+      match.predictions.confidence || 0
+    )
     *
     0.35;
 
 
 
   /*
-    Fiabilité des équipes
+     Séparation des probabilités
+
+     Exemple :
+     55 / 25 / 20 = meilleur
+     38 / 32 / 30 = faible
   */
 
-  score +=
+  const values = [
 
-    (
-      home.reliability +
-      away.reliability
-    )
+    probabilities.homeWin,
+
+    probabilities.draw,
+
+    probabilities.awayWin
+
+  ];
+
+
+  const sorted =
+    [...values].sort(
+      (a,b)=>b-a
+    );
+
+
+  const separation =
+    sorted[0] - sorted[1];
+
+
+  score +=
+    separation
     *
-    20;
+    0.40;
 
 
 
   /*
-    Stabilité
+     Qualité données
+  */
+
+  const dataQuality =
+
+    (
+      Math.min(home.played,15)
+      +
+      Math.min(away.played,15)
+    )
+    /
+    30
+    *
+    100;
+
+
+
+  score +=
+    dataQuality
+    *
+    0.10;
+
+
+
+  /*
+     Stabilité équipes
   */
 
   score +=
@@ -77,59 +143,28 @@ function calculateQuality(match) {
       home.stability +
       away.stability
     )
+    /
+    2
     *
-    0.15;
+    0.10;
 
 
 
   /*
-    Différence de niveau
+     xG réalistes
   */
-
-  score +=
-
-    Math.abs(
-      home.strength -
-      away.strength
-    )
-    *
-    0.30;
-
-
-
-  /*
-    Cohérence xG
-  */
-
 
   if (
 
     match.model.expectedGoals >= 1.8
     &&
-    match.model.expectedGoals <= 3.8
+    match.model.expectedGoals <= 4
 
   ) {
 
-    score += 8;
+    score += 5;
 
   }
-
-
-
-  /*
-    Pénalité équipes faibles
-  */
-
-
-  if (
-    home.strength < 35 ||
-    away.strength < 35
-  ) {
-
-    score -= 10;
-
-  }
-
 
 
 
@@ -141,12 +176,7 @@ function calculateQuality(match) {
     )
   );
 
-
 }
-
-
-
-
 
 /* =========================
    PREPARE RANKING
@@ -231,10 +261,8 @@ function rankOver25Matches(matches) {
 
 
       return (
-        match.predictions.over25Confidence
-        >=
-        50
-      );
+    match.predictions.over25Confidence >= 55
+);
 
 
     });
@@ -294,9 +322,9 @@ function rankBTTSMatches(matches) {
       return (
 
         match.predictions
-        .bttsConfidence
-        >=
-        50
+.bttsConfidence
+>=
+55
 
       );
 
@@ -396,10 +424,6 @@ function rankScoreMatches(matches) {
 
 
 }
-
-
-
-
 
 /* =========================
    EXPORTS
