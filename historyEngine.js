@@ -77,9 +77,17 @@ function saveHistory(history) {
 
 function savePrediction(prediction) {
 
-
     const history =
         loadHistory();
+
+    const exists =
+        history.some(
+            h => h.id === prediction.match.id
+        );
+
+    if (exists) {
+        return;
+    }
 
 
 
