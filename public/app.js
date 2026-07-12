@@ -42,34 +42,26 @@ async function loadPredictions(url) {
             card.style.marginBottom = "20px";
 
             card.innerHTML = `
-<h2>${item.match.homeTeam.name} vs ${item.match.awayTeam.name}</h2>
+<h2>${item.match ?? "Match"}</h2>
 
 <hr style="margin:15px 0;">
 
-<p><strong>Pronostic :</strong> ${item.predictions.winner}</p>
+<p><strong>Pronostic :</strong> ${
+    item.pick ??
+item.market ??
+item.score ??
+item.winner ??
+item.prediction ??
+"-"
+}</p>
 
-<p><strong>Confiance :</strong> ${item.predictions.confidence}%</p>
+${
+currentMode.startsWith("/vip/score")
+? `<p><strong>Score exact :</strong> ${item.score ?? "-"}</p>`
+: ""
+}
 
-<p><strong>1/N/2 :</strong>
-${item.predictions.probabilities.homeWin}% /
-${item.predictions.probabilities.draw}% /
-${item.predictions.probabilities.awayWin}%</p>
-
-<p><strong>Score exact :</strong>
-${item.predictions.correctScore}</p>
-
-<p><strong>BTTS :</strong>
-${item.predictions.btts}
-(${item.predictions.bttsConfidence}%)</p>
-
-<p><strong>Over 2.5 :</strong>
-${item.predictions.over25}
-(${item.predictions.over25Confidence}%)</p>
-
-<p><strong>xG :</strong>
-${item.model.expectedHomeGoals}
--
-${item.model.expectedAwayGoals}</p>
+<p><strong>Confiance :</strong> ${item.confidence ?? "-"}%</p>
 `;
 
             results.appendChild(card);
