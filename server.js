@@ -34,7 +34,7 @@ const HISTORY_FILE = path.join(__dirname, "history.json");
 
 const ANALYSIS_CACHE = new Map();
 
-const ANALYSIS_TTL = 5 * 60 * 1000;
+const ANALYSIS_TTL = 15 * 60 * 1000;
 
 const ANALYSIS_RUNNING = new Map();
 
@@ -126,20 +126,11 @@ async function analyzeMatches(matches) {
 
 
 
-      for (const match of uniqueMatches) {
-
-        try {
-
-
-          const result =
-            await analyzeMatch(
-              match
-            );
-
-
-          analyses.push(
-            result
-          );
+      const analyses = (
+    await Promise.all(
+        uniqueMatches.map(match => analyzeMatch(match))
+    )
+).filter(Boolean);
 
 
         } catch(error) {
