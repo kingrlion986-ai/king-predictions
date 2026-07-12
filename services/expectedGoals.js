@@ -78,6 +78,12 @@ function calculateExpectedGoals(
             away.formPoints * 0.20
         );
 
+   const homeReliability =
+    home.reliability ?? 0.7;
+
+const awayReliability =
+    away.reliability ?? 0.7;
+
 
 
     /*
@@ -111,23 +117,25 @@ function calculateExpectedGoals(
     */
 
     let homeXG =
-        (
-            homeAttack * 0.60
-        )
-        +
-        (
-            awayDefense * 0.40
-        );
+    (
+        homeAttack * 0.65
+    )
+    +
+    (
+        awayDefense * 0.35
+    );
 
+let awayXG =
+    (
+        awayAttack * 0.65
+    )
+    +
+    (
+        homeDefense * 0.35
+    );
 
-    let awayXG =
-        (
-            awayAttack * 0.60
-        )
-        +
-        (
-            homeDefense * 0.40
-        );
+homeXG *= (0.85 + homeReliability * 0.15);
+awayXG *= (0.85 + awayReliability * 0.15);
 
 
 
@@ -135,7 +143,7 @@ function calculateExpectedGoals(
        Avantage domicile
     */
 
-    homeXG += 0.20;
+    homeXG += 0.25;
 
 
 
@@ -151,11 +159,11 @@ function calculateExpectedGoals(
 
 
         const factor =
-            clamp(
-                difference / 1000,
-                -0.15,
-                0.15
-            );
+    clamp(
+        difference / 1200,
+        -0.12,
+        0.12
+    );
 
 
         homeXG += factor;
