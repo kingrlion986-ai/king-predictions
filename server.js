@@ -247,7 +247,7 @@ console.log(JSON.stringify(analysis.match, null, 2));
 console.log("RESULT MATCH:");
 console.log(JSON.stringify(analysis.match, null, 2));
     res.json({
-      match: analysis.match,
+      match: `${analysis.match.homeTeam.name} vs ${analysis.match.awayTeam.name}`,
       prediction: "1X2",
       pick:
 analysis.predictions.winner === "DRAW"
@@ -318,7 +318,7 @@ app.get("/vip/1x2", async (req, res) => {
     const result = ranked
       .slice(0, SETTINGS.maxVIP_1X2)
       .map(a => ({
-        match: a.match,
+        match: `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`,
         pick: a.predictions.winner,
         confidence: a.predictions.winnerConfidence,
         homeStrength: a.teamStats.home.strength,
@@ -357,7 +357,7 @@ const selected = ranked.slice(
   SETTINGS.maxOVER
 );
     const result = selected.map(a => ({
-  match: a.match,
+  match: `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`,
   market: a.predictions.over25,
   confidence: a.predictions.over25Confidence,
   expectedGoals: a.model.expectedGoals,
@@ -388,7 +388,7 @@ const selected = ranked.slice(
 );
 
     const result = selected.map(a => ({
-  match: a.match,
+  match: `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`,
   pick: a.predictions.btts,
   confidence: a.predictions.bttsConfidence,
   homeBTTSRate: a.teamStats.home.bttsRate,
@@ -418,7 +418,7 @@ const selected = ranked.slice(
 );
 
     const result = selected.map(a => ({
-  match: a.match,
+  match: `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`,
   score: a.predictions.correctScore,
 
   confidence: Math.round(
