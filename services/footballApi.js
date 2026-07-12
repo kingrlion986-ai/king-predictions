@@ -54,7 +54,7 @@ const TEAM_CACHE_TTL = 6 * 60 * 60 * 1000; // 6 heures
 ========================= */
 
 // Nombre maximum d'appels API simultanés
-const MAX_CONCURRENT_REQUESTS = 2;
+const MAX_CONCURRENT_REQUESTS = 4;
 
 let activeRequests = 0;
 
@@ -109,8 +109,6 @@ async function processQueue() {
 
 
   try {
-
-     await sleep(5000);
 
     const result = await job.task();
 
