@@ -18,6 +18,8 @@ async function loadPredictions(url) {
 
         const data = await response.json();
 
+        console.log("API RESPONSE:", data);
+
         let list = [];
 
         if (Array.isArray(data)) {
