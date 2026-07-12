@@ -523,16 +523,6 @@ function computeReliability(stats) {
 
 async function analyzeTeam(team) {
 
-   console.log("GET TEAM MATCHES START:", team.name);
-
-const matches = await getTeamMatches(team.id);
-
-console.log(
-  "GET TEAM MATCHES END:",
-  team.name,
-  matches.length
-);
-
 
   /*
     CACHE
@@ -585,6 +575,16 @@ console.log(
     return RUNNING.get(team.id);
 
   }
+
+   console.log("GET TEAM MATCHES START:", team.name);
+
+const matches = await getTeamMatches(team.id);
+
+console.log(
+  "GET TEAM MATCHES END:",
+  team.name,
+  matches.length
+);
 
 
 
