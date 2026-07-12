@@ -241,6 +241,9 @@ if (!matches.length) {
 const match = matches[0];
 const analysis = await analyzeMatch(match);
 
+    console.log("ANALYSIS:");
+console.log(JSON.stringify(analysis, null, 2));
+
 console.log("MATCH AVANT RETURN:");
 console.log(JSON.stringify(analysis.match, null, 2));
 
