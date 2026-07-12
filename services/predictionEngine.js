@@ -129,20 +129,15 @@ async function analyzeMatch(match) {
         predictions: {
 
             winner:
+    poisson.probabilities.homeWin >
+    poisson.probabilities.awayWin
+        ? match.homeTeam.name
+        : poisson.probabilities.awayWin >
+          poisson.probabilities.homeWin
+            ? match.awayTeam.name
+            : "DRAW",
 
-                poisson.probabilities.homeWin >
-                poisson.probabilities.awayWin
-
-                    ? match.homeTeam.name
-
-                    : poisson.probabilities.awayWin >
-                      poisson.probabilities.homeWin
-
-                        ? match.awayTeam.name
-
-                        : "DRAW",
-
-            confidence,
+winnerConfidence: confidence,
 
             probabilities:
                 poisson.probabilities,
@@ -216,7 +211,7 @@ async function analyzeMatch(match) {
 
     };
 
-    savePrediction(result);
+    // savePrediction(result);
 
     ANALYSIS_CACHE.set(
         key,
