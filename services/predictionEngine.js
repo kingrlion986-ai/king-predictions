@@ -51,6 +51,9 @@ async function analyzeMatch(match) {
         match.awayTeam.name
     );
 
+    console.log("MATCH RECU:");
+console.log(JSON.stringify(match, null, 2));
+
     const key = getMatchKey(match);
 
     const cached = ANALYSIS_CACHE.get(key);
