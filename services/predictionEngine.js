@@ -67,12 +67,10 @@ console.log(JSON.stringify(match, null, 2));
 
     console.timeEnd(`${match.homeTeam.name} vs ${match.awayTeam.name}`);
 
-    const homeStats =
-        await analyzeTeam(match.homeTeam);
-
-    const awayStats =
-        await analyzeTeam(match.awayTeam);
-
+    const [homeStats, awayStats] = await Promise.all([
+    analyzeTeam(match.homeTeam),
+    analyzeTeam(match.awayTeam)
+]);
     const homeElo =
         getTeamElo(match.homeTeam.id);
 
