@@ -92,6 +92,27 @@ function calculateConfidence({
         Stabilité moyenne
     */
 
+   /*
+    Différence de niveau
+*/
+
+const strengthGap = Math.abs(
+
+    homeStats.strength -
+    awayStats.strength
+
+);
+
+const strengthBonus = clamp(
+
+    strengthGap * 0.8,
+
+    0,
+
+    20
+
+);
+
     const stability =
 
         (
@@ -100,6 +121,27 @@ function calculateConfidence({
         )
         /
         2;
+
+   /*
+    Différence de niveau
+*/
+
+const strengthGap = Math.abs(
+
+    homeStats.strength -
+    awayStats.strength
+
+);
+
+const strengthBonus = clamp(
+
+    strengthGap * 0.8,
+
+    0,
+
+    20
+
+);
 
 
 
@@ -151,11 +193,15 @@ function calculateConfidence({
         )
         +
         (
-            stability * 0.20
+            stability * 0.15
         )
         +
         (
             eloAgreement * 0.15
+        )
+        +
+        ( 
+            strengthBonus * 0.10
         );
 
 
