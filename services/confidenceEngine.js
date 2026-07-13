@@ -139,6 +139,27 @@ const strengthBonus = clamp(
     20
 
 );
+
+   /*
+    Forme récente
+*/
+
+const formGap = Math.abs(
+
+    homeStats.formPoints -
+    awayStats.formPoints
+
+);
+
+const formBonus = clamp(
+
+    formGap * 2,
+
+    0,
+
+    20
+
+);
    
     /*
         Accord Elo / modèle
@@ -198,6 +219,11 @@ const strengthBonus = clamp(
         ( 
             strengthBonus * 0.10
         );
+
+        +
+        (
+            formBonus * 0.10
+        )
 
 
 
