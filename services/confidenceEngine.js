@@ -89,41 +89,24 @@ function calculateConfidence({
 
 
     /*
-        Stabilité moyenne
-    */
+    Stabilité moyenne
+*/
 
-   const stability =
+const stability =
 
-        (
-            homeStats.stability +
-            awayStats.stability
-        )
-        /
-        2;
+    (
+        homeStats.stability +
+        awayStats.stability
+    )
+    /
+    2;
 
-   const strengthGap = Math.abs(
 
-    homeStats.strength -
-    awayStats.strength
-
-);
-
-const strengthBonus = clamp(
-
-    strengthGap * 0.8,
-
-    0,
-
-    20
-
-);
-
-   
-   /*
+/*
     Différence de niveau
 */
 
-   const strengthGap = Math.abs(
+const strengthGap = Math.abs(
 
     homeStats.strength -
     awayStats.strength
@@ -140,7 +123,8 @@ const strengthBonus = clamp(
 
 );
 
-   /*
+
+/*
     Forme récente
 */
 
@@ -160,70 +144,65 @@ const formBonus = clamp(
     20
 
 );
-   
-    /*
-        Accord Elo / modèle
-
-        Si Elo donne un favori
-        proche du modèle Poisson,
-        confiance augmentée
-    */
-
-    let eloAgreement = 50;
 
 
-    if (eloProbability) {
+/*
+    Accord Elo / modèle
 
-        const poissonHome =
-            probabilities.homeWin / 100;
+    Si Elo donne un favori
+    proche du modèle Poisson,
+    confiance augmentée
+*/
 
+let eloAgreement = 50;
 
-        const difference =
-            Math.abs(
-                poissonHome -
-                eloProbability
-            );
+if (eloProbability) {
 
+    const poissonHome =
+        probabilities.homeWin / 100;
 
-        eloAgreement =
-            100 -
-            difference * 100;
-
-    }
-
-
-
-    /*
-        Score final
-    */
-
-
-    let confidence =
-
-        (
-            separation * 0.40
-        )
-        +
-        (
-            dataQuality * 0.25
-        )
-        +
-        (
-            stability * 0.15
-        )
-        +
-        (
-            eloAgreement * 0.15
-        )
-        +
-        ( 
-            strengthBonus * 0.10
+    const difference =
+        Math.abs(
+            poissonHome -
+            eloProbability
         );
 
-        +
-        (
-            formBonus * 0.10
-        )
+    eloAgreement =
+        100 -
+        difference * 100;
+
+}
+
+
+/*
+    Score final
+*/
+
+let confidence =
+
+    (
+        separation * 0.35
+    )
+    +
+    (
+        dataQuality * 0.20
+    )
+    +
+    (
+        stability * 0.15
+    )
+    +
+    (
+        eloAgreement * 0.15
+    )
+    +
+    (
+        strengthBonus * 0.075
+    )
+    +
+    (
+        formBonus * 0.075
+    );
 
 
 
