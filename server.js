@@ -62,145 +62,71 @@ function saveHistory(data) {
 async function analyzeMatches(matches) {
 
   const uniqueMatches = [
- ...new Map(
- matches.map(
- m => [m.id,m]
- )
- ).values()
-];
+    ...new Map(
+      matches.map(m => [m.id, m])
+    ).values()
+  ];
 
+  const key = uniqueMatches
+    .map(
+      m => `${m.homeTeam.id}-${m.awayTeam.id}`
+    )
+    .join("|");
 
-  const key =
-    matches
-      .map(
-        m =>
-        `${m.homeTeam.id}-${m.awayTeam.id}`
-      )
-      .join("|");
-
-
-
-  const cached =
-    ANALYSIS_CACHE.get(key);
-
-
+  const cached = ANALYSIS_CACHE.get(key);
 
   if (
     cached &&
-    Date.now() - cached.time
-    <
-    ANALYSIS_TTL
+    Date.now() - cached.time < ANALYSIS_TTL
   ) {
 
-    console.log(
-      "⚡ ANALYSIS CACHE"
-    );
+    console.log("⚡ ANALYSIS CACHE");
 
     return cached.data;
 
   }
 
-
-
-
-
   if (
     ANALYSIS_RUNNING.has(key)
   ) {
 
-    console.log(
-      "⏳ ANALYSIS ALREADY RUNNING"
-    );
+    console.log("⏳ ANALYSIS ALREADY RUNNING");
 
     return ANALYSIS_RUNNING.get(key);
 
   }
 
-
-
-  const promise =
-    (async()=>{
-
-
-const promise =
-(async () => {
+  const promise = (async () => {
 
     const analyses = (
-        await Promise.all(
-            uniqueMatches.map(match => analyzeMatch(match))
-        )
+      await Promise.all(
+        uniqueMatches.map(match => analyzeMatch(match))
+      )
     ).filter(Boolean);
 
     ANALYSIS_CACHE.set(
-        key,
-        {
-            time: Date.now(),
-            data: analyses
-        }
+      key,
+      {
+        time: Date.now(),
+        data: analyses
+      }
     );
 
     return analyses;
 
-})();
+  })();
 
-
-        } catch(error) {
-
-
-          console.log(
-            "MATCH ANALYSIS ERROR:",
-            error.message
-          );
-
-
-        }
-
-
-      }
-
-
-
-      ANALYSIS_CACHE.set(
-        key,
-        {
-          time: Date.now(),
-          data: analyses
-        }
-      );
-
-
-
-      return analyses;
-
-
-    })();
-
-
-
-
-
-  ANALYSIS_RUNNING.set(
-    key,
-    promise
-  );
-
-
+  ANALYSIS_RUNNING.set(key, promise);
 
   try {
 
     return await promise;
 
-
   } finally {
 
-
-    ANALYSIS_RUNNING.delete(
-      key
-    );
-
+    ANALYSIS_RUNNING.delete(key);
 
   }
-
 
 }
 
