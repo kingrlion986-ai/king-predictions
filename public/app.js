@@ -2,6 +2,8 @@ console.log("APP JS LOADED");
 
 let currentMode = "/free";
 
+let vipCache = {};
+
 const PAGE_CACHE = new Map();
 
 async function loadPredictions(url) {
@@ -20,6 +22,16 @@ async function loadPredictions(url) {
 
     try {
 
+        if (
+    url !== "/free" &&
+    vipCache[url]
+) {
+
+    displayResults(vipCache[url]);
+    return;
+
+        }
+
         const response = await fetch(url);
 
         if (!response.ok) {
@@ -27,6 +39,12 @@ async function loadPredictions(url) {
         }
 
         const data = await response.json();
+
+        if (url !== "/free") {
+
+    vipCache[url] = data;
+
+        }
 
         PAGE_CACHE.set(url, data);
 
