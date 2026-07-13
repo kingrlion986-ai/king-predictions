@@ -122,15 +122,26 @@ async function analyzeMatches(matches) {
     (async()=>{
 
 
-      const analyses = [];
+const promise =
+(async () => {
 
+    const analyses = (
+        await Promise.all(
+            uniqueMatches.map(match => analyzeMatch(match))
+        )
+    ).filter(Boolean);
 
+    ANALYSIS_CACHE.set(
+        key,
+        {
+            time: Date.now(),
+            data: analyses
+        }
+    );
 
-      const analyses = (
-    await Promise.all(
-        uniqueMatches.map(match => analyzeMatch(match))
-    )
-).filter(Boolean);
+    return analyses;
+
+})();
 
 
         } catch(error) {
