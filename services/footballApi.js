@@ -133,7 +133,7 @@ async function processQueue() {
    API RETRY CONFIG
 ========================= */
 
-const MAX_RETRIES = 4;
+const MAX_RETRIES = 10;
 
 
 /*
@@ -180,7 +180,7 @@ clearTimeout(timeout);
 
         if (retry < 3) {
 
-          const delay = 5000 * (retry + 1);
+          const delay = 1000 * (retry + 1);
 
           console.log(`⏳ RETRY ${retry + 1} AFTER ${delay}ms`);
 
