@@ -159,6 +159,52 @@ const bttsPrediction =
 
 const bttsConfidence =
     Math.round(bttsScore);
+
+    const goalDiff =
+    Math.abs(homeStats.strength - awayStats.strength);
+
+let correctScore =
+    poisson.exactScore.score;
+
+/*
+    Ajustement intelligent
+*/
+
+if (xg.totalExpectedGoals >= 3.2) {
+
+    if (winner === match.homeTeam.name)
+        correctScore = "2-1";
+
+    else if (winner === match.awayTeam.name)
+        correctScore = "1-2";
+
+    else
+        correctScore = "2-2";
+
+}
+
+else if (goalDiff >= 20) {
+
+    if (winner === match.homeTeam.name)
+        correctScore = "2-0";
+
+    else if (winner === match.awayTeam.name)
+        correctScore = "0-2";
+
+}
+
+else if (xg.totalExpectedGoals <= 2) {
+
+    if (winner === "DRAW")
+        correctScore = "0-0";
+
+    else if (winner === match.homeTeam.name)
+        correctScore = "1-0";
+
+    else
+        correctScore = "0-1";
+
+}
     
     const result = {
 
@@ -195,8 +241,7 @@ const bttsConfidence =
 
 bttsConfidence,
 
-    correctScore:
-        poisson.exactScore.score,
+    correctScore,
 
     correctScoreProbability:
         poisson.exactScore.probability
