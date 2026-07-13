@@ -182,6 +182,25 @@ awayXG +=
 
     }
 
+   /*
+    Influence de la force globale
+*/
+
+const strengthDifference =
+    home.strength -
+    away.strength;
+
+const strengthFactor =
+    clamp(
+        strengthDifference / 200,
+        -0.25,
+        0.25
+    );
+
+homeXG += strengthFactor;
+
+awayXG -= strengthFactor;
+
 
 
     /*
