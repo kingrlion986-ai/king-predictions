@@ -12,25 +12,10 @@ async function loadPredictions(url) {
 
     results.innerHTML = "<h2>⏳ Chargement...</h2>";
 
-    if (PAGE_CACHE.has(url)) {
-
-    displayPredictions(PAGE_CACHE.get(url));
-
-    return;
-
-    }
-
+    
     try {
 
-        if (
-    url !== "/free" &&
-    vipCache[url]
-) {
-
-    displayResults(vipCache[url]);
-    return;
-
-        }
+        
 
         const response = await fetch(url);
 
