@@ -576,6 +576,30 @@ app.get("/system", async(req,res)=>{
 
 });
 
+async function preloadPredictions() {
+
+  try {
+
+    console.log("🔄 PRELOADING PREDICTIONS...");
+
+    await getPreloadedAnalyses();
+
+    console.log("✅ PRELOAD FINISHED");
+
+  } catch (err) {
+
+    console.log("❌ PRELOAD ERROR:", err.message);
+
+  }
+
+}
+
+// Préchargement au démarrage
+preloadPredictions();
+
+// Rafraîchissement toutes les 15 minutes
+setInterval(preloadPredictions, 15 * 60 * 1000);
+
 app.listen(PORT, "0.0.0.0", () => {
   console.log("KING PREDICTIONS V16 RUNNING ⚽🔥");
 });
