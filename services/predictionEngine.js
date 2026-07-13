@@ -146,6 +146,19 @@ const over25Prediction =
 
 const over25Confidence =
     Math.round(overScore);
+
+    const bttsScore =
+    (poisson.btts * 0.60) +
+    (((homeStats.bttsRate + awayStats.bttsRate) / 2) * 0.25) +
+    (((homeStats.avgScored + awayStats.avgScored) / 2) * 20 * 0.15);
+
+const bttsPrediction =
+    bttsScore >= 55
+        ? "OUI"
+        : "NON";
+
+const bttsConfidence =
+    Math.round(bttsScore);
     
     const result = {
 
@@ -178,15 +191,9 @@ const over25Confidence =
     over25Confidence,
 
     btts:
+    bttsPrediction,
 
-        poisson.btts >= 50
-
-            ? "OUI"
-
-            : "NON",
-
-    bttsConfidence:
-        Math.round(poisson.btts),
+bttsConfidence,
 
     correctScore:
         poisson.exactScore.score,
