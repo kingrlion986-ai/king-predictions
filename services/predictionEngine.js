@@ -131,14 +131,28 @@ console.log(JSON.stringify(match, null, 2));
 
         predictions: {
 
-            winner:
-    poisson.probabilities.homeWin >
-    poisson.probabilities.awayWin
-        ? match.homeTeam.name
-        : poisson.probabilities.awayWin >
-          poisson.probabilities.homeWin
-            ? match.awayTeam.name
-            : "DRAW",
+            const homeScore =
+    poisson.probabilities.homeWin +
+    (homeStats.strength - awayStats.strength) * 0.35 +
+    (homeStats.reliability - awayStats.reliability) * 15;
+
+const awayScore =
+    poisson.probabilities.awayWin +
+    (awayStats.strength - homeStats.strength) * 0.35 +
+    (awayStats.reliability - homeStats.reliability) * 15;
+
+let winner = "DRAW";
+
+if (
+    Math.abs(homeScore - awayScore) > 4
+) {
+
+    winner =
+        homeScore > awayScore
+            ? match.homeTeam.name
+            : match.awayTeam.name;
+
+}
 
 winnerConfidence: confidence,
 
