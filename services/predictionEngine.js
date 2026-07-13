@@ -111,7 +111,28 @@ console.log(JSON.stringify(match, null, 2));
 
             eloProbability
 
-        });    
+        });
+
+    const homeScore =
+    poisson.probabilities.homeWin +
+    (homeStats.strength - awayStats.strength) * 0.35 +
+    (homeStats.reliability - awayStats.reliability) * 15;
+
+const awayScore =
+    poisson.probabilities.awayWin +
+    (awayStats.strength - homeStats.strength) * 0.35 +
+    (awayStats.reliability - homeStats.reliability) * 15;
+
+let winner = "DRAW";
+
+if (Math.abs(homeScore - awayScore) > 4) {
+
+    winner =
+        homeScore > awayScore
+            ? match.homeTeam.name
+            : match.awayTeam.name;
+
+}
     
     const result = {
 
@@ -131,28 +152,7 @@ console.log(JSON.stringify(match, null, 2));
 
         predictions: {
 
-            const homeScore =
-    poisson.probabilities.homeWin +
-    (homeStats.strength - awayStats.strength) * 0.35 +
-    (homeStats.reliability - awayStats.reliability) * 15;
-
-const awayScore =
-    poisson.probabilities.awayWin +
-    (awayStats.strength - homeStats.strength) * 0.35 +
-    (awayStats.reliability - homeStats.reliability) * 15;
-
-let winner = "DRAW";
-
-if (
-    Math.abs(homeScore - awayScore) > 4
-) {
-
-    winner =
-        homeScore > awayScore
-            ? match.homeTeam.name
-            : match.awayTeam.name;
-
-}
+            winner,
 
 winnerConfidence: confidence,
 
