@@ -2,11 +2,21 @@ console.log("APP JS LOADED");
 
 let currentMode = "/free";
 
+const PAGE_CACHE = new Map();
+
 async function loadPredictions(url) {
 
     const results = document.getElementById("results");
 
     results.innerHTML = "<h2>⏳ Chargement...</h2>";
+
+    if (PAGE_CACHE.has(url)) {
+
+    displayPredictions(PAGE_CACHE.get(url));
+
+    return;
+
+    }
 
     try {
 
@@ -17,6 +27,8 @@ async function loadPredictions(url) {
         }
 
         const data = await response.json();
+
+        PAGE_CACHE.set(url, data);
 
         console.log("API RESPONSE:", data);
 
