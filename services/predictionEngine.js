@@ -65,6 +65,8 @@ console.log(JSON.stringify(match, null, 2));
         return cached.data;
     }
 
+    console.timeEnd(`${match.homeTeam.name} vs ${match.awayTeam.name}`);
+
     const homeStats =
         await analyzeTeam(match.homeTeam);
 
@@ -303,6 +305,8 @@ bttsConfidence,
         "vs",
         match.awayTeam.name
     );
+
+    console.timeEnd(`${match.homeTeam.name} vs ${match.awayTeam.name}`);
 
     return result;
 }
