@@ -1,4 +1,4 @@
-const MAX_GOALS = 7;
+const MAX_GOALS = 8;
 
 /* =========================
    FACTORIAL
@@ -150,35 +150,64 @@ function analyzeMatrix(matrix) {
     btts /= total;
     over25 /= total;
 
+   const doubleChance = {
+
+    homeOrDraw: Number(((homeWin + draw) * 100).toFixed(2)),
+
+    awayOrDraw: Number(((awayWin + draw) * 100).toFixed(2)),
+
+    homeOrAway: Number(((homeWin + awayWin) * 100).toFixed(2))
+
+};
+
+let expectedGoals = 0;
+
+for (let h = 0; h <= MAX_GOALS; h++) {
+
+    for (let a = 0; a <= MAX_GOALS; a++) {
+
+        expectedGoals +=
+            (h + a) * matrix[h][a];
+
+    }
+
+}
+
+expectedGoals /= total;
+
     return {
 
-        probabilities: {
+    probabilities: {
 
-            homeWin: Number((homeWin * 100).toFixed(2)),
+        homeWin: Number((homeWin * 100).toFixed(2)),
 
-            draw: Number((draw * 100).toFixed(2)),
+        draw: Number((draw * 100).toFixed(2)),
 
-            awayWin: Number((awayWin * 100).toFixed(2))
+        awayWin: Number((awayWin * 100).toFixed(2))
 
-        },
+    },
 
-        btts: Number((btts * 100).toFixed(2)),
+    doubleChance,
 
-        over25: Number((over25 * 100).toFixed(2)),
+    btts: Number((btts * 100).toFixed(2)),
 
-        under25: Number(((1 - over25) * 100).toFixed(2)),
+    over25: Number((over25 * 100).toFixed(2)),
 
-        exactScore: {
+    under25: Number(((1 - over25) * 100).toFixed(2)),
 
-            score: exactScore,
+    expectedGoals: Number(expectedGoals.toFixed(2)),
 
-            probability: Number(
-                ((bestProbability / total) * 100).toFixed(2)
-            )
+    exactScore: {
 
-        }
+        score: exactScore,
 
-    };
+        probability: Number(
+            ((bestProbability / total) * 100).toFixed(2)
+         )
+
+      }
+
+   };
 
 }
 
