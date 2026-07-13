@@ -165,38 +165,37 @@ const over25Confidence =
 
         predictions: {
 
-            winner,
+    winner,
 
-winnerConfidence: confidence,
+    winnerConfidence: confidence,
 
-            probabilities:
-                poisson.probabilities,
+    probabilities:
+        poisson.probabilities,
 
-            over25:
+    over25:
+        over25Prediction,
 
-                over25: over25Prediction,
+    over25Confidence,
 
-                over25Confidence,
+    btts:
 
-            btts:
+        poisson.btts >= 50
 
-                poisson.btts >= 50
+            ? "OUI"
 
-                    ? "OUI"
+            : "NON",
 
-                    : "NON",
+    bttsConfidence:
+        Math.round(poisson.btts),
 
-            bttsConfidence:
-                Math.round(poisson.btts),
+    correctScore:
+        poisson.exactScore.score,
 
-            correctScore:
-                poisson.exactScore.score,
+    correctScoreProbability:
+        poisson.exactScore.probability
 
-            correctScoreProbability:
-                poisson.exactScore.probability
-
-        },
-
+},
+        
         teamStats: {
 
             home: homeStats,
