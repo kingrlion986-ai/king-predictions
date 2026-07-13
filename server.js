@@ -38,6 +38,12 @@ const ANALYSIS_TTL = 15 * 60 * 1000;
 
 const ANALYSIS_RUNNING = new Map();
 
+let PRELOADED_ANALYSES = null;
+
+let PRELOAD_TIME = 0;
+
+const PRELOAD_TTL = 15 * 60 * 1000;
+
 function loadHistory() {
   try {
     if (!fs.existsSync(HISTORY_FILE)) {
@@ -57,6 +63,26 @@ function saveHistory(data) {
     HISTORY_FILE,
     JSON.stringify(data, null, 2)
   );
+}
+
+async function getPreloadedAnalyses() {
+
+  if (
+    PRELOADED_ANALYSES &&
+    Date.now() - PRELOAD_TIME < PRELOAD_TTL
+  ) {
+    console.log("⚡ PRELOADED ANALYSES");
+    return PRELOADED_ANALYSES;
+  }
+
+  const matches = await getMatches();
+
+  PRELOADED_ANALYSES = await analyzeMatches(matches);
+
+  PRELOAD_TIME = Date.now();
+
+  return PRELOADED_ANALYSES;
+
 }
 
 async function analyzeMatches(matches) {
