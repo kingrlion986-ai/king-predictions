@@ -145,6 +145,16 @@ awayXG *= (0.85 + awayReliability * 0.15);
 
     homeXG += 0.25;
 
+   /*
+   Bonus domicile / extérieur
+*/
+
+homeXG +=
+    (home.homeAttack - away.awayDefense) * 0.08;
+
+awayXG +=
+    (away.awayAttack - home.homeDefense) * 0.08;
+
 
 
     /*
