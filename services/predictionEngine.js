@@ -133,6 +133,19 @@ if (Math.abs(homeScore - awayScore) > 4) {
             : match.awayTeam.name;
 
 }
+
+    const overScore =
+    (poisson.over25 * 0.60) +
+    (((homeStats.over25Rate + awayStats.over25Rate) / 2) * 0.25) +
+    (Math.min(xg.totalExpectedGoals, 4) / 4 * 100 * 0.15);
+
+const over25Prediction =
+    overScore >= 55
+        ? "OVER 2.5"
+        : "UNDER 2.5";
+
+const over25Confidence =
+    Math.round(overScore);
     
     const result = {
 
@@ -161,14 +174,9 @@ winnerConfidence: confidence,
 
             over25:
 
-                poisson.over25 >= 50
+                over25: over25Prediction,
 
-                    ? "OVER 2.5"
-
-                    : "UNDER 2.5",
-
-            over25Confidence:
-                Math.round(poisson.over25),
+                over25Confidence,
 
             btts:
 
