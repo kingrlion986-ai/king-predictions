@@ -296,13 +296,7 @@ const data = await apiGet(
     return [];
   }
 
-  return data.matches
-    .filter(match =>
-      ["SCHEDULED", "TIMED"].includes(match.status)
-    )
-    .map(formatMatch)
-    .filter(Boolean);
-
+  return data.matches.map(formatMatch).filter(Boolean);
 }
 /* =========================
    MATCH CLEANERS
