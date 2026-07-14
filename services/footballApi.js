@@ -515,6 +515,13 @@ console.log("APRÈS filterMatches =", matches.length);
 
 matches = addMatchQuality(matches);
 
+       // On garde uniquement les meilleurs matchs à analyser
+matches = matches
+  .sort((a, b) => b.quality - a.quality)
+  .slice(0, 5);
+
+console.log("MATCHES À ANALYSER :", matches.length);
+
 console.log("APRÈS QUALITY =", matches.length);
 
 console.log("APRÈS filterMatches =", matches.length);
