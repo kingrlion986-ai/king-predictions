@@ -350,9 +350,7 @@ function filterMatches(matches) {
 
 function addMatchQuality(matches) {
 
-
   const bigTeams = [
-
     "Real Madrid",
     "Barcelona",
     "Manchester City",
@@ -363,16 +361,11 @@ function addMatchQuality(matches) {
     "Inter",
     "Juventus",
     "Milan"
-
   ];
-
-
 
   return matches.map(match => {
 
-
     let quality = 50;
-
 
     if (
       bigTeams.some(team =>
@@ -380,26 +373,17 @@ function addMatchQuality(matches) {
         match.awayTeam.name.includes(team)
       )
     ) {
-
       quality += 25;
-
     }
 
-
     return {
-
       ...match,
-
       quality
-
     };
-
 
   });
 
-
 }
-
 
 
 /* =========================
@@ -530,6 +514,11 @@ matches = filterMatches(matches);
 console.log("APRÈS filterMatches =", matches.length);
 
 matches = addMatchQuality(matches);
+
+         console.log(
+  "QUALITY TEST:",
+  matches.length
+);
 
        console.log(
  "APRÈS QUALITY:",
