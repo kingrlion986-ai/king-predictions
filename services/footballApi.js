@@ -322,7 +322,7 @@ function removeDuplicates(matches) {
 
 function filterMatches(matches) {
 
-  console.log("Avant filter :", matches.length);
+  console.log("AVANT FILTER:", matches.length);
 
   const filtered = matches.filter(match => {
 
@@ -331,17 +331,18 @@ function filterMatches(matches) {
     }
 
     console.log(
-      "MATCH DATE:",
-      match.utcDate,
-      "NOW:",
-      new Date().toISOString()
+      "CHECK:",
+      match.homeTeam.name,
+      "vs",
+      match.awayTeam.name,
+      match.utcDate
     );
 
     return true;
 
   });
 
-  console.log("Après filter :", filtered.length);
+  console.log("APRES FILTER:", filtered.length);
 
   return filtered;
 
@@ -363,7 +364,7 @@ function addMatchQuality(matches) {
     "Milan"
   ];
 
-  return matches.map(match => {
+  const result = matches.map(match => {
 
     let quality = 50;
 
@@ -383,8 +384,11 @@ function addMatchQuality(matches) {
 
   });
 
-}
+  console.log("QUALITY TEST:", result.length);
 
+  return result;
+
+}
 
 /* =========================
    MATCH RUNNING LOCK
@@ -513,24 +517,29 @@ matches = filterMatches(matches);
 
 console.log("APRÈS filterMatches =", matches.length);
 
+matches = filterMatches(matches);
+
+console.log("APRÈS filterMatches =", matches.length);
+
+
 matches = addMatchQuality(matches);
 
-         console.log(
+console.log(
   "QUALITY TEST:",
   matches.length
 );
 
-       console.log(
- "APRÈS QUALITY:",
- matches.length
+console.log(
+  "APRÈS QUALITY:",
+  matches.length
 );
 
 console.log(
- matches[0]
+  matches[0]
 );
 
 
-      matches.sort((a,b)=> {
+matches.sort((a,b)=> {
 
 
         if (
