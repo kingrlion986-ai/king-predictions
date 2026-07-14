@@ -218,6 +218,23 @@ awayXG -=
     ) * 0.30;
 
 
+   /*
+    Solidité défensive
+*/
+
+homeXG -=
+    (
+        away.cleanSheets /
+        Math.max(away.played, 1)
+    ) * 0.20;
+
+awayXG -=
+    (
+        home.cleanSheets /
+        Math.max(home.played, 1)
+    ) * 0.20;
+
+
 
     /*
        Limites réalistes football
