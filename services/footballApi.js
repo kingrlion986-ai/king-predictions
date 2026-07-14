@@ -483,15 +483,17 @@ console.log("APRÈS PUSH =", matches.length);
           );
 
 
-          const result =
-            await getCompetitionMatches(
-              competition
-            );
+          const result = await getCompetitionMatches(competition);
 
+console.log("TYPE :", typeof result);
+console.log("IS ARRAY :", Array.isArray(result));
+console.log("RESULT :", result);
 
-          matches.push(
-            ...result
-          );
+if (Array.isArray(result)) {
+    matches.push(...result);
+} else {
+    console.error("❌ getCompetitionMatches ne retourne pas un tableau");
+}
 
        console.log("COMPÉTITION :", competition);
 console.log("APRÈS PUSH =", matches.length);
@@ -512,24 +514,12 @@ matches = removeDuplicates(matches);
 console.log("APRÈS removeDuplicates =", matches.length);
 
 matches = filterMatches(matches);
-
-console.log("APRÈS filterMatches =", matches.length);
-
-matches = addMatchQuality(matches);
-
-console.log("APRÈS QUALITY =", matches.length);
-
-matches = matches
-  .sort((a, b) => b.quality - a.quality)
-  .slice(0, 5);
-
+       
 console.log("MATCHES À ANALYSER :", matches.length);
 
 console.log("APRÈS QUALITY =", matches.length);
 
 console.log("APRÈS filterMatches =", matches.length);
-
-matches = filterMatches(matches);
 
 console.log("DEBUG AFTER FILTER ARRAY:");
 console.log(matches);
