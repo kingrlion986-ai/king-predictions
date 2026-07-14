@@ -265,7 +265,7 @@ res.json({
 app.get("/vip/1x2", async (req, res) => {
   try {
 
-    const analyses = await getPreloadedAnalyses();
+    const analyses = await getDailyPredictions();
     const ranked = rankMatches(analyses);
 
     const result = ranked
@@ -300,7 +300,7 @@ app.get("/vip/1x2", async (req, res) => {
 ========================= */
 app.get("/vip/over25", async (req, res) => {
   try {
-    const analyses = await getPreloadedAnalyses();
+    const analyses = await getDailyPredictions();
 const ranked = rankOver25Matches(analyses);
 
 const selected = ranked.slice(
@@ -328,7 +328,7 @@ const selected = ranked.slice(
 ========================= */
 app.get("/vip/btts", async (req, res) => {
   try {
-    const analyses = await getPreloadedAnalyses();
+    const analyses = await getDailyPredictions();
 const ranked = rankBTTSMatches(analyses);
 
 const selected = ranked.slice(
@@ -356,7 +356,7 @@ const selected = ranked.slice(
 ========================= */
 app.get("/vip/score", async (req, res) => {
   try {
-    const analyses = await getPreloadedAnalyses();
+    const analyses = await getDailyPredictions();
 const ranked = rankScoreMatches(analyses);
 
 const selected = ranked.slice(
