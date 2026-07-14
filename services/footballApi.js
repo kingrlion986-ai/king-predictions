@@ -263,8 +263,6 @@ async function getCompetitionMatches(code) {
 
   const now = new Date();
 
-const now = new Date();
-
 const in7days = new Date(
     now.getTime() + 7 * 24 * 60 * 60 * 1000
 );
