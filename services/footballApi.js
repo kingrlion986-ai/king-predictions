@@ -330,9 +330,14 @@ function filterMatches(matches) {
       return false;
     }
 
-    const date = new Date(match.utcDate);
+    console.log(
+      "MATCH DATE:",
+      match.utcDate,
+      "NOW:",
+      new Date().toISOString()
+    );
 
-    return date > new Date();
+    return true;
 
   });
 
