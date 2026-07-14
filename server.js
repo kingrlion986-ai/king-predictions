@@ -36,6 +36,10 @@ const ANALYSIS_CACHE = new Map();
 
 const ANALYSIS_TTL = 15 * 60 * 1000;
 
+let DAILY_PREDICTIONS = null;
+
+let DAILY_DATE = null;
+
 const ANALYSIS_RUNNING = new Map();
 
 let PRELOADED_ANALYSES = null;
@@ -82,6 +86,29 @@ async function getPreloadedAnalyses() {
   PRELOAD_TIME = Date.now();
 
   return PRELOADED_ANALYSES;
+
+}
+
+async function getDailyPredictions() {
+
+  const today = new Date().toISOString().split("T")[0];
+
+  if (
+    DAILY_PREDICTIONS &&
+    DAILY_DATE === today
+  ) {
+    console.log("⚡ DAILY CACHE");
+    return DAILY_PREDICTIONS;
+  }
+
+  const analyses = await getPreloadedAnalyses();
+
+  DAILY_PREDICTIONS = analyses;
+  DAILY_DATE = today;
+
+  console.log("✅ DAILY PREDICTIONS CREATED");
+
+  return DAILY_PREDICTIONS;
 
 }
 
