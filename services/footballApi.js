@@ -505,17 +505,12 @@ console.log("APRÈS removeDuplicates =", matches.length);
 
 matches = filterMatches(matches);
 
-     matches = removeDuplicates(matches);
-
-console.log("APRÈS removeDuplicates =", matches.length);
-
-matches = filterMatches(matches);
-
 console.log("APRÈS filterMatches =", matches.length);
 
 matches = addMatchQuality(matches);
 
-       // On garde uniquement les meilleurs matchs à analyser
+console.log("APRÈS QUALITY =", matches.length);
+
 matches = matches
   .sort((a, b) => b.quality - a.quality)
   .slice(0, 5);
