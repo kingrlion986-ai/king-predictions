@@ -199,7 +199,15 @@ const SETTINGS = {
 ========================= */
 app.get("/free", async (req, res) => {
   try {
-    const matches = await getMatches();
+    const analyses = await getDailyPredictions();
+
+if (!analyses.length) {
+  return res.json({
+    error: "No future matches"
+  });
+}
+
+const analysis = analyses[0];
 
 console.log("TOTAL MATCHS:", matches.length);
 
@@ -218,9 +226,6 @@ if (!matches.length) {
     error: "No future matches"
   });
 }
-
-const match = matches[0];
-const analysis = await analyzeMatch(match);
 
     console.log("ANALYSIS:");
 console.log(JSON.stringify(analysis, null, 2));
@@ -257,7 +262,7 @@ app.get("/vip/predictions", async (req, res) => {
   console.log("VIP ROUTE CALLED");
 
   try {
-    const analyses = await getPreloadedAnalyses();
+    const analyses = await getDailyPredictions();
 
 const vipMatches = filterVipMatches(analyses);
 
@@ -292,7 +297,7 @@ res.json({
 app.get("/vip/1x2", async (req, res) => {
   try {
 
-    const analyses = await getPreloadedAnalyses();
+    const analyses = await getDailyPredictions();
     const ranked = rankMatches(analyses);
 
     const result = ranked
@@ -327,7 +332,7 @@ app.get("/vip/1x2", async (req, res) => {
 ========================= */
 app.get("/vip/over25", async (req, res) => {
   try {
-  const analyses = await getPreloadedAnalyses();
+  const analyses = await getDailyPredictions();
 const ranked = rankOver25Matches(analyses);
 
 const selected = ranked.slice(
@@ -355,7 +360,7 @@ const selected = ranked.slice(
 ========================= */
 app.get("/vip/btts", async (req, res) => {
   try {
-  const analyses = await getPreloadedAnalyses();
+  const analyses = await getDailyPredictions();
 const ranked = rankBTTSMatches(analyses);
 
 const selected = ranked.slice(
@@ -383,7 +388,7 @@ const selected = ranked.slice(
 ========================= */
 app.get("/vip/score", async (req, res) => {
   try {
-    const analyses = await getPreloadedAnalyses();
+    const analyses = await getDailyPredictions();
 const ranked = rankScoreMatches(analyses);
 
 const selected = ranked.slice(
