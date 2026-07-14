@@ -519,6 +519,13 @@ console.log("APRÈS filterMatches =", matches.length);
 
 matches = filterMatches(matches);
 
+       matches = filterMatches(matches);
+
+console.log("DEBUG AFTER FILTER ARRAY:");
+console.log(matches);
+
+console.log("APRÈS filterMatches =", matches.length);
+
 console.log("APRÈS filterMatches =", matches.length);
 
 
