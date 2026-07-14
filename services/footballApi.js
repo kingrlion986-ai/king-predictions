@@ -279,6 +279,14 @@ const data = await apiGet(
 
   console.log("DATA =", !!data);
 
+   console.log(
+  data.matches.map(m => ({
+    id: m.id,
+    status: m.status,
+    utcDate: m.utcDate
+  }))
+);
+
   if (data) {
     console.log("MATCHES =", data.matches?.length);
     console.log(data.matches?.[0]);
