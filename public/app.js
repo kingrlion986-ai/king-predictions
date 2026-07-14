@@ -12,6 +12,18 @@ async function loadPredictions(url) {
 
     results.innerHTML = "<h2>⏳ Chargement...</h2>";
 
+    currentMode = url;
+
+if (PAGE_CACHE.has(url)) {
+
+    console.log("⚡ PAGE CACHE");
+
+    displayPredictions(PAGE_CACHE.get(url));
+
+    return;
+
+}
+
     
     try {
 
