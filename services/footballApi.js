@@ -268,11 +268,11 @@ const tomorrow = new Date(
 );
 
 const dateFrom =
-    now.toISOString();
+    now.toISOString().split("T")[0];
 
 const dateTo =
-    tomorrow.toISOString();
-
+    tomorrow.toISOString().split("T")[0];
+   
 const data = await apiGet(
     `/competitions/${code}/matches?dateFrom=${dateFrom}&dateTo=${dateTo}`
 );
