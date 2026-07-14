@@ -531,6 +531,15 @@ console.log("APRÈS filterMatches =", matches.length);
 
 matches = addMatchQuality(matches);
 
+       console.log(
+ "APRÈS QUALITY:",
+ matches.length
+);
+
+console.log(
+ matches[0]
+);
+
 
       matches.sort((a,b)=> {
 
