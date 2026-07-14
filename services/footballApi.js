@@ -261,14 +261,20 @@ async function getCompetitionMatches(code) {
 
   console.log(">>> GET COMPETITION", code);
 
-  const today = new Date().toISOString().split("T")[0];
+  const now = new Date();
 
-const in7days = new Date(
-  Date.now() + 7 * 24 * 60 * 60 * 1000
-).toISOString().split("T")[0];
+const tomorrow = new Date(
+    now.getTime() + 24 * 60 * 60 * 1000
+);
+
+const dateFrom =
+    now.toISOString();
+
+const dateTo =
+    tomorrow.toISOString();
 
 const data = await apiGet(
-  `/competitions/${code}/matches?dateFrom=${today}&dateTo=${in7days}`
+    `/competitions/${code}/matches?dateFrom=${dateFrom}&dateTo=${dateTo}`
 );
 
   console.log("DATA =", !!data);
@@ -505,6 +511,16 @@ matches = removeDuplicates(matches);
 console.log("APRÈS removeDuplicates =", matches.length);
 
 matches = filterMatches(matches);
+
+     matches = matches.filter(match => {
+
+    const kickoff = new Date(match.utcDate);
+
+    return (
+        kickoff.getTime() - Date.now()
+    ) <= 24 * 60 * 60 * 1000;
+
+});
 
 console.log("APRÈS filterMatches =", matches.length);
 
