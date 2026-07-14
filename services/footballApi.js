@@ -455,6 +455,9 @@ async function getMatches() {
 
   matches.push(...result);
 
+       console.log("COMPÉTITION :", competition);
+console.log("APRÈS PUSH =", matches.length);
+
   console.log("TOTAL =", matches.length);
 
       }
@@ -490,11 +493,16 @@ async function getMatches() {
             ...result
           );
 
+       console.log("COMPÉTITION :", competition);
+console.log("APRÈS PUSH =", matches.length);
+
 
 
         }
 
       }
+
+       console.log("TABLEAU COMPLET :", matches);
 
 
      console.log("AVANT removeDuplicates =", matches.length);
