@@ -201,6 +201,22 @@ homeXG += strengthFactor;
 
 awayXG -= strengthFactor;
 
+       /*
+    Difficulté à marquer
+*/
+
+homeXG -=
+    (
+        home.failedToScore /
+        Math.max(home.played, 1)
+    ) * 0.30;
+
+awayXG -=
+    (
+        away.failedToScore /
+        Math.max(away.played, 1)
+    ) * 0.30;
+
 
 
     /*
