@@ -505,46 +505,32 @@ console.log("APRÈS removeDuplicates =", matches.length);
 
 matches = filterMatches(matches);
 
-     matches = matches.filter(match => {
+     matches = removeDuplicates(matches);
 
-    const kickoff = new Date(match.utcDate);
+console.log("APRÈS removeDuplicates =", matches.length);
 
-    return (
-        kickoff.getTime() - Date.now()
-    ) <= 24 * 60 * 60 * 1000;
+matches = filterMatches(matches);
 
-});
+console.log("APRÈS filterMatches =", matches.length);
+
+matches = addMatchQuality(matches);
+
+console.log("APRÈS QUALITY =", matches.length);
 
 console.log("APRÈS filterMatches =", matches.length);
 
 matches = filterMatches(matches);
-
-       matches = filterMatches(matches);
 
 console.log("DEBUG AFTER FILTER ARRAY:");
 console.log(matches);
 
 console.log("APRÈS filterMatches =", matches.length);
 
-console.log("APRÈS filterMatches =", matches.length);
-
-
 matches = addMatchQuality(matches);
 
-console.log(
-  "QUALITY TEST:",
-  matches.length
-);
-
-console.log(
-  "APRÈS QUALITY:",
-  matches.length
-);
-
-console.log(
-  matches[0]
-);
-
+console.log("QUALITY TEST:", matches.length);
+console.log("APRÈS QUALITY:", matches.length);
+console.log(matches[0]);
 
 matches.sort((a,b)=> {
 
