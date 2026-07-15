@@ -176,20 +176,21 @@ clearTimeout(timeout);
 
       if (res.status === 429) {
 
-        console.log("⚠️ RATE LIMIT 429:", endpoint);
+    console.log("⚠️ RATE LIMIT 429:", endpoint);
 
-        if (retry < MAX_RETRIES)
+    if (retry < MAX_RETRIES) {
 
-          const delay = 1000 * (retry + 1);
+        const delay = 1000 * (retry + 1);
 
-          console.log(`⏳ RETRY ${retry + 1} AFTER ${delay}ms`);
+        console.log(`⏳ RETRY ${retry + 1} AFTER ${delay}ms`);
 
-          await sleep(delay);
+        await sleep(delay);
 
-          return await apiGet(endpoint, retry + 1);
-        }
+        return await apiGet(endpoint, retry + 1);
 
-        return null;
+    }
+
+    return null;
       }
 
       if (!res.ok) {
