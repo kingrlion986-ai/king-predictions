@@ -626,12 +626,10 @@ async function preloadPredictions() {
 
 }
 
-// Préchargement au démarrage
-preloadPredictions();
+// Préchargement désactivé sur plan gratuit API
+// preloadPredictions();
 
-// Rafraîchissement toutes les 15 minutes
-setInterval(preloadPredictions, 15 * 60 * 1000);
-
+// setInterval(preloadPredictions, 15 * 60 * 1000);
 app.listen(PORT, "0.0.0.0", () => {
   console.log("KING PREDICTIONS V16 RUNNING ⚽🔥");
 });
