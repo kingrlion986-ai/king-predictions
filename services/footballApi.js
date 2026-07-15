@@ -133,7 +133,7 @@ async function processQueue() {
    API RETRY CONFIG
 ========================= */
 
-const MAX_RETRIES = 4;
+const MAX_RETRIES = 2;
 
 
 /*
@@ -178,7 +178,7 @@ clearTimeout(timeout);
 
         console.log("⚠️ RATE LIMIT 429:", endpoint);
 
-        if (retry < 3) {
+        if (retry < MAX_RETRIES)
 
           const delay = 1000 * (retry + 1);
 
