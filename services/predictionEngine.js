@@ -20,7 +20,7 @@ const {
 
 const ANALYSIS_CACHE = new Map();
 
-const ANALYSIS_TTL = 5 * 60 * 1000;
+const ANALYSIS_TTL = 24 * 60 * 60 * 1000;
 
 /* =========================
    HELPERS
@@ -51,6 +51,9 @@ async function analyzeMatch(match) {
         match.awayTeam.name
     );
 
+    const timer = `${match.homeTeam.name} vs ${match.awayTeam.name}`;
+console.time(timer);
+
     console.log("MATCH RECU:");
 console.log(JSON.stringify(match, null, 2));
 
@@ -64,8 +67,6 @@ console.log(JSON.stringify(match, null, 2));
     ) {
         return cached.data;
     }
-
-    console.timeEnd(`${match.homeTeam.name} vs ${match.awayTeam.name}`);
 
     const [homeStats, awayStats] = await Promise.all([
     analyzeTeam(match.homeTeam),
@@ -304,7 +305,7 @@ bttsConfidence,
         match.awayTeam.name
     );
 
-    console.timeEnd(`${match.homeTeam.name} vs ${match.awayTeam.name}`);
+    console.timeEnd(timer);
 
     return result;
 }
