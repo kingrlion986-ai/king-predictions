@@ -576,34 +576,18 @@ async function analyzeTeam(team) {
 
   }
 
-   let matches;
-
-if (CACHE.has(team.id)) {
-
-    const cached = CACHE.get(team.id);
-
-    if (Date.now() - cached.time < CACHE_DURATION) {
-
-        return cached.data;
-
-    }
-
-}
-
-console.log("GET TEAM MATCHES START:", team.name);
-
-matches = await getTeamMatches(team.id);
-
-console.log(
-    "GET TEAM MATCHES END:",
-    team.name,
-    matches.length
-);
+   
 
 
 
   const promise =
   (async()=>{
+
+     console.log("GET TEAM MATCHES START:", team.name);
+
+    const matches = await getTeamMatches(team.id);
+
+    console.log("GET TEAM MATCHES END:", team.name, matches.length);
 
     /*
       FALLBACK
