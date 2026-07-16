@@ -81,7 +81,16 @@ async function getPreloadedAnalyses() {
 
   const matches = await getMatches();
 
-  PRELOADED_ANALYSES = await analyzeMatches(matches);
+const selectedMatches = matches
+  .slice(0, 10);
+
+console.log(
+  "🎯 MATCHES SELECTED FOR AI:",
+  selectedMatches.length
+);
+
+PRELOADED_ANALYSES =
+  await analyzeMatches(selectedMatches);
 
   PRELOAD_TIME = Date.now();
 
@@ -151,11 +160,17 @@ async function analyzeMatches(matches) {
 
   const promise = (async () => {
 
-    const analyses = (
-      await Promise.all(
-        uniqueMatches.map(match => analyzeMatch(match))
-      )
-    ).filter(Boolean);
+    const analyses = [];
+
+for (const match of uniqueMatches) {
+
+  const result = await analyzeMatch(match);
+
+  if (result) {
+    analyses.push(result);
+  }
+
+}
 
     ANALYSIS_CACHE.set(
       key,
@@ -631,9 +646,12 @@ async function preloadPredictions() {
 }
 
 // Préchargement désactivé sur plan gratuit API
-// preloadPredictions();
+preloadPredictions();
 
-// setInterval(preloadPredictions, 15 * 60 * 1000);
+setInterval(
+  preloadPredictions,
+  30 * 60 * 1000
+);
 app.listen(PORT, "0.0.0.0", () => {
   console.log("KING PREDICTIONS V16 RUNNING ⚽🔥");
 });
