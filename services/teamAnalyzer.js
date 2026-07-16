@@ -583,11 +583,7 @@ async function analyzeTeam(team) {
   const promise =
   (async()=>{
 
-     console.log("GET TEAM MATCHES START:", team.name);
-
     const matches = await getTeamMatches(team.id);
-
-    console.log("GET TEAM MATCHES END:", team.name, matches.length);
 
     /*
       FALLBACK
