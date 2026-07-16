@@ -7,6 +7,10 @@ const {
   getMatches
 } = require("./services/footballApi");
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 const {
   analyzeMatch
 } = require("./services/predictionEngine");
