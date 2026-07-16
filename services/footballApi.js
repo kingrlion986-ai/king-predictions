@@ -606,17 +606,19 @@ async function getTeamMatches(teamId) {
   const cached = CACHE.teamMatches.get(teamId);
 
   if (cached && Date.now() < cached.expiresAt) {
-    console.log("⚡ TEAM CACHE:", teamId);
     return cached.data;
   }
 
-  const data = await apiGet(`/teams/${teamId}/matches?status=FINISHED`);
+  const data = await apiGet(
+    `/teams/${teamId}/matches?status=FINISHED&limit=8`
+  );
 
   if (!data || !Array.isArray(data.matches)) {
-    return cached ? cached.data : [];
+    return [];
   }
 
   const matches = data.matches
+    .slice(0, 8)
     .map(formatMatch)
     .filter(Boolean);
 
@@ -627,7 +629,6 @@ async function getTeamMatches(teamId) {
 
   return matches;
 }
-
 /* =========================
    EXPORTS
 ========================= */
