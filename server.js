@@ -214,6 +214,7 @@ const SETTINGS = {
   maxBTTS: 5,
   maxSCORE: 3,
 };
+let FREE_RUNNING = null;
 
 /* =========================
    FREE (1 MATCH)
@@ -222,63 +223,83 @@ app.get("/free", async (req, res) => {
 
   try {
 
-    console.time("FREE_ANALYSIS_TIME");
+    if (FREE_RUNNING) {
 
-    const analyses = await getDailyPredictions();
+      console.log("⏳ FREE REQUEST WAITING");
 
-    console.timeEnd("FREE_ANALYSIS_TIME");
+      const result = await FREE_RUNNING;
+      return res.json(result);
 
-
-    if (!analyses.length) {
-      return res.json({
-        error: "No future matches"
-      });
     }
 
 
-    const analysis = analyses[0];
+    FREE_RUNNING = (async()=>{
+
+      const analyses = await getDailyPredictions();
+
+      if (!analyses.length) {
+        return {
+          error:"No future matches"
+        };
+      }
 
 
-    res.json({
+      const analysis = analyses[0];
 
-      match:
+
+      return {
+
+        match:
         `${analysis.match.homeTeam.name} vs ${analysis.match.awayTeam.name}`,
 
-      prediction:
-        "1X2",
+        prediction:"1X2",
 
-      pick:
+        pick:
         analysis.predictions.winner === "DRAW"
           ? "Double Chance"
           : analysis.predictions.winner,
 
-      confidence:
+        confidence:
         analysis.predictions.winnerConfidence,
 
-      stats: {
+        stats:{
 
-        homeStrength:
+          homeStrength:
           analysis.teamStats.home.strength,
 
-        awayStrength:
+          awayStrength:
           analysis.teamStats.away.strength
 
-      }
+        }
 
-    });
+      };
 
 
-  } catch (err) {
+    })();
+
+
+    const result = await FREE_RUNNING;
+
+    res.json(result);
+
+
+  } catch(err){
 
     console.error(err);
 
     res.status(500).json({
-      error: "Internal server error"
+      error:"Internal server error"
     });
+
+  } finally {
+
+    FREE_RUNNING = null;
 
   }
 
 });
+
+
 
 /* =========================
    VIP PREDICTIONS
