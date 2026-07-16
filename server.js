@@ -199,7 +199,11 @@ const SETTINGS = {
 ========================= */
 app.get("/free", async (req, res) => {
   try {
-    const analyses = await getDailyPredictions();
+    console.time("FREE_ANALYSIS_TIME");
+
+const analyses = await getDailyPredictions();
+
+console.timeEnd("FREE_ANALYSIS_TIME");
 
 if (!analyses.length) {
   return res.json({
