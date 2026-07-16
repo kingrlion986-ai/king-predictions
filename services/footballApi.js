@@ -262,31 +262,20 @@ async function getCompetitionMatches(code) {
 
   console.log(">>> GET COMPETITION", code);
 
-  const now = new Date();
-
-const in7days = new Date(
-    now.getTime() + 7 * 24 * 60 * 60 * 1000
-);
-
-const dateFrom =
-    now.toISOString().split("T")[0];
-
-const dateTo =
-    in7days.toISOString().split("T")[0];
-   
-const data = await apiGet(
+  const data = await apiGet(
     `/competitions/${code}/matches?status=TIMED,SCHEDULED`
-);
-
-  console.log("DATA =", !!data);
-  }
+  );
 
   if (!data || !Array.isArray(data.matches)) {
     return [];
   }
 
-  return data.matches.map(formatMatch).filter(Boolean);
+  return data.matches
+    .map(formatMatch)
+    .filter(Boolean);
 }
+
+  
 /* =========================
    MATCH CLEANERS
 ========================= */
