@@ -123,7 +123,7 @@ async function processQueue() {
 
   activeRequests--;
 
-  processQueue();
+setImmediate(processQueue);
 
 }
 
@@ -275,22 +275,10 @@ const dateTo =
     in7days.toISOString().split("T")[0];
    
 const data = await apiGet(
-    `/competitions/${code}/matches?dateFrom=${dateFrom}&dateTo=${dateTo}`
+    `/competitions/${code}/matches?status=TIMED,SCHEDULED`
 );
 
   console.log("DATA =", !!data);
-
-   console.log(
-  data.matches.map(m => ({
-    id: m.id,
-    status: m.status,
-    utcDate: m.utcDate
-  }))
-);
-
-  if (data) {
-    console.log("MATCHES =", data.matches?.length);
-    console.log(data.matches?.[0]);
   }
 
   if (!data || !Array.isArray(data.matches)) {
@@ -472,7 +460,7 @@ console.log("APRÈS PUSH =", matches.length);
         seulement si nécessaire
       */
 
-      if (matches.length < 5) {
+      if (matches.length === 0) {
 
 
         for (
@@ -507,35 +495,13 @@ console.log("APRÈS PUSH =", matches.length);
 
       }
 
-       console.log("TABLEAU COMPLET :", matches);
-
-
-     console.log("AVANT removeDuplicates =", matches.length);
-
-matches = removeDuplicates(matches);
-
-console.log("APRÈS removeDuplicates =", matches.length);
+       matches = removeDuplicates(matches);
 
 matches = filterMatches(matches);
-       
-console.log("MATCHES À ANALYSER :", matches.length);
-
-console.log("APRÈS QUALITY =", matches.length);
-
-console.log("APRÈS filterMatches =", matches.length);
-
-console.log("DEBUG AFTER FILTER ARRAY:");
-console.log(matches);
-
-console.log("APRÈS filterMatches =", matches.length);
 
 matches = addMatchQuality(matches);
 
-console.log("QUALITY TEST:", matches.length);
-console.log("APRÈS QUALITY:", matches.length);
-console.log(matches[0]);
-
-matches.sort((a,b)=> {
+matches.sort((a, b) => {
 
 
         if (
@@ -610,8 +576,8 @@ async function getTeamMatches(teamId) {
   }
 
   const data = await apiGet(
-    `/teams/${teamId}/matches?status=FINISHED&limit=8`
-  );
+  `/teams/${teamId}/matches?status=FINISHED`
+);
 
   if (!data || !Array.isArray(data.matches)) {
     return [];
