@@ -170,6 +170,8 @@ for (const match of uniqueMatches) {
     analyses.push(result);
   }
 
+  await sleep(1000);
+
 }
 
     ANALYSIS_CACHE.set(
@@ -213,64 +215,65 @@ const SETTINGS = {
    FREE (1 MATCH)
 ========================= */
 app.get("/free", async (req, res) => {
+
   try {
+
     console.time("FREE_ANALYSIS_TIME");
 
-const analyses = await getDailyPredictions();
+    const analyses = await getDailyPredictions();
 
-console.timeEnd("FREE_ANALYSIS_TIME");
+    console.timeEnd("FREE_ANALYSIS_TIME");
 
-if (!analyses.length) {
-  return res.json({
-    error: "No future matches"
-  });
-}
 
-const analysis = analyses[0];
+    if (!analyses.length) {
+      return res.json({
+        error: "No future matches"
+      });
+    }
 
-console.log("TOTAL MATCHS:", matches.length);
 
-console.log(
-  "STATUTS UNIQUES:",
-  [...new Set(matches.map(m => m.status))]
-);
-    matches.forEach(match => {
-  console.log(
-    `${match.homeTeam.name} (${match.homeTeam.id}) vs ${match.awayTeam.name} (${match.awayTeam.id})`
-  );
-});
+    const analysis = analyses[0];
 
-if (!matches.length) {
-  return res.json({
-    error: "No future matches"
-  });
-}
 
-    console.log("ANALYSIS:");
-console.log(JSON.stringify(analysis, null, 2));
-
-console.log("MATCH AVANT RETURN:");
-console.log(JSON.stringify(analysis.match, null, 2));
-
-console.log("RESULT MATCH:");
-console.log(JSON.stringify(analysis.match, null, 2));
     res.json({
-      match: `${analysis.match.homeTeam.name} vs ${analysis.match.awayTeam.name}`,
-      prediction: "1X2",
+
+      match:
+        `${analysis.match.homeTeam.name} vs ${analysis.match.awayTeam.name}`,
+
+      prediction:
+        "1X2",
+
       pick:
-analysis.predictions.winner === "DRAW"
-  ? "Double Chance"
-  : analysis.predictions.winner,
-      confidence: analysis.predictions.winnerConfidence,
+        analysis.predictions.winner === "DRAW"
+          ? "Double Chance"
+          : analysis.predictions.winner,
+
+      confidence:
+        analysis.predictions.winnerConfidence,
+
       stats: {
-        homeStrength: analysis.teamStats.home.strength,
-        awayStrength: analysis.teamStats.away.strength
+
+        homeStrength:
+          analysis.teamStats.home.strength,
+
+        awayStrength:
+          analysis.teamStats.away.strength
+
       }
+
     });
+
+
   } catch (err) {
+
     console.error(err);
-    res.status(500).json({ error: "Internal server error" });
+
+    res.status(500).json({
+      error: "Internal server error"
+    });
+
   }
+
 });
 
 /* =========================
