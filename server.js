@@ -169,10 +169,7 @@ for (const match of uniqueMatches) {
     analyses.push(result);
   }
 
-  await sleep(1000);
-
 }
-
     ANALYSIS_CACHE.set(
       key,
       {
