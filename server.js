@@ -378,6 +378,17 @@ const selected = ranked.slice(
   0,
   SETTINGS.maxOVER
 );
+
+    const analyses = await getDailyPredictions();
+
+const ranked = rankOver25Matches(analyses);
+
+console.log("OVER25:", ranked);
+
+const selected = ranked.slice(
+  0,
+  SETTINGS.maxOVER
+);
     const result = selected.map(a => ({
   match: `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`,
   market: a.predictions.over25,
@@ -401,6 +412,17 @@ app.get("/vip/btts", async (req, res) => {
   try {
   const analyses = await getDailyPredictions();
 const ranked = rankBTTSMatches(analyses);
+
+const selected = ranked.slice(
+  0,
+  SETTINGS.maxBTTS
+);
+
+    const analyses = await getDailyPredictions();
+
+const ranked = rankBTTSMatches(analyses);
+
+console.log("BTTS:", ranked);
 
 const selected = ranked.slice(
   0,
