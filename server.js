@@ -371,37 +371,37 @@ app.get("/vip/1x2", async (req, res) => {
 ========================= */
 app.get("/vip/over25", async (req, res) => {
   try {
-  const analyses = await getDailyPredictions();
-const ranked = rankOver25Matches(analyses);
-
-const selected = ranked.slice(
-  0,
-  SETTINGS.maxOVER
-);
 
     const analyses = await getDailyPredictions();
 
-const ranked = rankOver25Matches(analyses);
+    const ranked = rankOver25Matches(analyses);
 
-console.log("OVER25:", ranked);
+    console.log("OVER25:", ranked);
 
-const selected = ranked.slice(
-  0,
-  SETTINGS.maxOVER
-);
+    const selected = ranked.slice(
+      0,
+      SETTINGS.maxOVER
+    );
+
     const result = selected.map(a => ({
-  match: `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`,
-  market: a.predictions.over25,
-  confidence: a.predictions.over25Confidence,
-  expectedGoals: a.model.expectedGoals,
-  homeOver25Rate: a.teamStats.home.over25Rate,
-  awayOver25Rate: a.teamStats.away.over25Rate
-}));
+      match: `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`,
+      market: a.predictions.over25,
+      confidence: a.predictions.over25Confidence,
+      expectedGoals: a.model.expectedGoals,
+      homeOver25Rate: a.teamStats.home.over25Rate,
+      awayOver25Rate: a.teamStats.away.over25Rate
+    }));
 
     res.json(result);
+
   } catch (err) {
+
     console.error(err);
-    res.status(500).json({ error: "Internal server error" });
+
+    res.status(500).json({
+      error: "Internal server error"
+    });
+
   }
 });
 
@@ -410,37 +410,36 @@ const selected = ranked.slice(
 ========================= */
 app.get("/vip/btts", async (req, res) => {
   try {
-  const analyses = await getDailyPredictions();
-const ranked = rankBTTSMatches(analyses);
-
-const selected = ranked.slice(
-  0,
-  SETTINGS.maxBTTS
-);
 
     const analyses = await getDailyPredictions();
 
-const ranked = rankBTTSMatches(analyses);
+    const ranked = rankBTTSMatches(analyses);
 
-console.log("BTTS:", ranked);
+    console.log("BTTS:", ranked);
 
-const selected = ranked.slice(
-  0,
-  SETTINGS.maxBTTS
-);
+    const selected = ranked.slice(
+      0,
+      SETTINGS.maxBTTS
+    );
 
     const result = selected.map(a => ({
-  match: `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`,
-  pick: a.predictions.btts,
-  confidence: a.predictions.bttsConfidence,
-  homeBTTSRate: a.teamStats.home.bttsRate,
-  awayBTTSRate: a.teamStats.away.bttsRate
-}));
+      match: `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`,
+      pick: a.predictions.btts,
+      confidence: a.predictions.bttsConfidence,
+      homeBTTSRate: a.teamStats.home.bttsRate,
+      awayBTTSRate: a.teamStats.away.bttsRate
+    }));
 
     res.json(result);
+
   } catch (err) {
+
     console.error(err);
-    res.status(500).json({ error: "Internal server error" });
+
+    res.status(500).json({
+      error: "Internal server error"
+    });
+
   }
 });
 
