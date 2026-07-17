@@ -203,6 +203,15 @@ else if (xg.totalExpectedGoals <= 2) {
         correctScore = "0-1";
 
 }
+
+    const over25Confidence =
+    Math.round(overScore);
+
+const bttsConfidence =
+    Math.round(bttsScore);
+
+console.log("OVER CONF:", over25Confidence);
+console.log("BTTS CONF:", bttsConfidence);
     
     const result = {
 
