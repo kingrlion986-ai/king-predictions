@@ -85,16 +85,11 @@ async function getPreloadedAnalyses() {
 
   const matches = await getMatches();
 
-const selectedMatches = matches
-  .slice(0, 10);
+const selectedMatches = matches.slice(0, 1);
 
-console.log(
-  "🎯 MATCHES SELECTED FOR AI:",
-  selectedMatches.length
-);
+console.log("🎯 MATCHES SELECTED FOR AI:", selectedMatches.length);
 
-PRELOADED_ANALYSES =
-  await analyzeMatches(selectedMatches);
+PRELOADED_ANALYSES = await analyzeMatches(selectedMatches);
 
   PRELOAD_TIME = Date.now();
 
