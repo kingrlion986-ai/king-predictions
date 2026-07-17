@@ -261,7 +261,7 @@ function rankOver25Matches(matches) {
 
 
       return (
-    match.predictions.over25Confidence >= 55
+    match.predictions.over25Confidence >= 30
 );
 
 
@@ -324,7 +324,7 @@ function rankBTTSMatches(matches) {
         match.predictions
 .bttsConfidence
 >=
-55
+30
 
       );
 
