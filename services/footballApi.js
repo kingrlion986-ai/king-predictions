@@ -486,7 +486,7 @@ async function getMatches() {
 
   console.log("📡 PRIMARY:", competition);
 
-  const result = await getCompetitionMatchesSmart(competition);
+  const result = await getCompetitionMatches(competition);
   console.log(competition, "=>", result.length);
 
   matches.push(...result);
@@ -519,8 +519,7 @@ console.log("APRÈS PUSH =", matches.length);
           );
 
 
-          const result = await getCompetitionMatchesSmart(competition);
-
+          const result = await getCompetitionMatches(competition);
 console.log("TYPE :", typeof result);
 console.log("IS ARRAY :", Array.isArray(result));
 console.log("RESULT :", result);
