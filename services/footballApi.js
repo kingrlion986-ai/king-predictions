@@ -183,7 +183,7 @@ clearTimeout(timeout);
 
     if (retry < MAX_RETRIES) {
 
-        const delay = 5000 * (retry + 1);
+        const delay = 15000 * (retry + 1);
 
         console.log(`⏳ RETRY ${retry + 1} AFTER ${delay}ms`);
 
