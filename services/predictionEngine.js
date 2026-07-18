@@ -111,6 +111,15 @@ console.time(timer);
 
         });
 
+    let predictionQuality = "LOW";
+
+if (confidence >= 70) {
+    predictionQuality = "HIGH";
+}
+else if (confidence >= 55) {
+    predictionQuality = "MEDIUM";
+}
+
     const homeScore =
     poisson.probabilities.homeWin +
     (homeStats.strength - awayStats.strength) * 0.35 +
@@ -229,6 +238,8 @@ console.log("BTTS CONF:", bttsConfidence);
     winner,
 
     winnerConfidence: confidence,
+
+                quality: predictionQuality,
 
     probabilities:
         poisson.probabilities,
