@@ -183,6 +183,12 @@ for (let h = 0; h <= MAX_GOALS; h++) {
 
 expectedGoals /= total;
 
+   const dominance =
+    Number(
+        Math.abs(homeWin - awayWin)
+            .toFixed(2)
+    );
+
     return {
 
     probabilities: {
@@ -210,6 +216,8 @@ expectedGoals /= total;
     expectedGoals: Number(expectedGoals.toFixed(2)),
 
     uncertainty,
+
+       dominance,
 
     exactScore: {
         score: exactScore,
