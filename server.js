@@ -56,6 +56,8 @@ let PRELOAD_TIME = 0;
 
 const PRELOAD_TTL = 15 * 60 * 1000;
 
+let DAILY_BUILD_RUNNING = false;
+
 function loadHistory() {
   try {
     if (!fs.existsSync(HISTORY_FILE)) {
@@ -78,6 +80,12 @@ function saveHistory(data) {
 }
 
 async function getPreloadedAnalyses() {
+
+  if (ANALYSIS_RUNNING) {
+    console.log("⏳ ANALYSIS ALREADY RUNNING");
+    return PRELOADED_ANALYSES || [];
+  }
+
 
   if (
     PRELOADED_ANALYSES &&
