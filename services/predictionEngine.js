@@ -97,6 +97,12 @@ console.time(timer);
             xg.expectedAwayGoals
         );
 
+    console.log(
+    "POISSON DEBUG:",
+    poisson.uncertainty,
+    poisson.dominance
+);
+
     const confidence =
         calculateConfidence({
 
