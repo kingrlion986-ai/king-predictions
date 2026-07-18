@@ -111,16 +111,15 @@ console.time(timer);
 
         });
 
-        let finalConfidence = confidence;
+        let adjustedConfidence = confidence;
 
-finalConfidence += poisson.dominance * 20;
-finalConfidence -= poisson.uncertainty * 0.15;
+adjustedConfidence += poisson.dominance * 20;
+adjustedConfidence -= poisson.uncertainty * 0.15;
 
-finalConfidence = Math.max(
+adjustedConfidence = Math.max(
     20,
-    Math.min(95, Math.round(finalConfidence))
+    Math.min(95, Math.round(adjustedConfidence))
 );
-
             // =========================
 // ADAPTIVE CONFIDENCE V17
 // =========================
@@ -130,10 +129,6 @@ const strengthGap =
         homeStats.strength -
         awayStats.strength
     );
-
-
-let adjustedConfidence = confidence;
-
 
 // Bonus domination équipe
 
@@ -177,10 +172,9 @@ Math.min(
 if (adjustedConfidence >= 70) {
     predictionQuality = "HIGH";
 }
-else if (confidence >= 55) {
+else if (adjustedConfidence >= 55) {
     predictionQuality = "MEDIUM";
 }
-
     const homeScore =
     poisson.probabilities.homeWin +
     (homeStats.strength - awayStats.strength) * 0.35 +
