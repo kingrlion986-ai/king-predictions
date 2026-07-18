@@ -510,39 +510,41 @@ console.log("APRÈS PUSH =", matches.length);
         seulement si nécessaire
       */
 
-      if (matches.length === 0) {
+      const MIN_MATCHES = 20;
 
+if (matches.length < MIN_MATCHES) {
 
-        for (
-          const competition of SECONDARY_COMPETITIONS
-        ) {
+  console.log(
+    `📦 Seulement ${matches.length} matchs trouvés. Chargement des compétitions secondaires...`
+  );
 
+  for (const competition of SECONDARY_COMPETITIONS) {
 
-          console.log(
-            "📡 SECONDARY:",
-            competition
-          );
+    console.log("📡 SECONDARY:", competition);
 
+    const result = await getCompetitionMatches(competition);
 
-          const result = await getCompetitionMatches(competition);
-console.log("TYPE :", typeof result);
-console.log("IS ARRAY :", Array.isArray(result));
-console.log("RESULT :", result);
+    console.log("TYPE :", typeof result);
+    console.log("IS ARRAY :", Array.isArray(result));
+    console.log("RESULT :", result);
 
-if (Array.isArray(result)) {
-    matches.push(...result);
-} else {
-    console.error("❌ getCompetitionMatches ne retourne pas un tableau");
+    if (Array.isArray(result)) {
+      matches.push(...result);
+    } else {
+      console.error("❌ getCompetitionMatches ne retourne pas un tableau");
+    }
+
+    console.log("COMPÉTITION :", competition);
+    console.log("APRÈS PUSH =", matches.length);
+
+    // Arrête dès qu'on a assez de matchs
+    if (matches.length >= MIN_MATCHES) {
+      console.log("✅ Nombre minimum de matchs atteint.");
+      break;
+    }
+  }
+
 }
-
-       console.log("COMPÉTITION :", competition);
-console.log("APRÈS PUSH =", matches.length);
-
-
-
-        }
-
-      }
 
        matches = removeDuplicates(matches);
 
