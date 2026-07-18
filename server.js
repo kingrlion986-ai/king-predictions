@@ -373,6 +373,9 @@ app.get("/free", async (req, res) => {
         confidence:
         analysis.predictions.winnerConfidence,
 
+        quality:
+analysis.predictions.quality,
+
         stats:{
 
           homeStrength:
