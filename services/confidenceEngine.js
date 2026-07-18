@@ -58,9 +58,17 @@ function calculateConfidence({
         );
 
 
-    const separation =
-        sorted[0] -
-        sorted[1];
+    const favoriteProbability = sorted[0];
+
+const separation =
+    (sorted[0] - sorted[1]) * 2;
+
+const favoriteBonus =
+    clamp(
+        (favoriteProbability - 35) * 1.8,
+        0,
+        25
+    );
 
 
 
@@ -180,41 +188,39 @@ if (eloProbability) {
 
 let confidence =
 
-    (
-        separation * 0.35
-    )
-    +
-    (
-        dataQuality * 0.20
-    )
-    +
-    (
-        stability * 0.15
-    )
-    +
-    (
-        eloAgreement * 0.15
-    )
-    +
-    (
-        strengthBonus * 0.075
-    )
-    +
-    (
-        formBonus * 0.075
-    );
+    10 +
+
+    separation * 0.35 +
+
+    favoriteBonus +
+
+    dataQuality * 0.15 +
+
+    stability * 0.12 +
+
+    eloAgreement * 0.10 +
+
+    strengthBonus * 0.18 +
+
+    formBonus * 0.10;
 
 
+    if (favoriteProbability >= 70)
+    confidence += 8;
 
-    return Math.round(
+else if (favoriteProbability >= 60)
+    confidence += 5;
 
-        clamp(
-            confidence,
-            20,
-            95
-        )
+else if (favoriteProbability >= 50)
+    confidence += 2;
 
-    );
+return Math.round(
+    clamp(
+        confidence,
+        25,
+        95
+    )
+);
 
 }
 
