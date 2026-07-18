@@ -157,6 +157,9 @@ const timeout = setTimeout(
   () => controller.abort(),
   10000
 );
+
+       await sleep(1200);
+       
        console.log("➡️ API CALL:", endpoint);
 
 
