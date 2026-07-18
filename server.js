@@ -115,7 +115,7 @@ const selectedMatches = matches
     return scoreB - scoreA;
 
   })
-  .slice(0, 5);
+  .slice(0, 1);
 
 
 console.log(
@@ -139,6 +139,21 @@ PRELOADED_ANALYSES =
   PRELOAD_TIME = Date.now();
 
   return PRELOADED_ANALYSES;
+
+}
+
+async function getVipAnalyses() {
+
+  const matches = await getMatches();
+
+  const selectedMatches = matches.slice(0,5);
+
+  console.log(
+    "🏆 VIP MATCHES:",
+    selectedMatches.length
+  );
+
+  return await analyzeMatches(selectedMatches);
 
 }
 
@@ -405,7 +420,7 @@ app.get("/vip/predictions", async (req, res) => {
   console.log("VIP ROUTE CALLED");
 
   try {
-    const analyses = await getDailyPredictions();
+    const analyses = await getVipAnalyses();
 
 const vipMatches = filterVipMatches(analyses);
 
