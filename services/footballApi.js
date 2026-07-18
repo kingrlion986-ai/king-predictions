@@ -283,6 +283,47 @@ const data = await apiGet(
     .filter(Boolean);
 }
 
+async function getCompetitionMatchesSmart(code) {
+
+  for (let start = 0; start <= 30; start += 3) {
+
+    const dateFrom = new Date();
+    dateFrom.setDate(dateFrom.getDate() + start);
+
+    const dateTo = new Date();
+    dateTo.setDate(dateTo.getDate() + start + 2);
+
+    const from = dateFrom.toISOString().split("T")[0];
+    const to = dateTo.toISOString().split("T")[0];
+
+    console.log(
+      `🔍 ${code} : ${from} -> ${to}`
+    );
+
+    const data = await apiGet(
+      `/competitions/${code}/matches?status=TIMED,SCHEDULED&dateFrom=${from}&dateTo=${to}`
+    );
+
+    if (
+      data &&
+      Array.isArray(data.matches) &&
+      data.matches.length > 0
+    ) {
+
+      console.log(
+        `✅ ${code} : ${data.matches.length} matchs trouvés`
+      );
+
+      return data.matches
+        .map(formatMatch)
+        .filter(Boolean);
+    }
+
+  }
+
+  return [];
+}
+
   
 /* =========================
    MATCH CLEANERS
@@ -445,8 +486,7 @@ async function getMatches() {
 
   console.log("📡 PRIMARY:", competition);
 
-  const result = await getCompetitionMatches(competition);
-
+  const result = await getCompetitionMatchesSmart(competition);
   console.log(competition, "=>", result.length);
 
   matches.push(...result);
@@ -479,7 +519,7 @@ console.log("APRÈS PUSH =", matches.length);
           );
 
 
-          const result = await getCompetitionMatches(competition);
+          const result = await getCompetitionMatchesSmart(competition);
 
 console.log("TYPE :", typeof result);
 console.log("IS ARRAY :", Array.isArray(result));
