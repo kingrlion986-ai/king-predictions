@@ -378,7 +378,7 @@ function filterMatches(matches) {
     );
 
 
-    return diffHours >= 0 && diffHours <= 48;
+    return diffHours >= 0 && diffHours <= 168;
 
   });
 
