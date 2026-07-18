@@ -81,12 +81,6 @@ function saveHistory(data) {
 
 async function getPreloadedAnalyses() {
 
-  if (ANALYSIS_RUNNING) {
-    console.log("⏳ ANALYSIS ALREADY RUNNING");
-    return PRELOADED_ANALYSES || [];
-  }
-
-
   if (
     PRELOADED_ANALYSES &&
     Date.now() - PRELOAD_TIME < PRELOAD_TTL
