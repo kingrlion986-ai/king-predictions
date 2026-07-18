@@ -84,6 +84,12 @@ function calculateExpectedGoals(
 const awayReliability =
     away.reliability ?? 0.7;
 
+   const homeStability =
+    (home.stability ?? 50) / 100;
+
+const awayStability =
+    (away.stability ?? 50) / 100;
+
 
 
     /*
@@ -134,9 +140,15 @@ let awayXG =
         homeDefense * 0.35
     );
 
-homeXG *= (0.85 + homeReliability * 0.15);
-awayXG *= (0.85 + awayReliability * 0.15);
+homeXG *=
+    (0.80 +
+    homeReliability * 0.10 +
+    homeStability * 0.10);
 
+awayXG *=
+    (0.80 +
+    awayReliability * 0.10 +
+    awayStability * 0.10);
 
 
     /*
@@ -192,9 +204,9 @@ const strengthDifference =
 
 const strengthFactor =
     clamp(
-        strengthDifference / 200,
-        -0.25,
-        0.25
+        strengthDifference / 150,
+        -0.35,
+        0.35
     );
 
 homeXG += strengthFactor;
@@ -235,6 +247,15 @@ awayXG -=
     ) * 0.20;
 
 
+   /*
+    Bonus attaque efficace
+*/
+
+homeXG +=
+    (home.over25Rate / 100) * 0.15;
+
+awayXG +=
+    (away.over25Rate / 100) * 0.15;
 
     /*
        Limites réalistes football
