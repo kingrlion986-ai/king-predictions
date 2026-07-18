@@ -66,6 +66,16 @@ const COMPETITION_LEVEL = {
 
 const TEAM_STRENGTHS = new Map();
 
+function getOpponentStrength(opponent) {
+
+  if (!opponent || !opponent.id) {
+    return 50;
+  }
+
+  return TEAM_STRENGTHS.get(opponent.id) || 50;
+
+}
+
 /* =========================
    BUILD TEAM STATISTICS
 ========================= */
@@ -123,14 +133,29 @@ function buildStats(matches, teamId) {
         Dernier match = poids maximum
       */
 
-      const weight =
-  2 -
-  (index / totalMatches);
-
-
-
       const isHome =
-        match.homeTeam.id === teamId;
+  match.homeTeam.id === teamId;
+
+const opponent =
+  isHome
+    ? match.awayTeam
+    : match.homeTeam;
+
+const opponentStrength =
+  getOpponentStrength(opponent);
+
+const competitionWeight =
+  COMPETITION_LEVEL[
+    match.competition?.code
+  ] || COMPETITION_LEVEL.DEFAULT;
+
+const opponentFactor =
+  0.75 + (opponentStrength / 100) * 0.5;
+
+const weight =
+  (2 - (index / totalMatches)) *
+  competitionWeight *
+  opponentFactor;
 
 
 
