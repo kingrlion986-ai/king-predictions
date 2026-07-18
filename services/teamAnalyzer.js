@@ -40,7 +40,31 @@ const RUNNING = new Map();
 const CACHE_DURATION =
   1000 * 60 * 60 * 6;
 
+const COMPETITION_LEVEL = {
 
+  // Top Europe
+  CL: 1.25,
+  PL: 1.20,
+  PD: 1.20,
+  SA: 1.18,
+  BL1: 1.18,
+  FL1: 1.16,
+
+  // Bons championnats
+  PPL: 1.10,
+  DED: 1.08,
+  BSA: 1.08,
+  ELC: 1.05,
+
+  // Deuxième divisions
+  BL2: 0.90,
+  EL2: 0.90,
+  SD: 0.88,
+
+  DEFAULT: 1.00
+};
+
+const TEAM_STRENGTHS = new Map();
 
 /* =========================
    BUILD TEAM STATISTICS
@@ -647,6 +671,8 @@ async function analyzeTeam(team) {
 
     const strength =
       computeStrength(stats);
+
+     TEAM_STRENGTHS.set(team.id, strength);
 
 
 
