@@ -768,6 +768,20 @@ async function preloadPredictions() {
 
 }
 
+startDailyScheduler(async () => {
+
+  // Réinitialise les caches
+  PRELOADED_ANALYSES = null;
+  PRELOAD_TIME = 0;
+
+  DAILY_PREDICTIONS = null;
+  DAILY_DATE = null;
+
+  // Reconstruit les prédictions
+  await getDailyPredictions();
+
+});
+
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log("KING PREDICTIONS V16 RUNNING ⚽🔥");
