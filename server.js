@@ -251,7 +251,7 @@ for (const match of uniqueMatches) {
     analyses.push(result);
   }
 
-  await sleep(1200);
+  await sleep(2500);
 
 }
     ANALYSIS_CACHE.set(
