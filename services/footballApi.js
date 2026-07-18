@@ -30,6 +30,26 @@ const SECONDARY_COMPETITIONS = [
   "PPL"
 ];
 
+/* =========================
+   COMPETITION WEIGHT SYSTEM
+========================= */
+
+const COMPETITION_WEIGHTS = {
+
+  PL: 1.20,
+  PD: 1.20,
+  SA: 1.15,
+  BL1: 1.15,
+  FL1: 1.10,
+
+  CL: 1.10,
+  DED: 0.90,
+  BSA: 0.95,
+  ELC: 0.85,
+  PPL: 0.80
+
+};
+
 function loadPersistentTeamCache() {
 
   try {
@@ -285,9 +305,17 @@ function formatMatch(match) {
     status: match.status,
 
     competition: {
-      code: match.competition?.code,
-      name: match.competition?.name
-    },
+
+  code: match.competition?.code,
+
+  name: match.competition?.name,
+
+  weight:
+    COMPETITION_WEIGHTS[
+      match.competition?.code
+    ] || 0.70
+
+},
 
     homeTeam: {
       id: match.homeTeam.id,
@@ -458,7 +486,9 @@ function addMatchQuality(matches) {
 
   const result = matches.map(match => {
 
-    let quality = 50;
+    let quality =
+50 *
+(match.competition?.weight || 1);
 
     if (
       bigTeams.some(team =>
