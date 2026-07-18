@@ -93,7 +93,7 @@ const CACHE = {
 
 
 const MATCH_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
-const TEAM_CACHE_TTL = 24 * 60 * 60 * 1000; // 6 heures
+const TEAM_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
 const PERSISTENT_TEAM_CACHE =
   loadPersistentTeamCache();
 
@@ -208,7 +208,7 @@ const timeout = setTimeout(
   10000
 );
 
-       await sleep(3000);
+       await sleep(6000);
        
        console.log("➡️ API CALL:", endpoint);
 
