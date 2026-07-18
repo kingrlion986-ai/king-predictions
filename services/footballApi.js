@@ -262,9 +262,17 @@ async function getCompetitionMatches(code) {
 
   console.log(">>> GET COMPETITION", code);
 
-  const data = await apiGet(
-    `/competitions/${code}/matches?status=TIMED,SCHEDULED`
-  );
+  const today = new Date();
+
+const dateFrom = today.toISOString().split("T")[0];
+
+const dateTo = new Date(
+  today.getTime() + 2 * 24 * 60 * 60 * 1000
+).toISOString().split("T")[0];
+
+const data = await apiGet(
+  `/competitions/${code}/matches?status=TIMED,SCHEDULED&dateFrom=${dateFrom}&dateTo=${dateTo}`
+);
 
   if (!data || !Array.isArray(data.matches)) {
     return [];
@@ -327,7 +335,7 @@ function filterMatches(matches) {
 
     // Garde uniquement les matchs entre maintenant
     // et les prochaines 48 heures
-    return diffHours >= 0 && diffHours <= 48;
+    return true;
 
   });
 
