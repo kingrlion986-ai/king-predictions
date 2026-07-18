@@ -111,6 +111,16 @@ console.time(timer);
 
         });
 
+        let finalConfidence = confidence;
+
+finalConfidence += poisson.dominance * 20;
+finalConfidence -= poisson.uncertainty * 0.15;
+
+finalConfidence = Math.max(
+    20,
+    Math.min(95, Math.round(finalConfidence))
+);
+
             // =========================
 // ADAPTIVE CONFIDENCE V17
 // =========================
