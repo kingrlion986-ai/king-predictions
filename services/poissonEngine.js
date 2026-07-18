@@ -183,13 +183,25 @@ for (let h = 0; h <= MAX_GOALS; h++) {
 
 expectedGoals /= total;
 
-   const dominance =
+const favoriteProbability = Math.max(
+    homeWin,
+    draw,
+    awayWin
+);
+
+const uncertainty =
     Number(
-        Math.abs(homeWin - awayWin)
-            .toFixed(2)
+        ((1 - favoriteProbability) * 100)
+        .toFixed(2)
     );
 
-    return {
+const dominance =
+    Number(
+        Math.abs(homeWin - awayWin)
+        .toFixed(2)
+    );
+
+return {
 
     probabilities: {
 
