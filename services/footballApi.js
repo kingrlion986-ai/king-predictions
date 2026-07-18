@@ -1,4 +1,6 @@
 const fetch = require("node-fetch");
+const fs = require("fs");
+const path = require("path");
 
 /* =========================
    CONFIGURATION
@@ -6,6 +8,7 @@ const fetch = require("node-fetch");
 
 const API_KEY = process.env.API_KEY;
 const BASE_URL = "https://api.football-data.org/v4";
+const TEAM_CACHE_FILE = path.join(__dirname, "..", "teamCache.json");
 
 /* =========================
    COMPETITIONS
@@ -27,6 +30,51 @@ const SECONDARY_COMPETITIONS = [
   "PPL"
 ];
 
+function loadPersistentTeamCache() {
+
+  try {
+
+    if (!fs.existsSync(TEAM_CACHE_FILE)) {
+      fs.writeFileSync(
+        TEAM_CACHE_FILE,
+        JSON.stringify({})
+      );
+    }
+
+    return JSON.parse(
+      fs.readFileSync(
+        TEAM_CACHE_FILE,
+        "utf8"
+      )
+    );
+
+  } catch (err) {
+
+    console.log("❌ TEAM CACHE LOAD:", err.message);
+
+    return {};
+
+  }
+
+}
+
+function savePersistentTeamCache(cache) {
+
+  try {
+
+    fs.writeFileSync(
+      TEAM_CACHE_FILE,
+      JSON.stringify(cache, null, 2)
+    );
+
+  } catch (err) {
+
+    console.log("❌ TEAM CACHE SAVE:", err.message);
+
+  }
+
+}
+
 
 /* =========================
    CACHE SYSTEM
@@ -46,6 +94,8 @@ const CACHE = {
 
 const MATCH_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 const TEAM_CACHE_TTL = 24 * 60 * 60 * 1000; // 6 heures
+const PERSISTENT_TEAM_CACHE =
+  loadPersistentTeamCache();
 
 
 
