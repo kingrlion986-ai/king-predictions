@@ -26,6 +26,10 @@ const {
   filterVipMatches
 } = require("./services/vipFilterEngine");
 
+const {
+  startDailyScheduler
+} = require("./services/dailyScheduler");
+
 const app = express();
 
 app.use(cors());
@@ -180,6 +184,21 @@ async function getDailyPredictions() {
   }
 
 }
+
+    startDailyScheduler(async () => {
+
+  console.log("♻️ RESET DAILY SYSTEM");
+
+  DAILY_PREDICTIONS = null;
+  DAILY_DATE = null;
+
+  PRELOADED_ANALYSES = null;
+  PRELOAD_TIME = 0;
+
+
+  await getDailyPredictions();
+
+});
 
 async function analyzeMatches(matches) {
 
@@ -747,13 +766,7 @@ async function preloadPredictions() {
 
 }
 
-// Préchargement désactivé sur plan gratuit API
-preloadPredictions();
 
-setInterval(
-  preloadPredictions,
-  30 * 60 * 1000
-);
 app.listen(PORT, "0.0.0.0", () => {
   console.log("KING PREDICTIONS V16 RUNNING ⚽🔥");
 });
