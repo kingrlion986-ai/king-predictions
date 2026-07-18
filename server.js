@@ -104,7 +104,7 @@ if (!matches || matches.length === 0) {
 
 // Sélection des meilleurs matchs disponibles
 const selectedMatches = matches
-  .slice(0, 3);
+  .slice(0, 1);
 
 
 console.log(
