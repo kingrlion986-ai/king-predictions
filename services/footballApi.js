@@ -670,15 +670,33 @@ console.log(matches.slice(0,3));
 ========================= */
 async function getTeamMatches(teamId) {
 
+  // 1. Cache mémoire
   const cached = CACHE.teamMatches.get(teamId);
 
   if (cached && Date.now() < cached.expiresAt) {
+    console.log("⚡ MEMORY CACHE:", teamId);
     return cached.data;
   }
 
+  // 2. Cache disque
+  const persistent = PERSISTENT_TEAM_CACHE[teamId];
+
+  if (
+    persistent &&
+    Date.now() < persistent.expiresAt
+  ) {
+
+    console.log("💾 DISK CACHE:", teamId);
+
+    CACHE.teamMatches.set(teamId, persistent);
+
+    return persistent.data;
+  }
+
+  // 3. API
   const data = await apiGet(
-  `/teams/${teamId}/matches?status=FINISHED`
-);
+    `/teams/${teamId}/matches?status=FINISHED`
+  );
 
   if (!data || !Array.isArray(data.matches)) {
     return [];
@@ -689,10 +707,19 @@ async function getTeamMatches(teamId) {
     .map(formatMatch)
     .filter(Boolean);
 
-  CACHE.teamMatches.set(teamId, {
+  const cacheEntry = {
     data: matches,
     expiresAt: Date.now() + TEAM_CACHE_TTL
-  });
+  };
+
+  // Sauvegarde mémoire
+  CACHE.teamMatches.set(teamId, cacheEntry);
+
+  // Sauvegarde disque
+  PERSISTENT_TEAM_CACHE[teamId] = cacheEntry;
+  savePersistentTeamCache(PERSISTENT_TEAM_CACHE);
+
+  console.log("💾 TEAM SAVED:", teamId);
 
   return matches;
 }
