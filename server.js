@@ -85,11 +85,30 @@ async function getPreloadedAnalyses() {
 
   const matches = await getMatches();
 
-const selectedMatches = matches.slice(0, 1);
+if (!matches || matches.length === 0) {
 
-console.log("🎯 MATCHES SELECTED FOR AI:", selectedMatches.length);
+  console.log("⚠️ NO MATCHES AVAILABLE");
 
-PRELOADED_ANALYSES = await analyzeMatches(selectedMatches);
+  PRELOADED_ANALYSES = [];
+
+  return [];
+
+}
+
+
+// Sélection des meilleurs matchs disponibles
+const selectedMatches = matches
+  .slice(0, 10);
+
+
+console.log(
+  "🎯 MATCHES SELECTED FOR AI:",
+  selectedMatches.length
+);
+
+
+PRELOADED_ANALYSES =
+  await analyzeMatches(selectedMatches);
 
   PRELOAD_TIME = Date.now();
 
@@ -101,22 +120,64 @@ async function getDailyPredictions() {
 
   const today = new Date().toISOString().split("T")[0];
 
+
+  // Cache du jour encore valide
   if (
     DAILY_PREDICTIONS &&
     DAILY_DATE === today
   ) {
+
     console.log("⚡ DAILY CACHE");
+
     return DAILY_PREDICTIONS;
+
   }
 
-  const analyses = await getPreloadedAnalyses();
 
-  DAILY_PREDICTIONS = analyses;
-  DAILY_DATE = today;
+  console.log("🔄 NEW DAILY PREDICTIONS");
 
-  console.log("✅ DAILY PREDICTIONS CREATED");
 
-  return DAILY_PREDICTIONS;
+  try {
+
+    const analyses = await getPreloadedAnalyses();
+
+
+    if (!analyses || analyses.length === 0) {
+
+      console.log(
+        "⚠️ NO PREDICTIONS FOUND"
+      );
+
+      return [];
+
+    }
+
+
+    DAILY_PREDICTIONS = analyses;
+
+    DAILY_DATE = today;
+
+
+    console.log(
+      "✅ DAILY PREDICTIONS CREATED:",
+      analyses.length
+    );
+
+
+    return DAILY_PREDICTIONS;
+
+
+  } catch (err) {
+
+    console.error(
+      "❌ DAILY PREDICTIONS ERROR:",
+      err.message
+    );
+
+
+    return [];
+
+  }
 
 }
 
