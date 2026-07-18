@@ -267,9 +267,9 @@ async function getCompetitionMatches(code) {
 const dateFrom = today.toISOString().split("T")[0];
 
 const dateTo = new Date(
-  today.getTime() + 2 * 24 * 60 * 60 * 1000
+  today.getTime() + 14 * 24 * 60 * 60 * 1000
 ).toISOString().split("T")[0];
-
+   
 const data = await apiGet(
   `/competitions/${code}/matches?status=TIMED,SCHEDULED&dateFrom=${dateFrom}&dateTo=${dateTo}`
 );
