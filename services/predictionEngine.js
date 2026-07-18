@@ -111,9 +111,60 @@ console.time(timer);
 
         });
 
+            // =========================
+// ADAPTIVE CONFIDENCE V17
+// =========================
+
+const strengthGap =
+    Math.abs(
+        homeStats.strength -
+        awayStats.strength
+    );
+
+
+let adjustedConfidence = confidence;
+
+
+// Bonus domination équipe
+
+if (strengthGap >= 20) {
+
+    adjustedConfidence += 12;
+
+}
+
+else if (strengthGap >= 10) {
+
+    adjustedConfidence += 6;
+
+}
+
+
+// Bonus fiabilité
+
+const reliabilityGap =
+    Math.abs(
+        homeStats.reliability -
+        awayStats.reliability
+    );
+
+
+if (reliabilityGap >= 0.20) {
+
+    adjustedConfidence += 5;
+
+}
+
+
+adjustedConfidence =
+Math.min(
+    Math.round(adjustedConfidence),
+    95
+);
+
     let predictionQuality = "LOW";
 
-if (confidence >= 70) {
+if (adjustedConfidence >= 70) {
     predictionQuality = "HIGH";
 }
 else if (confidence >= 55) {
@@ -237,7 +288,7 @@ console.log("BTTS CONF:", bttsConfidence);
 
     winner,
 
-    winnerConfidence: confidence,
+    winnerConfidence: adjustedConfidence,
 
                 quality: predictionQuality,
 
