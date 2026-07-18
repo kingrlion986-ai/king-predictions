@@ -45,7 +45,7 @@ const CACHE = {
 
 
 const MATCH_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
-const TEAM_CACHE_TTL = 6 * 60 * 60 * 1000; // 6 heures
+const TEAM_CACHE_TTL = 24 * 60 * 60 * 1000; // 6 heures
 
 
 
