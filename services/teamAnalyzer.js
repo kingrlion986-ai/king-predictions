@@ -331,120 +331,52 @@ function computeStability(stats) {
 
 function computeStrength(stats) {
 
+  let strength = 40;
 
-  let strength = 50;
+  // Attaque
+  strength += stats.avgScored * 8;
 
+  // Défense
+  strength += Math.max(
+    0,
+    2.5 - stats.avgConceded
+  ) * 6;
 
-
-  /*
-    Attaque
-  */
-
-  strength +=
-    stats.avgScored * 12;
-
-
-
-  /*
-    Défense
-  */
-
-  strength +=
-    Math.max(
-      0,
-      2.5 - stats.avgConceded
-    )
-    * 10;
-
-
-
-  /*
-    Résultats récents
-  */
-
+  // Résultats
   const points =
     (
       stats.wins * 3 +
       stats.draws
-    )
-    /
-    (
-      stats.played * 3
-    );
+    ) /
+    (stats.played * 3);
 
+  strength += points * 20;
 
+  // Avantage domicile / extérieur
+  strength += stats.homeAttack * 2;
+  strength += stats.awayAttack * 2;
+
+  // Clean sheets
   strength +=
-    points * 25;
+    (stats.cleanSheets / stats.played) * 5;
 
-
-
-  /*
-    Avantage domicile / extérieur
-  */
-
-  strength +=
-    stats.homeAttack * 4;
-
-
-  strength +=
-    stats.awayAttack * 4;
-
-
-
-  /*
-    Clean sheets
-  */
-
-  strength +=
-    (
-      stats.cleanSheets /
-      stats.played
-    )
-    * 8;
-
-
-
-  /*
-    Difficulté à marquer
-  */
-
+  // Difficulté à marquer
   strength -=
-    (
-      stats.failedToScore /
-      stats.played
-    )
-    * 12;
+    (stats.failedToScore / stats.played) * 8;
 
-
-
-  /*
-    Matchs offensifs
-  */
-
+  // Matchs offensifs
   strength +=
-    (
-      stats.over25Rate /
-      100
-    )
-    * 5;
+    (stats.over25Rate / 100) * 3;
 
-
-
-  /*
-    Régularité
-  */
-
+  // Régularité
   strength +=
-    computeStability(stats)
-    * 0.10;
-
-
+    computeStability(stats) * 0.05;
 
   return Math.round(
     clamp(
       strength,
-      10,
-      100
+      20,
+      95
     )
   );
 
