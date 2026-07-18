@@ -98,7 +98,9 @@ function analyzeMatrix(matrix) {
     let awayWin = 0;
 
     let btts = 0;
+    let over15 = 0;
     let over25 = 0;
+    let over35 = 0;
 
     let bestProbability = 0;
     let exactScore = "0-0";
@@ -127,6 +129,12 @@ function analyzeMatrix(matrix) {
 
             if ((h + a) >= 3)
                 over25 += p;
+
+           if ((h + a) >= 2)
+    over15 += p;
+
+if ((h + a) >= 4)
+    over35 += p;
 
             if (p > bestProbability) {
 
@@ -191,14 +199,19 @@ expectedGoals /= total;
 
     btts: Number((btts * 100).toFixed(2)),
 
+    over15: Number((over15 * 100).toFixed(2)),
+
     over25: Number((over25 * 100).toFixed(2)),
+
+    over35: Number((over35 * 100).toFixed(2)),
 
     under25: Number(((1 - over25) * 100).toFixed(2)),
 
     expectedGoals: Number(expectedGoals.toFixed(2)),
 
-    exactScore: {
+    uncertainty,
 
+    exactScore: {
         score: exactScore,
 
         probability: Number(
