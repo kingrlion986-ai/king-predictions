@@ -371,12 +371,14 @@ function filterMatches(matches) {
       match.homeTeam.name,
       "vs",
       match.awayTeam.name,
-      match.utcDate
+      match.utcDate,
+      "dans",
+      Math.round(diffHours),
+      "heures"
     );
 
-    // Garde uniquement les matchs entre maintenant
-    // et les prochaines 48 heures
-    return true;
+
+    return diffHours >= 0 && diffHours <= 48;
 
   });
 
