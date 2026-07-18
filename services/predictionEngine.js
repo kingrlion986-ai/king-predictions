@@ -124,7 +124,7 @@ adjustedConfidence -= poisson.uncertainty * 0.15;
 
 adjustedConfidence = Math.max(
     20,
-    Math.min(95, Math.round(adjustedConfidence))
+    Math.min(85, Math.round(adjustedConfidence))
 );
             // =========================
 // ADAPTIVE CONFIDENCE V17
@@ -170,16 +170,19 @@ if (reliabilityGap >= 0.20) {
 adjustedConfidence =
 Math.min(
     Math.round(adjustedConfidence),
-    95
+    85
 );
 
     let predictionQuality = "LOW";
 
-if (adjustedConfidence >= 70) {
+if (adjustedConfidence >= 75) {
     predictionQuality = "HIGH";
 }
-else if (adjustedConfidence >= 55) {
+else if (adjustedConfidence >= 60) {
     predictionQuality = "MEDIUM";
+}
+else {
+    predictionQuality = "LOW";
 }
     const homeScore =
     poisson.probabilities.homeWin +
