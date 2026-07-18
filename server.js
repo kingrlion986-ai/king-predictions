@@ -102,9 +102,29 @@ if (!matches || matches.length === 0) {
 }
 
 
-// Sélection des meilleurs matchs disponibles
+// Sélection intelligente des meilleurs matchs
 const selectedMatches = matches
-  .slice(0, 1);
+  .sort((a, b) => {
+
+    const scoreA =
+      (a.quality || 50);
+
+    const scoreB =
+      (b.quality || 50);
+
+    return scoreB - scoreA;
+
+  })
+  .slice(0, 5);
+
+
+console.log(
+  "🏆 TOP MATCHES SELECTED:",
+  selectedMatches.map(
+    m =>
+    `${m.homeTeam.name} vs ${m.awayTeam.name}`
+  )
+);
 
 
 console.log(
