@@ -133,7 +133,7 @@ setImmediate(processQueue);
    API RETRY CONFIG
 ========================= */
 
-const MAX_RETRIES = 1;
+const MAX_RETRIES = 3;
 
 
 /*
