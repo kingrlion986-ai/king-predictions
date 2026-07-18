@@ -104,7 +104,7 @@ if (!matches || matches.length === 0) {
 
 // Sélection des meilleurs matchs disponibles
 const selectedMatches = matches
-  .slice(0, 10);
+  .slice(0, 3);
 
 
 console.log(
@@ -250,6 +250,8 @@ for (const match of uniqueMatches) {
   if (result) {
     analyses.push(result);
   }
+
+  await sleep(1200);
 
 }
     ANALYSIS_CACHE.set(
