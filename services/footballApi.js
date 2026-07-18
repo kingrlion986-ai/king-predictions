@@ -304,11 +304,18 @@ function filterMatches(matches) {
 
   console.log("AVANT FILTER:", matches.length);
 
+  const now = new Date();
+
   const filtered = matches.filter(match => {
 
     if (!match.homeTeam || !match.awayTeam) {
       return false;
     }
+
+    const matchDate = new Date(match.utcDate);
+
+    const diffHours =
+      (matchDate - now) / (1000 * 60 * 60);
 
     console.log(
       "CHECK:",
@@ -318,7 +325,9 @@ function filterMatches(matches) {
       match.utcDate
     );
 
-    return true;
+    // Garde uniquement les matchs entre maintenant
+    // et les prochaines 48 heures
+    return diffHours >= 0 && diffHours <= 48;
 
   });
 
@@ -327,7 +336,6 @@ function filterMatches(matches) {
   return filtered;
 
 }
-  
 
 function addMatchQuality(matches) {
 
