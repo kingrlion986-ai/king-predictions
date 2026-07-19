@@ -58,6 +58,8 @@ const PRELOAD_TTL = 15 * 60 * 1000;
 
 let DAILY_BUILD_RUNNING = false;
 
+let DAILY_BUILD_PROMISE = null;
+
 function loadHistory() {
   try {
     if (!fs.existsSync(HISTORY_FILE)) {
@@ -160,6 +162,11 @@ async function getVipAnalyses() {
 async function getDailyPredictions() {
 
   const today = new Date().toISOString().split("T")[0];
+
+  if (DAILY_BUILD_RUNNING) {
+    console.log("⏳ DAILY BUILD ALREADY RUNNING");
+    return DAILY_BUILD_PROMISE;
+  }
 
 
   // Cache du jour encore valide
@@ -335,16 +342,10 @@ app.get("/free", async (req, res) => {
   try {
 
     if (FREE_RUNNING) {
-
-      console.log("⏳ FREE REQUEST WAITING");
-
-      const result = await FREE_RUNNING;
-      return res.json(result);
-
+        return res.json(await FREE_RUNNING);
     }
 
-
-    FREE_RUNNING = (async()=>{
+    FREE_RUNNING = (async () => {
 
       const analyses = await getDailyPredictions();
 
@@ -397,15 +398,15 @@ analysis.predictions.quality,
     res.json(result);
 
 
-  } catch(err){
+  } catch (err) {
 
-    console.error(err);
+    console.error("FREE ERROR:", err);
 
     res.status(500).json({
-      error:"Internal server error"
+        error: "Internal server error"
     });
 
-  } finally {
+} finally {
 
     FREE_RUNNING = null;
 
