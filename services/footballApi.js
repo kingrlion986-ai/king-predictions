@@ -571,7 +571,7 @@ async function getMatches() {
 
   console.log("📡 PRIMARY:", competition);
 
-  const result = await getCompetitionMatches(competition);
+  const result = await getCompetitionMatchesSmart(competition);
   console.log(competition, "=>", result.length);
 
   matches.push(...result);
