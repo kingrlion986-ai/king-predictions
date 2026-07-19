@@ -114,7 +114,7 @@ function buildStats(matches, teamId) {
   let over25 = 0;
   let btts = 0;
 
-
+let recentForm = 0;
 
   const totalMatches =
     matches.length || 1;
@@ -218,14 +218,17 @@ const weight =
 
 
 
-      if (goalsFor > goalsAgainst)
-        wins++;
-
-      else if (goalsFor === goalsAgainst)
-        draws++;
-
-      else
-        losses++;
+      if (goalsFor > goalsAgainst) {
+    wins++;
+    recentForm += weight * 3;
+}
+else if (goalsFor === goalsAgainst) {
+    draws++;
+    recentForm += weight;
+}
+else {
+    losses++;
+} 
 
 
 
@@ -316,6 +319,12 @@ const weight =
         totalMatches *
         100
       )
+
+     recentForm:
+  round(
+    recentForm /
+    weightTotal
+  )
 
   };
 
@@ -420,6 +429,8 @@ function computeStrength(stats) {
   // Régularité
   strength +=
     computeStability(stats) * 0.05;
+
+   strength += stats.recentForm * 4;
 
   return Math.round(
     clamp(
@@ -806,17 +817,7 @@ async function analyzeTeam(team) {
 
 
 
-      formPoints:
-        round(
-          (
-            stats.wins * 3 +
-            stats.draws
-          )
-          /
-          (
-            stats.played * 3
-          )
-        )
+      formPoints: stats.recentForm,
 
 
     };
