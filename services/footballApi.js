@@ -366,7 +366,7 @@ const data = await apiGet(
 
 async function getCompetitionMatchesSmart(code) {
 
-  for (let start = 0; start <= 30; start += 3) {
+  for (let start = 0; start <= 14; start += 7) {
 
     const dateFrom = new Date();
     dateFrom.setDate(dateFrom.getDate() + start);
@@ -384,6 +384,8 @@ async function getCompetitionMatchesSmart(code) {
     const data = await apiGet(
       `/competitions/${code}/matches?dateFrom=${from}&dateTo=${to}`
     );
+
+     console.log("RÉPONSE API :", JSON.stringify(data, null, 2));
 
      console.log(`${code} : API a renvoyé ${data?.matches?.length || 0} matchs`);
 
