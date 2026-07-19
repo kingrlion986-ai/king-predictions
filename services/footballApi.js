@@ -382,7 +382,7 @@ async function getCompetitionMatchesSmart(code) {
     );
 
     const data = await apiGet(
-      `/competitions/${code}/matches?status=TIMED,SCHEDULED&dateFrom=${from}&dateTo=${to}`
+      `/competitions/${code}/matches?dateFrom=${from}&dateTo=${to}`
     );
 
     if (
