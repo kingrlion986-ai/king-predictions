@@ -228,7 +228,7 @@ const timeout = setTimeout(
   10000
 );
 
-       await sleep(6000);
+       await sleep(1500);
        
        console.log("➡️ API CALL:", endpoint);
 
@@ -384,6 +384,8 @@ async function getCompetitionMatchesSmart(code) {
     const data = await apiGet(
       `/competitions/${code}/matches?dateFrom=${from}&dateTo=${to}`
     );
+
+     console.log(`${code} : API a renvoyé ${data?.matches?.length || 0} matchs`);
 
     if (
       data &&
