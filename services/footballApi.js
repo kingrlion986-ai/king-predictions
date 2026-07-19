@@ -602,7 +602,7 @@ if (matches.length < MIN_MATCHES) {
 
     console.log("📡 SECONDARY:", competition);
 
-    const result = await getCompetitionMatches(competition);
+    const result = await getCompetitionMatchesSmart(competition);
 
     console.log("TYPE :", typeof result);
     console.log("IS ARRAY :", Array.isArray(result));
