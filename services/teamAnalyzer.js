@@ -264,13 +264,34 @@ else {
   );
 
 
-  const weightTotal =
-    matches.reduce(
-      (sum,_,index)=>
-        sum +
-        (1 + index / totalMatches),
-      0
-    );
+  const weightTotal = matches.reduce((sum, match, index) => {
+
+  const isHome = match.homeTeam.id === teamId;
+
+  const opponent =
+    isHome
+      ? match.awayTeam
+      : match.homeTeam;
+
+  const opponentStrength =
+    getOpponentStrength(opponent);
+
+  const competitionWeight =
+    COMPETITION_LEVEL[
+      match.competition?.code
+    ] || COMPETITION_LEVEL.DEFAULT;
+
+  const opponentFactor =
+    0.75 + (opponentStrength / 100) * 0.5;
+
+  const weight =
+    (2 - (index / totalMatches)) *
+    competitionWeight *
+    opponentFactor;
+
+  return sum + weight;
+
+}, 0);
 
 
 
@@ -671,6 +692,10 @@ formScore: 50,
 
 
       };
+
+     momentum: 0,
+averageOpponentStrength: 50,
+formScore: 50,
 
 
 
