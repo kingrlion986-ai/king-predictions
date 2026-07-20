@@ -64,11 +64,11 @@ function calculateQuality(match) {
   */
 
   score +=
-    (
-      match.predictions.confidence || 0
-    )
-    *
-    0.35;
+(
+  match.predictions.winnerConfidence || 0
+)
+*
+0.35;
 
 
 
@@ -148,6 +148,23 @@ function calculateQuality(match) {
     *
     0.10;
 
+  score +=
+(
+  home.recentForm +
+  away.recentForm
+)
+/ 2
+*
+0.15;
+
+  score +=
+(
+  home.reliability +
+  away.reliability
+)
+*
+8;
+
 
 
   /*
@@ -166,6 +183,15 @@ function calculateQuality(match) {
 
   }
 
+  const probabilityGap =
+Math.abs(
+    probabilities.homeWin -
+    probabilities.awayWin
+);
+
+if (probabilityGap < 8) {
+    score -= 8;
+}
 
 
   return Math.round(
