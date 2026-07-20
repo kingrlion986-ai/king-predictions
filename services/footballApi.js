@@ -697,7 +697,7 @@ async function getMatches() {
         seulement si nécessaire
       */
 
-      const MIN_MATCHES = 20;
+      const MIN_MATCHES = 15;
 
 if (matches.length < MIN_MATCHES) {
 
