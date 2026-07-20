@@ -86,6 +86,9 @@ function buildStats(matches, teamId) {
    let homeWeight = 0;
    let awayWeight = 0;
 
+   let attackPower = 0;
+   let defensePower = 0;
+
 
   let weightedScored = 0;
   let weightedConceded = 0;
@@ -180,6 +183,9 @@ const weight =
             safe(
             match.score.fullTime.home
           );
+
+       attackPower += goalsFor * weight;
+defensePower += Math.max(0, 3 - goalsAgainst) * weight;
 
 
 
@@ -299,6 +305,9 @@ else {
     awayAttack: round(awayScored / Math.max(awayWeight, 1)),
     homeDefense: round(homeConceded / Math.max(homeWeight, 1)),
     awayDefense: round(awayConceded / Math.max(awayWeight, 1)),
+
+     attackPower: round(attackPower / weightTotal),
+     defensePower: round(defensePower / weightTotal),
      
     cleanSheets,
 
@@ -325,7 +334,6 @@ else {
     recentForm /
     weightTotal
   )
-
   };
 
 }
@@ -765,6 +773,9 @@ async function analyzeTeam(team) {
 
       avgConceded:
         stats.avgConceded,
+
+       attackPower: stats.attackPower,
+       defensePower: stats.defensePower,
 
 
 
