@@ -331,6 +331,15 @@ evaluateDecision({
     winner
 
 });
+
+    console.log(
+    "👑 AI DECISION:",
+    aiDecision.decision,
+    "| RISK:",
+    aiDecision.risk,
+    "| SCORE:",
+    aiDecision.score
+);
     
     const result = {
 
