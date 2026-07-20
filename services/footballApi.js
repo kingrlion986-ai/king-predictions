@@ -54,15 +54,15 @@ const COMPETITION_WEIGHTS = {
   DED: 0.90,
   BSA: 0.95,
   ELC: 0.85,
-  PPL: 0.80
+  PPL: 0.80,
 
+  // Deuxièmes divisions
   BL2: 0.95,
   FL2: 0.95,
   SD: 0.95,
-  SA2: 0.90,
+  SA2: 0.90
 
 };
-
 function loadPersistentTeamCache() {
 
   try {
