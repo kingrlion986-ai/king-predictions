@@ -315,26 +315,26 @@ else {
 
 
     over25Rate:
-      round(
-        over25 /
-        totalMatches *
-        100
-      ),
+  round(
+    over25 /
+    totalMatches *
+    100
+  ),
 
+bttsRate:
+  round(
+    btts /
+    totalMatches *
+    100
+  ),
 
-    bttsRate:
-      round(
-        btts /
-        totalMatches *
-        100
-      )
-
-     recentForm:
+recentForm:
   round(
     recentForm /
     weightTotal
   )
-  };
+
+};
 
 }
 /* =========================
