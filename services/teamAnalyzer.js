@@ -166,31 +166,18 @@ const weight =
   competitionWeight *
   opponentFactor;
 
-opponentStrengthTotal += opponentStrength * weight;
+opponentStrengthTotal +=
+  opponentStrength * weight;
 
+const goalsFor =
+  isHome
+    ? safe(match.score.fullTime.home)
+    : safe(match.score.fullTime.away);
 
-
-      const goalsFor =
-        isHome
-        ? safe(
-            match.score.fullTime.home
-          )
-        :
-            safe(
-            match.score.fullTime.away
-          );
-
-
-
-      const goalsAgainst =
-        isHome
-        ? safe(
-            match.score.fullTime.away
-          )
-        :
-            safe(
-            match.score.fullTime.home
-          );
+const goalsAgainst =
+  isHome
+    ? safe(match.score.fullTime.away)
+    : safe(match.score.fullTime.home);
 
        attackPower += goalsFor * weight;
 defensePower += Math.max(0, 3 - goalsAgainst) * weight;
@@ -675,6 +662,12 @@ async function analyzeTeam(team) {
 
 
         formPoints:0.5
+
+         momentum: 0,
+
+averageOpponentStrength: 50,
+
+formScore: 50,
 
 
       };
