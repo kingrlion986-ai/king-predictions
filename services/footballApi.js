@@ -366,13 +366,17 @@ async function getCompetitionMatches(code) {
 
 
   const data = await apiGet(
-    `/competitions/${code}/matches?dateFrom=${dateFrom}&dateTo=${dateTo}`
-  );
-
+  `/competitions/${code}/matches`
+);
 
   if (!data || !Array.isArray(data.matches)) {
     return [];
   }
+
+   console.log(
+  "MATCHES API BRUT:",
+  data.matches.length
+);
 
 
   return data.matches
