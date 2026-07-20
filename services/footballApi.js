@@ -360,28 +360,78 @@ async function getCompetitionMatches(code) {
 
   const dateFrom = today.toISOString().split("T")[0];
 
-  const dateTo = new Date(
+  const futureDate = new Date(
     today.getTime() + 14 * 24 * 60 * 60 * 1000
-  ).toISOString().split("T")[0];
+  );
+
+  const dateTo = futureDate.toISOString().split("T")[0];
 
 
-  const data = await apiGet(
-  `/competitions/${code}/matches`
-);
+  try {
 
-  if (!data || !Array.isArray(data.matches)) {
+    const data = await apiGet(
+      `/competitions/${code}/matches?dateFrom=${dateFrom}&dateTo=${dateTo}`
+    );
+
+
+    if (
+      !data ||
+      !Array.isArray(data.matches)
+    ) {
+
+      console.log(
+        "⚠️ NO MATCHES FOR COMPETITION:",
+        code
+      );
+
+      return [];
+
+    }
+
+
+    console.log(
+      "MATCHES API BRUT:",
+      data.matches.length
+    );
+
+
+    const matches = data.matches
+      .map(formatMatch)
+      .filter(Boolean)
+      .filter(match => {
+
+        const matchDate =
+          new Date(match.utcDate);
+
+
+        return (
+          matchDate >= today &&
+          matchDate <= futureDate
+        );
+
+      });
+
+
+    console.log(
+      "MATCHES APRÈS DATE FILTER:",
+      matches.length
+    );
+
+
+    return matches;
+
+
+  } catch (error) {
+
+    console.error(
+      "❌ GET COMPETITION ERROR:",
+      code,
+      error.message
+    );
+
     return [];
+
   }
-
-   console.log(
-  "MATCHES API BRUT:",
-  data.matches.length
-);
-
-
-  return data.matches
-    .map(formatMatch)
-    .filter(Boolean);
 
 }
 
@@ -674,9 +724,9 @@ if (matches.length < MIN_MATCHES) {
 
        matches = removeDuplicates(matches);
 
-matches = filterMatches(matches);
-
 matches = addMatchQuality(matches);
+
+matches = filterMatches(matches);
 
 matches.sort((a, b) => {
 
