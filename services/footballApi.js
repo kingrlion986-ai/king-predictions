@@ -437,65 +437,66 @@ async function getCompetitionMatches(code) {
 
 async function getCompetitionMatchesSmart(code) {
 
-  for (let start = 0; start <= 60; start += 7) {
-
   const dateFrom = new Date();
-  dateFrom.setDate(dateFrom.getDate() + start);
 
   const dateTo = new Date();
-  dateTo.setDate(dateTo.getDate() + start + 6);
-    const from = dateFrom.toISOString().split("T")[0];
-    const to = dateTo.toISOString().split("T")[0];
 
-    console.log(
-      `🔍 ${code} : ${from} -> ${to}`
-    );
-
-    const data = await apiGet(
-      `/competitions/${code}/matches?dateFrom=${from}&dateTo=${to}`
-    );
-
-     if (
-    data &&
-    data.resultSet &&
-    data.resultSet.count === 0
-) {
-
-    console.log(
-        `ℹ️ ${code}: aucun match sur cette période`
-    );
-
-     }
-
-     console.log(
-  `${code} : ${data?.resultSet?.count || 0} matchs`
-);
-
-     console.log(`${code} : API a renvoyé ${data?.matches?.length || 0} matchs`);
-
-    if (
-      data &&
-      Array.isArray(data.matches) &&
-      data.matches.length > 0
-    ) {
-
-      console.log(
-        `✅ ${code} : ${data.matches.length} matchs trouvés`
-      );
-
-      return data.matches
-  .map(formatMatch)
-  .filter(Boolean)
-  .sort(
-    (a, b) =>
-      new Date(a.utcDate) -
-      new Date(b.utcDate)
+  dateTo.setDate(
+    dateTo.getDate() + 60
   );
-    }
+
+  const from =
+    dateFrom
+      .toISOString()
+      .split("T")[0];
+
+  const to =
+    dateTo
+      .toISOString()
+      .split("T")[0];
+
+
+  console.log(
+    `🔍 ${code} : ${from} -> ${to}`
+  );
+
+
+  const data = await apiGet(
+    `/competitions/${code}/matches?dateFrom=${from}&dateTo=${to}`
+  );
+
+
+  if (
+    !data ||
+    !Array.isArray(data.matches)
+  ) {
+
+    console.log(
+      `ℹ️ ${code}: aucun match`
+    );
+
+    return [];
 
   }
 
-  return [];
+
+  console.log(
+    `${code} : ${data.matches.length} matchs trouvés`
+  );
+
+
+  return data.matches
+
+    .map(formatMatch)
+
+    .filter(Boolean)
+
+    .sort(
+      (a, b) =>
+        new Date(a.utcDate) -
+        new Date(b.utcDate)
+    );
+
 }
 
   
