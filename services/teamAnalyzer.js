@@ -682,7 +682,7 @@ async function analyzeTeam(team) {
         bttsRate:50,
 
 
-        formPoints:0.5
+        formPoints:0.5,
 
          momentum: 0,
 
@@ -692,11 +692,6 @@ formScore: 50,
 
 
       };
-
-     momentum: 0,
-averageOpponentStrength: 50,
-formScore: 50,
-
 
 
       CACHE.set(
