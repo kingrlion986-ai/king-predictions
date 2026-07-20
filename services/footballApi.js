@@ -481,6 +481,13 @@ function filterMatches(matches) {
 
     const matchDate = new Date(match.utcDate);
 
+     const maxDate = new Date();
+maxDate.setDate(maxDate.getDate() + 60);
+
+if (matchDate > maxDate) {
+  return false;
+}
+
     const diffHours =
       (matchDate - now) / (1000 * 60 * 60);
 
@@ -496,7 +503,7 @@ function filterMatches(matches) {
     );
 
 
-    return diffHours >= 0 && diffHours <= 168;
+    return diffHours >= 0 && diffHours <= 1440;
 
   });
 
