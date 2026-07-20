@@ -153,8 +153,6 @@ const opponent =
 const opponentStrength =
   getOpponentStrength(opponent);
 
-       opponentStrengthTotal += opponentStrength * weight;
-       
 const competitionWeight =
   COMPETITION_LEVEL[
     match.competition?.code
@@ -167,6 +165,8 @@ const weight =
   (2 - (index / totalMatches)) *
   competitionWeight *
   opponentFactor;
+
+opponentStrengthTotal += opponentStrength * weight;
 
 
 
@@ -848,6 +848,19 @@ async function analyzeTeam(team) {
 
       formPoints: stats.recentForm,
 
+       momentum:
+  stats.momentum,
+
+averageOpponentStrength:
+  stats.averageOpponentStrength,
+
+formScore:
+  Math.round(
+    strength * 0.45 +
+    stability * 0.30 +
+    reliability * 100 * 0.25
+  ),
+
 
     };
 
@@ -891,20 +904,6 @@ async function analyzeTeam(team) {
     team.id,
     promise
   );
-
-   momentum: stats.momentum,
-
-averageOpponentStrength:
-stats.averageOpponentStrength,
-
-formScore:
-Math.round(
-(
-strength * 0.45 +
-stability * 0.30 +
-reliability * 100 * 0.25
-)
-),
 
 
 
