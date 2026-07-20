@@ -700,25 +700,34 @@ matches.sort((a, b) => {
 
 
 
+            console.log(
+        "🔥 MATCHES TOTAL:",
+        matches.length
+      );
+
       console.log(
-  "🔥 MATCHES TOTAL:",
-  matches.length
-);
+        "TOTAL MATCHES RETURNED =",
+        matches.length
+      );
 
-console.log("TOTAL MATCHES RETURNED =", matches.length);
-console.log(matches.slice(0,3));
+      console.log(matches.slice(0,3));
 
-return matches;
+      return matches;
 
-} finally {
 
-  MATCH_LOADING = null;
+    } finally {
+
+      MATCH_LOADING = null;
+
+    }
+
+
+  })();
+
+
+  return MATCH_LOADING;
 
 }
-
-})();
-
-
 
 /* =========================
    TEAM MATCHES
