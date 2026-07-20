@@ -503,7 +503,7 @@ if (matchDate > maxDate) {
     );
 
 
-    return diffHours >= 0 && diffHours <= 1440;
+    return diffHours >= 0 && diffHours <= 168;
 
   });
 
@@ -680,23 +680,25 @@ matches = addMatchQuality(matches);
 
 matches.sort((a, b) => {
 
+  const dateA = new Date(a.utcDate);
+  const dateB = new Date(b.utcDate);
 
-        if (
-          b.quality !== a.quality
-        ) {
+  const daysA =
+    (dateA - new Date()) / (1000 * 60 * 60 * 24);
 
-          return b.quality - a.quality;
-
-        }
-
-
-        return (
-          new Date(a.utcDate) -
-          new Date(b.utcDate)
-        );
+  const daysB =
+    (dateB - new Date()) / (1000 * 60 * 60 * 24);
 
 
-      });
+  // priorité aux matchs proches
+  if (Math.abs(daysA - daysB) > 3) {
+    return daysA - daysB;
+  }
+
+  // ensuite qualité
+  return b.quality - a.quality;
+
+});
 
 
 
