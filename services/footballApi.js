@@ -22,23 +22,22 @@ const PRIMARY_COMPETITIONS = [
   "FL1"
 ];
 
+
 const SECONDARY_COMPETITIONS = [
 
-  // Coupes / autres bons niveaux
+  // Bons championnats
   "CL",
   "DED",
   "BSA",
   "PPL",
 
-  // Deuxièmes divisions Europe
+  // Deuxièmes divisions
   "ELC",   // Championship Angleterre
-  "BL2",   // Bundesliga 2 Allemagne
+  "BL2",   // Bundesliga 2
   "FL2",   // Ligue 2 France
   "SD",    // Segunda Espagne
-  "SA2"    // Serie B Italie (si disponible API)
-
+  "SA2"    // Serie B Italie
 ];
-
 /* =========================
    COMPETITION WEIGHT SYSTEM
 ========================= */
