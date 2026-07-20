@@ -241,7 +241,7 @@ const timeout = setTimeout(
   10000
 );
 
-       await sleep(1500);
+       await sleep(3000);
        
        console.log("➡️ API CALL:", endpoint);
 
