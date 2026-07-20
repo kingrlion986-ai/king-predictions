@@ -280,6 +280,36 @@ else if (xg.totalExpectedGoals <= 2) {
 
 console.log("OVER CONF:", over25Confidence);
 console.log("BTTS CONF:", bttsConfidence);
+
+    // =========================
+// FINAL AI SCORE V18
+// =========================
+
+const finalAIScore =
+(
+    adjustedConfidence * 0.40
+)
++
+(
+    poisson.dominance * 100 * 0.25
+)
++
+(
+    (homeStats.stability + awayStats.stability) / 2 * 0.20
+)
++
+(
+    (homeStats.reliability + awayStats.reliability) * 50 * 0.15
+);
+
+
+const aiRating =
+Math.round(
+    Math.min(
+        100,
+        finalAIScore
+    )
+);
     
     const result = {
 
@@ -302,6 +332,8 @@ console.log("BTTS CONF:", bttsConfidence);
     winner,
 
     winnerConfidence: adjustedConfidence,
+
+            aiRating,
 
                 quality: predictionQuality,
 
