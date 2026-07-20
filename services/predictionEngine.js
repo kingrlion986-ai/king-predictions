@@ -14,6 +14,9 @@ const {
     savePrediction
 } = require("./historyEngine");
 
+const {
+    evaluateDecision
+} = require("./decisionEngine");
 /* =========================
    CACHE
 ========================= */
@@ -311,6 +314,23 @@ Math.round(
         finalAIScore
     )
 );
+
+    const aiDecision =
+evaluateDecision({
+
+    confidence: adjustedConfidence,
+
+    poisson,
+
+    homeStats,
+
+    awayStats,
+
+    eloProbability,
+
+    winner
+
+});
     
     const result = {
 
@@ -333,6 +353,8 @@ Math.round(
     winner,
 
     winnerConfidence: adjustedConfidence,
+
+            aiDecision,
 
             aiRating,
 
