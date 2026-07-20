@@ -23,11 +23,20 @@ const PRIMARY_COMPETITIONS = [
 ];
 
 const SECONDARY_COMPETITIONS = [
+
+  // Coupes / autres bons niveaux
   "CL",
   "DED",
   "BSA",
-  "ELC",
-  "PPL"
+  "PPL",
+
+  // Deuxièmes divisions Europe
+  "ELC",   // Championship Angleterre
+  "BL2",   // Bundesliga 2 Allemagne
+  "FL2",   // Ligue 2 France
+  "SD",    // Segunda Espagne
+  "SA2"    // Serie B Italie (si disponible API)
+
 ];
 
 /* =========================
@@ -47,6 +56,11 @@ const COMPETITION_WEIGHTS = {
   BSA: 0.95,
   ELC: 0.85,
   PPL: 0.80
+
+  BL2: 0.95,
+  FL2: 0.95,
+  SD: 0.95,
+  SA2: 0.90,
 
 };
 
