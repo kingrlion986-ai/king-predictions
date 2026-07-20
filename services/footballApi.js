@@ -498,7 +498,6 @@ async function getCompetitionMatchesSmart(code) {
     );
 
 }
-
   
 /* =========================
    MATCH CLEANERS
