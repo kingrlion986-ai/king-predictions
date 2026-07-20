@@ -358,23 +358,27 @@ async function getCompetitionMatches(code) {
 
   const today = new Date();
 
-const dateFrom = today.toISOString().split("T")[0];
+  const dateFrom = today.toISOString().split("T")[0];
 
-const dateTo = new Date(
-  today.getTime() + 14 * 24 * 60 * 60 * 1000
-).toISOString().split("T")[0];
-   
-const data = await apiGet(
-  `/competitions/${code}/matches?dateFrom=${dateFrom}&dateTo=${dateTo}`
-);
+  const dateTo = new Date(
+    today.getTime() + 14 * 24 * 60 * 60 * 1000
+  ).toISOString().split("T")[0];
+
+
+  const data = await apiGet(
+    `/competitions/${code}/matches?dateFrom=${dateFrom}&dateTo=${dateTo}`
+  );
+
 
   if (!data || !Array.isArray(data.matches)) {
     return [];
   }
 
+
   return data.matches
     .map(formatMatch)
     .filter(Boolean);
+
 }
 
 async function getCompetitionMatchesSmart(code) {
