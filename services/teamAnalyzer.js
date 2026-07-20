@@ -86,6 +86,9 @@ function getOpponentStrength(opponent) {
 
 function buildStats(matches, teamId) {
 
+   let momentum = 0;
+   let opponentStrengthTotal = 0;
+
    let homeWeight = 0;
    let awayWeight = 0;
 
@@ -150,6 +153,8 @@ const opponent =
 const opponentStrength =
   getOpponentStrength(opponent);
 
+       opponentStrengthTotal += opponentStrength * weight;
+       
 const competitionWeight =
   COMPETITION_LEVEL[
     match.competition?.code
@@ -230,14 +235,16 @@ defensePower += Math.max(0, 3 - goalsAgainst) * weight;
       if (goalsFor > goalsAgainst) {
     wins++;
     recentForm += weight * 3;
+    momentum += 3 * weight;
 }
 else if (goalsFor === goalsAgainst) {
     draws++;
     recentForm += weight;
+    momentum += 1 * weight;
 }
 else {
     losses++;
-} 
+}
 
 
 
@@ -289,6 +296,12 @@ else {
     draws,
     losses,
 
+
+     momentum: round(momentum / weightTotal),
+
+averageOpponentStrength: round(
+    opponentStrengthTotal / weightTotal
+),
 
     avgScored:
       round(
@@ -403,7 +416,7 @@ function computeStrength(stats) {
   let strength = 40;
 
   // Attaque
-  strength += stats.avgScored * 8;
+strength += stats.avgScored * 6;
 
   // Défense
   strength += Math.max(
@@ -427,8 +440,7 @@ function computeStrength(stats) {
 
   // Clean sheets
   strength +=
-    (stats.cleanSheets / stats.played) * 5;
-
+(stats.cleanSheets / stats.played) * 8;
   // Difficulté à marquer
   strength -=
     (stats.failedToScore / stats.played) * 8;
@@ -439,9 +451,11 @@ function computeStrength(stats) {
 
   // Régularité
   strength +=
-    computeStability(stats) * 0.05;
+computeStability(stats) * 0.15;
 
-   strength += stats.recentForm * 4;
+   strength += stats.recentForm * 6;
+
+   strength += stats.momentum * 5;
 
   return Math.round(
     clamp(
@@ -877,6 +891,20 @@ async function analyzeTeam(team) {
     team.id,
     promise
   );
+
+   momentum: stats.momentum,
+
+averageOpponentStrength:
+stats.averageOpponentStrength,
+
+formScore:
+Math.round(
+(
+strength * 0.45 +
+stability * 0.30 +
+reliability * 100 * 0.25
+)
+),
 
 
 
