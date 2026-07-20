@@ -795,6 +795,9 @@ async function analyzeTeam(team) {
       awayDefense:
         stats.awayDefense,
 
+       attackPower: stats.attackPower,
+       defensePower: stats.defensePower,
+
 
 
       wins:
