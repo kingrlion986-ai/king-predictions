@@ -189,6 +189,18 @@ const favoriteProbability = Math.max(
     awayWin
 );
 
+   const secondProbability = Math.max(
+    Math.min(homeWin, draw),
+    Math.min(
+        Math.max(homeWin, draw),
+        awayWin
+    )
+);
+
+const predictionGap =
+    favoriteProbability -
+    secondProbability;
+
 const uncertainty =
     Number(
         ((1 - favoriteProbability) * 100)
@@ -197,10 +209,18 @@ const uncertainty =
 
 const dominance =
     Number(
-        Math.abs(homeWin - awayWin)
-        .toFixed(2)
+        (
+            predictionGap * 100
+        ).toFixed(2)
     );
 
+   const matchScore =
+(
+    favoriteProbability * 40 +
+    dominance * 0.35 +
+    (1 - uncertainty / 100) * 25
+);
+   
 return {
 
     probabilities: {
@@ -226,6 +246,9 @@ return {
     under25: Number(((1 - over25) * 100).toFixed(2)),
 
     expectedGoals: Number(expectedGoals.toFixed(2)),
+
+   matchScore:
+Number(matchScore.toFixed(2)),
 
     uncertainty,
 
