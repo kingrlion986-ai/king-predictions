@@ -600,7 +600,7 @@ async function getMatches() {
 
   console.log("📡 PRIMARY:", competition);
 
-  const result = await getCompetitionMatchesSmart(competition);
+  const result = await getCompetitionMatches(competition);
   console.log(competition, "=>", result.length);
 
   matches.push(...result);
@@ -631,7 +631,7 @@ if (matches.length < MIN_MATCHES) {
 
     console.log("📡 SECONDARY:", competition);
 
-    const result = await getCompetitionMatchesSmart(competition);
+    const result = await getCompetitionMatches(competition);
 
     console.log("TYPE :", typeof result);
     console.log("IS ARRAY :", Array.isArray(result));
