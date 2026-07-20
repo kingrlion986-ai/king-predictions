@@ -47,17 +47,21 @@ function calculateExpectedGoals(
     */
 
     const homeAttack =
-        (
-            home.homeAttack * 0.45
-        )
-        +
-        (
-            home.avgScored * 0.35
-        )
-        +
-        (
-            home.formPoints * 0.20
-        );
+    (
+        home.attackPower * 0.35
+    )
+    +
+    (
+        home.homeAttack * 0.30
+    )
+    +
+    (
+        home.avgScored * 0.20
+    )
+    +
+    (
+        home.formPoints * 0.15
+    );
 
 
 
@@ -66,17 +70,21 @@ function calculateExpectedGoals(
     */
 
     const awayAttack =
-        (
-            away.awayAttack * 0.45
-        )
-        +
-        (
-            away.avgScored * 0.35
-        )
-        +
-        (
-            away.formPoints * 0.20
-        );
+    (
+        away.attackPower * 0.35
+    )
+    +
+    (
+        away.awayAttack * 0.30
+    )
+    +
+    (
+        away.avgScored * 0.20
+    )
+    +
+    (
+        away.formPoints * 0.15
+    );
 
    const homeReliability =
     home.reliability ?? 0.7;
@@ -97,24 +105,32 @@ const awayStability =
     */
 
     const awayDefense =
-        (
-            away.awayDefense * 0.50
-        )
-        +
-        (
-            away.avgConceded * 0.50
-        );
+(
+    away.defensePower * 0.40
+)
++
+(
+    away.awayDefense * 0.30
+)
++
+(
+    away.avgConceded * 0.30
+);
 
 
 
     const homeDefense =
-        (
-            home.homeDefense * 0.50
-        )
-        +
-        (
-            home.avgConceded * 0.50
-        );
+(
+    home.defensePower * 0.40
+)
++
+(
+    home.homeDefense * 0.30
+)
++
+(
+    home.avgConceded * 0.30
+);
 
 
 
