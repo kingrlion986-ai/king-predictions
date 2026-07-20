@@ -65,10 +65,11 @@ console.time(timer);
         return cached.data;
     }
 
-    const [homeStats, awayStats] = await Promise.all([
-    analyzeTeam(match.homeTeam),
-    analyzeTeam(match.awayTeam)
-]);
+    const homeStats =
+    await analyzeTeam(match.homeTeam);
+
+const awayStats =
+    await analyzeTeam(match.awayTeam);
     const homeElo =
         getTeamElo(match.homeTeam.id);
 
