@@ -1,79 +1,108 @@
 /* =========================
-   VIP FILTER ENGINE V18
+VIP FILTER ENGINE V19
 ========================= */
-
 
 function clamp(value, min, max) {
 
-    return Math.max(
-        min,
-        Math.min(
-            max,
-            value
-        )
-    );
+return Math.max(
+    min,
+    Math.min(
+        max,
+        value
+    )
+);
 
 }
 
+/*
+Récupère la confiance principale
+de manière compatible avec le modèle
+*/
+
+function getModelConfidence(predictions) {
+
+return (
+
+    predictions.winnerConfidence ??
+
+    predictions.confidence ??
+
+    0
+
+);
+
+}
 
 /*
-    Vérifie si un match possède
-    un avantage statistique réel
+Vérifie si un match possède
+un avantage statistique réel
 */
 
 function calculateVIPScore(match) {
 
-
-    let score = 0;
-
-
-    const predictions =
-        match.predictions;
+let score = 0;
 
 
-    const home =
-        match.teamStats.home;
+const predictions =
+    match.predictions;
 
 
-    const away =
-        match.teamStats.away;
+const home =
+    match.teamStats.home;
 
 
-
-    /*
-       Qualité globale
-    */
-
-    score +=
-        (
-            match.qualityScore || 0
-        )
-        *
-        0.35;
+const away =
+    match.teamStats.away;
 
 
+/*
+   =========================
+   QUALITÉ GLOBALE
+   =========================
+*/
 
-    /*
-       Confiance modèle
-    */
-
-    score +=
-        (
-            predictions.confidence || 0
-        )
-        *
-        0.30;
+score +=
+    (
+        match.qualityScore || 0
+    )
+    *
+    0.35;
 
 
+/*
+   =========================
+   CONFIANCE MODÈLE
+   =========================
+*/
 
-    /*
-       Écart probabilités
+const confidence =
+    getModelConfidence(
+        predictions
+    );
 
-       Évite les faux favoris
-    */
 
-    const probabilities =
-        predictions.probabilities;
+score +=
+    confidence
+    *
+    0.30;
+
+
+/*
+   =========================
+   ÉCART PROBABILITÉS
+   =========================
+*/
+
+const probabilities =
+    predictions.probabilities;
+
+
+if (
+    probabilities &&
+    typeof probabilities.homeWin === "number" &&
+    typeof probabilities.draw === "number" &&
+    typeof probabilities.awayWin === "number"
+) {
 
 
     const values = [
@@ -89,7 +118,7 @@ function calculateVIPScore(match) {
 
     const sorted =
         [...values].sort(
-            (a,b)=>b-a
+            (a, b) => b - a
         );
 
 
@@ -103,111 +132,171 @@ function calculateVIPScore(match) {
         *
         0.20;
 
+}
 
 
-    /*
-       Stabilité équipes
-    */
+/*
+   =========================
+   STABILITÉ
+   =========================
+*/
 
-    score +=
-
-        (
-            home.stability +
-            away.stability
-        )
-        /
-        2
-        *
-        0.10;
+const homeStability =
+    home.stability ?? 50;
 
 
-
-    /*
-       Pénalité manque de données
-    */
-
-    if (
-
-        home.played < 5 ||
-        away.played < 5
-
-    ) {
-
-        score -= 15;
-
-    }
+const awayStability =
+    away.stability ?? 50;
 
 
+score +=
 
-    return Math.round(
-        clamp(
-            score,
-            0,
-            100
-        )
+    (
+        homeStability +
+        awayStability
+    )
+    /
+    2
+    *
+    0.10;
+
+
+/*
+   =========================
+   QUALITÉ DES DONNÉES
+   =========================
+*/
+
+if (
+
+    home.played < 5 ||
+    away.played < 5
+
+) {
+
+    score -= 15;
+
+}
+
+
+/*
+   =========================
+   FORME RÉCENTE
+   =========================
+*/
+
+const homeForm =
+    home.formPoints ?? 0;
+
+
+const awayForm =
+    away.formPoints ?? 0;
+
+
+const formGap =
+    Math.abs(
+        homeForm -
+        awayForm
+    );
+
+
+score +=
+    clamp(
+        formGap * 1.5,
+        0,
+        10
+    );
+
+
+/*
+   =========================
+   FORCE DES ÉQUIPES
+   =========================
+*/
+
+const strengthGap =
+    Math.abs(
+        (home.strength ?? 0) -
+        (away.strength ?? 0)
+    );
+
+
+score +=
+    clamp(
+        strengthGap * 0.25,
+        0,
+        10
+    );
+
+
+/*
+   =========================
+   SCORE FINAL
+   =========================
+*/
+
+return Math.round(
+    clamp(
+        score,
+        0,
+        100
+    )
+);
+
+}
+
+/*
+Filtre VIP strict
+*/
+
+function filterVipMatches(matches) {
+
+return matches
+
+    .map(match => ({
+
+        ...match,
+
+        vipScore:
+            calculateVIPScore(match)
+
+    }))
+
+
+    .filter(match => {
+
+
+        const confidence =
+            getModelConfidence(
+                match.predictions
+            );
+
+
+        return (
+
+            match.vipScore >= 75
+
+            &&
+
+            confidence >= 65
+
+        );
+
+    })
+
+
+    .sort(
+        (a, b) =>
+            b.vipScore -
+            a.vipScore
     );
 
 }
 
-
-
-
-
-/*
-    Filtre VIP strict
-*/
-
-function filterVIPMatches(matches) {
-
-
-    return matches
-
-        .map(match => ({
-
-            ...match,
-
-            vipScore:
-                calculateVIPScore(match)
-
-        }))
-
-
-        .filter(match => {
-
-
-            return (
-
-                match.vipScore >= 75
-
-                &&
-
-                match.predictions.confidence
-                >=
-                65
-
-            );
-
-
-        })
-
-
-        .sort(
-            (a,b)=>
-            b.vipScore -
-            a.vipScore
-        );
-
-
-}
-
-
-
-
 module.exports = {
 
+filterVipMatches,
 
-    filterVIPMatches,
-
-    calculateVIPScore
+calculateVIPScore
 
 };
