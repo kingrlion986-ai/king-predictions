@@ -777,9 +777,7 @@ async function analyzeTeam(team) {
       avgConceded:
         stats.avgConceded,
 
-       attackPower: stats.attackPower,
-       defensePower: stats.defensePower,
-
+       
 
 
       homeAttack:
