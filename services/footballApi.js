@@ -437,14 +437,13 @@ async function getCompetitionMatches(code) {
 
 async function getCompetitionMatchesSmart(code) {
 
-  for (let start = 0; start <= 60; start += 3) {
+  for (let start = 0; start <= 60; start += 7) {
 
-    const dateFrom = new Date();
-    dateFrom.setDate(dateFrom.getDate() + start);
+  const dateFrom = new Date();
+  dateFrom.setDate(dateFrom.getDate() + start);
 
-    const dateTo = new Date();
-    dateTo.setDate(dateTo.getDate() + start + 2);
-
+  const dateTo = new Date();
+  dateTo.setDate(dateTo.getDate() + start + 6);
     const from = dateFrom.toISOString().split("T")[0];
     const to = dateTo.toISOString().split("T")[0];
 
@@ -669,6 +668,10 @@ async function getMatches() {
 
 
       for (const competition of PRIMARY_COMPETITIONS) {
+
+         if (matches.length >= 15) {
+    break;
+         }
 
   await sleep(3000);
 
