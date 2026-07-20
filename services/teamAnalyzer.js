@@ -42,7 +42,7 @@ const CACHE_DURATION =
 
 const COMPETITION_LEVEL = {
 
-  // Top Europe
+  // Top niveau
   CL: 1.25,
   PL: 1.20,
   PD: 1.20,
@@ -50,20 +50,23 @@ const COMPETITION_LEVEL = {
   BL1: 1.18,
   FL1: 1.16,
 
+
   // Bons championnats
-  PPL: 1.10,
   DED: 1.08,
   BSA: 1.08,
-  ELC: 1.05,
+  PPL: 1.10,
+
 
   // Deuxième divisions
-  BL2: 0.90,
-  EL2: 0.90,
-  SD: 0.88,
+  ELC: 1.05,
+  BL2: 0.95,
+  FL2: 0.95,
+  SD: 0.90,
+  SA2: 0.90,
+
 
   DEFAULT: 1.00
 };
-
 const TEAM_STRENGTHS = new Map();
 
 function getOpponentStrength(opponent) {
