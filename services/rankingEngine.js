@@ -193,14 +193,25 @@ if (probabilityGap < 8) {
     score -= 8;
 }
 
+  // =========================
+// AI RATING BONUS V18
+// =========================
+
+if (match.predictions.aiRating) {
+
+    score +=
+        match.predictions.aiRating * 0.25;
+
+}
+
 
   return Math.round(
-    clamp(
-      score,
-      0,
-      100
-    )
-  );
+  clamp(
+    score,
+    0,
+    100
+  )
+);
 
 }
 
@@ -262,9 +273,21 @@ function rankMatches(matches) {
     );
 
 
-  return sortByQuality(
-    ranked
-  );
+  return ranked.sort(
+    (a,b)=>{
+
+        const scoreA =
+            a.qualityScore +
+            (a.predictions.aiRating || 0);
+
+        const scoreB =
+            b.qualityScore +
+            (b.predictions.aiRating || 0);
+
+        return scoreB - scoreA;
+
+    }
+);
 
 
 }
