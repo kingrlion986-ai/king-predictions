@@ -437,7 +437,7 @@ async function getCompetitionMatches(code) {
 
 async function getCompetitionMatchesSmart(code) {
 
-  for (let start = 0; start <= 14; start += 3) {
+  for (let start = 0; start <= 60; start += 3) {
 
     const dateFrom = new Date();
     dateFrom.setDate(dateFrom.getDate() + start);
@@ -468,7 +468,9 @@ async function getCompetitionMatchesSmart(code) {
 
      }
 
-     console.log("RÉPONSE API :", JSON.stringify(data, null, 2));
+     console.log(
+  `${code} : ${data?.resultSet?.count || 0} matchs`
+);
 
      console.log(`${code} : API a renvoyé ${data?.matches?.length || 0} matchs`);
 
@@ -483,8 +485,13 @@ async function getCompetitionMatchesSmart(code) {
       );
 
       return data.matches
-        .map(formatMatch)
-        .filter(Boolean);
+  .map(formatMatch)
+  .filter(Boolean)
+  .sort(
+    (a, b) =>
+      new Date(a.utcDate) -
+      new Date(b.utcDate)
+  );
     }
 
   }
@@ -667,7 +674,7 @@ async function getMatches() {
 
   console.log("📡 PRIMARY:", competition);
 
-  const result = await getCompetitionMatches(competition);
+  const result = await getCompetitionMatchesSmart(competition);
 
   console.log(competition, "=>", result.length);
 
@@ -698,7 +705,7 @@ if (matches.length < MIN_MATCHES) {
 
     console.log("📡 SECONDARY:", competition);
 
-    const result = await getCompetitionMatches(competition);
+    const result = await getCompetitionMatchesSmart(competition);
 
     console.log("TYPE :", typeof result);
     console.log("IS ARRAY :", Array.isArray(result));
