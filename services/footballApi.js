@@ -365,7 +365,7 @@ const dateTo = new Date(
 ).toISOString().split("T")[0];
    
 const data = await apiGet(
-  `/competitions/${code}/matches?status=TIMED,SCHEDULED&dateFrom=${dateFrom}&dateTo=${dateTo}`
+  `/competitions/${code}/matches?dateFrom=${dateFrom}&dateTo=${dateTo}`
 );
 
   if (!data || !Array.isArray(data.matches)) {
@@ -597,6 +597,10 @@ async function getMatches() {
 
 
       for (const competition of PRIMARY_COMPETITIONS) {
+
+         for (const competition of PRIMARY_COMPETITIONS) {
+
+  await sleep(3000);
 
   console.log("📡 PRIMARY:", competition);
 
