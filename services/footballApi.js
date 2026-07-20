@@ -366,7 +366,7 @@ const data = await apiGet(
 
 async function getCompetitionMatchesSmart(code) {
 
-  for (let start = 0; start <= 14; start += 7) {
+  for (let start = 0; start <= 14; start += 3) {
 
     const dateFrom = new Date();
     dateFrom.setDate(dateFrom.getDate() + start);
@@ -384,6 +384,18 @@ async function getCompetitionMatchesSmart(code) {
     const data = await apiGet(
       `/competitions/${code}/matches?dateFrom=${from}&dateTo=${to}`
     );
+
+     if (
+    data &&
+    data.resultSet &&
+    data.resultSet.count === 0
+) {
+
+    console.log(
+        `ℹ️ ${code}: aucun match sur cette période`
+    );
+
+     }
 
      console.log("RÉPONSE API :", JSON.stringify(data, null, 2));
 
