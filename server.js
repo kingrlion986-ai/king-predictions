@@ -148,7 +148,9 @@ async function getVipAnalyses() {
 
   const matches = await getMatches();
 
-  const selectedMatches = matches.slice(0,5);
+  const selectedMatches = matches
+.sort((a,b)=>(b.quality || 0)-(a.quality || 0))
+.slice(0,5);
 
   console.log(
     "🏆 VIP MATCHES:",
@@ -293,7 +295,7 @@ for (const match of uniqueMatches) {
     analyses.push(result);
   }
 
-  await sleep(2500);
+  await sleep(6000);
 
 }
     ANALYSIS_CACHE.set(
