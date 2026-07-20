@@ -602,24 +602,22 @@ async function getMatches() {
 
       for (const competition of PRIMARY_COMPETITIONS) {
 
-         for (const competition of PRIMARY_COMPETITIONS) {
-
   await sleep(3000);
 
   console.log("📡 PRIMARY:", competition);
 
   const result = await getCompetitionMatches(competition);
+
   console.log(competition, "=>", result.length);
 
   matches.push(...result);
 
-       console.log("COMPÉTITION :", competition);
-console.log("APRÈS PUSH =", matches.length);
+  console.log("COMPÉTITION :", competition);
+  console.log("APRÈS PUSH =", matches.length);
 
   console.log("TOTAL =", matches.length);
 
       }
-
 
 
       /*
@@ -703,32 +701,22 @@ matches.sort((a, b) => {
 
 
       console.log(
-        "🔥 MATCHES TOTAL:",
-        matches.length
-      );
+  "🔥 MATCHES TOTAL:",
+  matches.length
+);
 
 console.log("TOTAL MATCHES RETURNED =", matches.length);
 console.log(matches.slice(0,3));
-       
-      return matches;
+
+return matches;
 
 } finally {
 
-
-      MATCH_LOADING = null;
-
-
-    }
-
-
-
-  })();
-
-
-
-  return MATCH_LOADING;
+  MATCH_LOADING = null;
 
 }
+
+})();
 
 
 
