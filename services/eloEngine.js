@@ -1,3 +1,8 @@
+const fs = require("fs");
+const path = require("path");
+
+const ELO_FILE = path.join(__dirname, "../data/eloRatings.json");
+
 /* =========================
    ELO ENGINE V20
 ========================= */
@@ -6,6 +11,54 @@ const DEFAULT_ELO = 1500;
 const K_FACTOR = 24;
 
 const ELO_CACHE = new Map();
+
+function loadRatings() {
+
+    try {
+
+        if (!fs.existsSync(ELO_FILE)) {
+
+            fs.mkdirSync(path.dirname(ELO_FILE), {
+                recursive: true
+            });
+
+            fs.writeFileSync(
+                ELO_FILE,
+                JSON.stringify({})
+            );
+
+        }
+
+        const ratings = JSON.parse(
+            fs.readFileSync(ELO_FILE, "utf8")
+        );
+
+        Object.entries(ratings).forEach(([id, elo]) => {
+            ELO_CACHE.set(Number(id), elo);
+        });
+
+    } catch (err) {
+
+        console.log("ELO LOAD ERROR:", err.message);
+
+    }
+
+}
+
+function saveRatings() {
+
+    const data = {};
+
+    for (const [id, elo] of ELO_CACHE.entries()) {
+        data[id] = elo;
+    }
+
+    fs.writeFileSync(
+        ELO_FILE,
+        JSON.stringify(data, null, 2)
+    );
+
+}
 
 /* =========================
    HELPERS
@@ -41,6 +94,8 @@ function setTeamElo(teamId, elo) {
             clamp(elo, 1000, 2500)
         )
     );
+
+   saveRatings();
 
 }
 
@@ -162,6 +217,8 @@ function clearEloCache() {
     ELO_CACHE.clear();
 
 }
+
+loadRatings();
 
 module.exports = {
 
