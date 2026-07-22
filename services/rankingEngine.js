@@ -205,6 +205,31 @@ if (match.predictions.aiRating) {
 }
 
 
+  // Bonus si les deux équipes sont fiables
+score += (
+    home.reliability +
+    away.reliability
+) * 5;
+
+// Bonus si le match est déséquilibré (plus facile à prédire)
+score += Math.abs(
+    home.strength -
+    away.strength
+) * 0.15;
+
+// Bonus Elo
+if (match.model.elo) {
+
+    score += Math.min(
+        Math.abs(
+            match.model.elo.home -
+            match.model.elo.away
+        ) / 15,
+        12
+    );
+
+}
+
   return Math.round(
   clamp(
     score,
@@ -277,13 +302,14 @@ function rankMatches(matches) {
     (a,b)=>{
 
         const scoreA =
-            a.qualityScore +
-            (a.predictions.aiRating || 0);
+    a.qualityScore +
+    (a.predictions.aiRating || 0) +
+    (a.predictions.aiDecision?.score || 0) * 0.30;
 
-        const scoreB =
-            b.qualityScore +
-            (b.predictions.aiRating || 0);
-
+const scoreB =
+    b.qualityScore +
+    (b.predictions.aiRating || 0) +
+    (b.predictions.aiDecision?.score || 0) * 0.30;
         return scoreB - scoreA;
 
     }
