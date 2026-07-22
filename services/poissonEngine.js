@@ -107,6 +107,12 @@ function analyzeMatrix(matrix) {
 
     let total = 0;
 
+   let homeGoalsExpectation = 0;
+let awayGoalsExpectation = 0;
+
+let cleanSheetHome = 0;
+let cleanSheetAway = 0;
+
     for (let h = 0; h <= MAX_GOALS; h++) {
 
         for (let a = 0; a <= MAX_GOALS; a++) {
@@ -114,6 +120,15 @@ function analyzeMatrix(matrix) {
             const p = matrix[h][a];
 
             total += p;
+
+           homeGoalsExpectation += h * p;
+awayGoalsExpectation += a * p;
+
+if (a === 0)
+    cleanSheetHome += p;
+
+if (h === 0)
+    cleanSheetAway += p;
 
             if (h > a)
                 homeWin += p;
@@ -220,6 +235,22 @@ const dominance =
     dominance * 0.35 +
     (1 - uncertainty / 100) * 25
 );
+
+       /*
+   Calibration des probabilités
+*/
+
+const calibration = 0.96;
+
+homeWin *= calibration;
+draw *= (2 - calibration);
+awayWin *= calibration;
+
+const sum = homeWin + draw + awayWin;
+
+homeWin /= sum;
+draw /= sum;
+awayWin /= sum;
    
 return {
 
@@ -246,6 +277,26 @@ return {
     under25: Number(((1 - over25) * 100).toFixed(2)),
 
     expectedGoals: Number(expectedGoals.toFixed(2)),
+
+   expectedHomeGoals:
+    Number(
+        (homeGoalsExpectation / total).toFixed(2)
+    ),
+
+expectedAwayGoals:
+    Number(
+        (awayGoalsExpectation / total).toFixed(2)
+    ),
+
+cleanSheetHome:
+    Number(
+        ((cleanSheetHome / total) * 100).toFixed(2)
+    ),
+
+cleanSheetAway:
+    Number(
+        ((cleanSheetAway / total) * 100).toFixed(2)
+    ),
 
    matchScore:
 Number(matchScore.toFixed(2)),
