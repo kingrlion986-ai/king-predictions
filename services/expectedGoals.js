@@ -315,11 +315,27 @@ awayXG -=
     Bonus attaque efficace
 */
 
+/*
+   Bonus offensif avancé
+*/
+
 homeXG +=
-    (home.over25Rate / 100) * 0.15;
+    (home.over25Rate / 100) * 0.18;
 
 awayXG +=
-    (away.over25Rate / 100) * 0.15;
+    (away.over25Rate / 100) * 0.18;
+
+homeXG +=
+    (home.bttsRate / 100) * 0.10;
+
+awayXG +=
+    (away.bttsRate / 100) * 0.10;
+
+homeXG +=
+    (home.attackPower / 10) * 0.05;
+
+awayXG +=
+    (away.attackPower / 10) * 0.05;
 
     /*
        Limites réalistes football
@@ -339,6 +355,44 @@ awayXG +=
             0.20,
             3.50
         );
+
+   /*
+   Ajustement domination
+*/
+
+const dominance =
+    Math.abs(home.strength - away.strength);
+
+if (dominance >= 25) {
+
+    if (home.strength > away.strength) {
+
+        homeXG += 0.25;
+        awayXG -= 0.15;
+
+    } else {
+
+        awayXG += 0.25;
+        homeXG -= 0.15;
+
+    }
+
+}
+else if (dominance >= 15) {
+
+    if (home.strength > away.strength) {
+
+        homeXG += 0.15;
+        awayXG -= 0.08;
+
+    } else {
+
+        awayXG += 0.15;
+        homeXG -= 0.08;
+
+    }
+
+}
 
 
 
