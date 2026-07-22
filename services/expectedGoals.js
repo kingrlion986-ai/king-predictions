@@ -98,6 +98,18 @@ const awayReliability =
 const awayStability =
     (away.stability ?? 50) / 100;
 
+   const homeMomentum =
+    home.momentum ?? 0;
+
+const awayMomentum =
+    away.momentum ?? 0;
+
+const homeOpponent =
+    home.averageOpponentStrength ?? 50;
+
+const awayOpponent =
+    away.averageOpponentStrength ?? 50;
+
 
 
     /*
@@ -228,6 +240,42 @@ const strengthFactor =
 homeXG += strengthFactor;
 
 awayXG -= strengthFactor;
+
+   /*
+   Momentum récent
+*/
+
+homeXG +=
+    clamp(
+        (homeMomentum - awayMomentum) * 0.08,
+        -0.25,
+        0.25
+    );
+
+awayXG +=
+    clamp(
+        (awayMomentum - homeMomentum) * 0.08,
+        -0.25,
+        0.25
+    );
+
+/*
+   Niveau des adversaires affrontés
+*/
+
+homeXG +=
+    clamp(
+        (homeOpponent - awayOpponent) / 100,
+        -0.15,
+        0.15
+    );
+
+awayXG +=
+    clamp(
+        (awayOpponent - homeOpponent) / 100,
+        -0.15,
+        0.15
+    );
 
        /*
     Difficulté à marquer
