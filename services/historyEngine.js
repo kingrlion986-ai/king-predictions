@@ -367,6 +367,6 @@ module.exports = {
 
     loadHistory,
 
-   getLearningData
+   getLearningData,
 
 };
