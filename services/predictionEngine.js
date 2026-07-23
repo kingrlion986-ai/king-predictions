@@ -25,6 +25,10 @@ const {
 const {
     updateMatchElo
 } = require("./eloEngine");
+
+const {
+    getWeights
+} = require("./adaptiveWeightEngine");
 /* =========================
    CACHE
 ========================= */
@@ -85,6 +89,9 @@ console.time(timer);
 
     const awayElo =
         getTeamElo(match.awayTeam.id);
+
+    const weights =
+    getWeights();
 
     const eloProbability =
         calculateEloProbability(
