@@ -19,6 +19,10 @@ const {
 } = require("./decisionEngine");
 
 const {
+    buildLearningModel
+} = require("./learningEngine");
+
+const {
     updateMatchElo
 } = require("./eloEngine");
 /* =========================
@@ -124,7 +128,12 @@ console.time(timer);
 
         });
 
-        let adjustedConfidence = confidence;
+    const learning =
+    buildLearningModel();
+
+        let adjustedConfidence =
+    confidence *
+    learning.confidenceWeight;
 
 adjustedConfidence += poisson.dominance * 20;
 adjustedConfidence -= poisson.uncertainty * 0.15;
@@ -192,20 +201,20 @@ else {
     predictionQuality = "LOW";
 }
     const homeScore =
-    poisson.probabilities.homeWin * 0.45 +
+    poisson.probabilities.homeWin * 0.45 * learning.poissonWeight +
     homeStats.strength * 0.20 +
     homeStats.formScore * 0.10 +
     homeStats.momentum * 4 +
     homeStats.reliability * 10 +
-    eloProbability * 15;
+    eloProbability * 15 * learning.eloWeight;
 
 const awayScore =
-    poisson.probabilities.awayWin * 0.45 +
+    poisson.probabilities.awayWin * 0.45 * learning.poissonWeight +
     awayStats.strength * 0.20 +
     awayStats.formScore * 0.10 +
     awayStats.momentum * 4 +
     awayStats.reliability * 10 +
-    (1 - eloProbability) * 15;
+    (1 - eloProbability) * 15 * learning.eloWeight;
     
 let winner = "DRAW";
     const drawChance = poisson.probabilities.draw;
@@ -436,6 +445,8 @@ bttsConfidence,
                     )
 
             },
+
+            learning,
 
             expectedGoals:
                 xg.totalExpectedGoals,
