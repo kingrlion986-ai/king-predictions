@@ -29,6 +29,9 @@ const {
 const {
     getWeights
 } = require("./adaptiveWeightEngine");
+const {
+    updateWeights
+} = require("./adaptiveWeightEngine");
 /* =========================
    CACHE
 ========================= */
@@ -208,20 +211,20 @@ else {
     predictionQuality = "LOW";
 }
     const homeScore =
-    poisson.probabilities.homeWin * 0.45 * learning.poissonWeight +
-    homeStats.strength * 0.20 +
-    homeStats.formScore * 0.10 +
-    homeStats.momentum * 4 +
-    homeStats.reliability * 10 +
-    eloProbability * 15 * learning.eloWeight;
+    poisson.probabilities.homeWin * weights.poisson +
+    homeStats.strength * weights.strength +
+    homeStats.formScore * weights.form +
+    homeStats.momentum * weights.momentum +
+    homeStats.reliability * weights.reliability +
+    eloProbability * 100 * weights.elo;
 
 const awayScore =
-    poisson.probabilities.awayWin * 0.45 * learning.poissonWeight +
-    awayStats.strength * 0.20 +
-    awayStats.formScore * 0.10 +
-    awayStats.momentum * 4 +
-    awayStats.reliability * 10 +
-    (1 - eloProbability) * 15 * learning.eloWeight;
+    poisson.probabilities.awayWin * weights.poisson +
+    awayStats.strength * weights.strength +
+    awayStats.formScore * weights.form +
+    awayStats.momentum * weights.momentum +
+    awayStats.reliability * weights.reliability +
+    (1 - eloProbability) * 100 * weights.elo;
     
 let winner = "DRAW";
     const drawChance = poisson.probabilities.draw;
