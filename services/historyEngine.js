@@ -1,3 +1,7 @@
+const {
+    updateMatchElo
+} = require("./eloEngine");
+
 /* =========================
    HISTORY ENGINE V18
 ========================= */
@@ -175,6 +179,25 @@ function updateResult(
 
     item.result =
         result;
+
+   if (
+    typeof result.homeGoals === "number" &&
+    typeof result.awayGoals === "number"
+) {
+
+    updateMatchElo(
+
+        item.match.homeTeam.id,
+
+        item.match.awayTeam.id,
+
+        result.homeGoals,
+
+        result.awayGoals
+
+    );
+
+   }
 
 
 
