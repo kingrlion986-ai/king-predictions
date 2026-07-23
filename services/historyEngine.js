@@ -2,6 +2,10 @@ const {
     updateMatchElo
 } = require("./eloEngine");
 
+const {
+    updateWeights
+} = require("./adaptiveWeightEngine");
+
 /* =========================
    HISTORY ENGINE V18
 ========================= */
@@ -206,6 +210,8 @@ function updateResult(
             item,
             result
         );
+
+    updateWeights(item);
 
     if (!item.learning) {
 
