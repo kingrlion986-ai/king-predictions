@@ -1,22 +1,25 @@
 const fs = require("fs");
 const path = require("path");
 
-const FILE =
-path.join(
+const FILE = path.join(
     __dirname,
     "../data/adaptiveWeights.json"
 );
 
 const DEFAULT = {
 
-    elo: 1.00,
-    xg: 1.00,
-    poisson: 1.00,
-    form: 1.00,
-    stability: 1.00,
-    confidence: 1.00
+    poisson: 0.45,
+    elo: 0.15,
+    strength: 0.20,
+    form: 0.10,
+    momentum: 0.05,
+    reliability: 0.05
 
 };
+
+function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+}
 
 function loadWeights() {
 
@@ -65,9 +68,52 @@ function getWeights() {
 
 }
 
+function updateWeights(item) {
+
+    const weights = loadWeights();
+
+    if (!item || !item.evaluation) {
+        return weights;
+    }
+
+    const score = item.evaluation.globalScore || 0;
+
+    // Bonne prédiction
+    if (score >= 70) {
+
+        weights.poisson += 0.01;
+        weights.elo += 0.005;
+        weights.strength += 0.005;
+
+    }
+
+    // Mauvaise prédiction
+    else if (score < 40) {
+
+        weights.poisson -= 0.01;
+        weights.elo -= 0.005;
+        weights.strength -= 0.005;
+
+    }
+
+    // Limites de sécurité
+    weights.poisson = clamp(weights.poisson, 0.20, 0.60);
+    weights.elo = clamp(weights.elo, 0.05, 0.30);
+    weights.strength = clamp(weights.strength, 0.05, 0.30);
+    weights.form = clamp(weights.form, 0.05, 0.20);
+    weights.momentum = clamp(weights.momentum, 0.05, 0.20);
+    weights.reliability = clamp(weights.reliability, 0.05, 0.20);
+
+    saveWeights(weights);
+
+    return weights;
+
+}
+
 module.exports = {
 
     getWeights,
-    saveWeights
+    saveWeights,
+    updateWeights
 
 };
