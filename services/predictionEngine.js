@@ -96,6 +96,36 @@ console.time(timer);
     const weights =
     getWeights();
 
+    const consensus = {
+
+    home: 0,
+
+    away: 0,
+
+    draw: 0
+
+};
+
+    consensus.home +=
+    poisson.probabilities.homeWin *
+    weights.poisson;
+
+consensus.draw +=
+    poisson.probabilities.draw *
+    weights.poisson;
+
+consensus.away +=
+    poisson.probabilities.awayWin *
+    weights.poisson;
+
+    consensus.home +=
+    (eloProbability * 100) *
+    weights.elo;
+
+consensus.away +=
+    ((1 - eloProbability) * 100) *
+    weights.elo;
+
     const eloProbability =
         calculateEloProbability(
             homeElo,
