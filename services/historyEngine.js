@@ -207,6 +207,30 @@ function updateResult(
             result
         );
 
+    if (!item.learning) {
+
+    item.learning = {
+        total: 0,
+        success: 0
+    };
+
+}
+
+item.learning.total++;
+
+if (item.evaluation.winnerCorrect) {
+
+    item.learning.success++;
+
+}
+
+item.learning.successRate =
+    Math.round(
+        item.learning.success /
+        item.learning.total *
+        100
+    );
+
 
 
     saveHistory(
