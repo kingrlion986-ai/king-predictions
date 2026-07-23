@@ -17,6 +17,10 @@ const {
 const {
     evaluateDecision
 } = require("./decisionEngine");
+
+const {
+    updateMatchElo
+} = require("./eloEngine");
 /* =========================
    CACHE
 ========================= */
@@ -188,16 +192,27 @@ else {
     predictionQuality = "LOW";
 }
     const homeScore =
-    poisson.probabilities.homeWin +
-    (homeStats.strength - awayStats.strength) * 0.35 +
-    (homeStats.reliability - awayStats.reliability) * 15;
+    poisson.probabilities.homeWin * 0.45 +
+    homeStats.strength * 0.20 +
+    homeStats.formScore * 0.10 +
+    homeStats.momentum * 4 +
+    homeStats.reliability * 10 +
+    eloProbability * 15;
 
 const awayScore =
-    poisson.probabilities.awayWin +
-    (awayStats.strength - homeStats.strength) * 0.35 +
-    (awayStats.reliability - homeStats.reliability) * 15;
-
+    poisson.probabilities.awayWin * 0.45 +
+    awayStats.strength * 0.20 +
+    awayStats.formScore * 0.10 +
+    awayStats.momentum * 4 +
+    awayStats.reliability * 10 +
+    (1 - eloProbability) * 15;
+    
 let winner = "DRAW";
+    const drawChance = poisson.probabilities.draw;
+
+if (drawChance >= 32) {
+    winner = "DRAW";
+}
 
 if (Math.abs(homeScore - awayScore) > 4) {
 
@@ -339,6 +354,15 @@ evaluateDecision({
     "| SCORE:",
     aiDecision.score
 );
+
+    const predictionStrength =
+    Math.round(
+        (
+            aiRating +
+            adjustedConfidence +
+            poisson.matchScore
+        ) / 3
+    );
     
     const result = {
 
@@ -365,6 +389,8 @@ evaluateDecision({
             aiDecision,
 
             aiRating,
+
+            predictionStrength,
 
                 quality: predictionQuality,
 
@@ -428,6 +454,17 @@ bttsConfidence,
     };
 
     // savePrediction(result);
+
+    if (match.status === "FINISHED") {
+
+    updateMatchElo(
+        match.homeTeam.id,
+        match.awayTeam.id,
+        match.score.fullTime.home,
+        match.score.fullTime.away
+    );
+
+    }
 
     ANALYSIS_CACHE.set(
         key,
