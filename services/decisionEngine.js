@@ -20,6 +20,8 @@ function evaluateDecision({
     let score = 0;
     let reasons = [];
 
+ let trapScore = 0;
+
 
     /*
     ===============================
@@ -180,6 +182,73 @@ function evaluateDecision({
     }
 
 
+ /*
+===============================
+TRAP MATCH DETECTOR V20
+===============================
+*/
+
+// Équipes trop proches
+if (strengthGap <= 6) {
+
+    trapScore += 20;
+    reasons.push("Balanced teams");
+
+}
+
+// Elo très proche
+if (
+    eloProbability > 0.46 &&
+    eloProbability < 0.54
+) {
+
+    trapScore += 20;
+    reasons.push("Balanced Elo");
+
+}
+
+// Trop de risque selon Poisson
+if (poisson.uncertainty >= 45) {
+
+    trapScore += 20;
+    reasons.push("High uncertainty");
+
+}
+
+// Données peu fiables
+if (reliability < 0.60) {
+
+    trapScore += 20;
+    reasons.push("Low reliability");
+
+}
+
+// Beaucoup de matchs nuls récents
+if (
+    homeStats.draws >= 3 ||
+    awayStats.draws >= 3
+) {
+
+    trapScore += 10;
+    reasons.push("Draw tendency");
+
+}
+
+// Match très ouvert
+if (
+    poisson.btts > 65 &&
+    poisson.over25 > 65
+) {
+
+    trapScore += 10;
+    reasons.push("Open game");
+
+}
+
+// On retire le score des matchs dangereux
+score -= trapScore * 0.60;
+
+
 
     /*
     ===============================
@@ -189,17 +258,24 @@ function evaluateDecision({
 
 
     let decision = "NO BET";
-    let risk = "HIGH";
+let risk = "HIGH";
+
+if (trapScore >= 45) {
+
+    decision = "TRAP MATCH";
+    risk = "VERY HIGH";
+
+}
 
 
-    if (score >= 75) {
+    if (trapScore < 45 && score >= 75) {
 
         decision = "VIP PICK";
         risk = "LOW";
 
     }
 
-    else if (score >= 55) {
+    else if (trapScore < 45 && score >= 55) {
 
         decision = "NORMAL";
         risk = "MEDIUM";
@@ -218,6 +294,8 @@ function evaluateDecision({
             100,
             score
         ),
+
+     trapScore,
 
         reasons,
 
