@@ -9,7 +9,7 @@ const path = require("path");
 const HISTORY_FILE =
     path.join(
         __dirname,
-        "histoire.json"
+        "../history.json"
     );
 
 
@@ -109,6 +109,17 @@ function savePrediction(prediction) {
         prediction:
             prediction.predictions,
 
+       teamStats: prediction.teamStats,
+
+confidence:
+prediction.predictions.winnerConfidence,
+
+aiRating:
+prediction.predictions.aiRating,
+
+predictionStrength:
+prediction.predictions.predictionStrength,
+
 
         model:
             prediction.model,
@@ -202,45 +213,29 @@ function evaluatePrediction(
         item.prediction;
 
 
+return {
 
-    return {
+    winnerCorrect:
+        prediction.winner === result.winner,
 
+    scoreCorrect:
+        prediction.correctScore === result.score,
 
-        winnerCorrect:
+    bttsCorrect:
+        prediction.btts === result.btts,
 
-            prediction.winner
-            ===
-            result.winner,
+    overCorrect:
+        prediction.over25 === result.over25,
 
+    globalScore:
+        (
+            (prediction.winner === result.winner ? 40 : 0) +
+            (prediction.correctScore === result.score ? 30 : 0) +
+            (prediction.btts === result.btts ? 15 : 0) +
+            (prediction.over25 === result.over25 ? 15 : 0)
+        )
 
-
-        scoreCorrect:
-
-            prediction.correctScore
-            ===
-            result.score,
-
-
-
-        bttsCorrect:
-
-            prediction.btts
-            ===
-            result.btts,
-
-
-
-        overCorrect:
-
-            prediction.over25
-            ===
-            result.over25
-
-
-    };
-
-}
-
+};
 
 
 
@@ -311,6 +306,54 @@ function getStatistics() {
 
 }
 
+   function getLearningData() {
+
+    const history = loadHistory();
+
+    const completed =
+        history.filter(
+            h => h.evaluation
+        );
+
+    if (!completed.length) {
+
+        return {
+
+            winnerAccuracy: 0,
+            averageScore: 0
+
+        };
+
+    }
+
+    const winnerCorrect =
+        completed.filter(
+            h => h.evaluation.winnerCorrect
+        ).length;
+
+    const averageScore =
+        completed.reduce(
+            (sum, h) =>
+                sum + h.evaluation.globalScore,
+            0
+        ) / completed.length;
+
+    return {
+
+        winnerAccuracy:
+            Math.round(
+                winnerCorrect /
+                completed.length *
+                100
+            ),
+
+        averageScore:
+            Math.round(averageScore)
+
+    };
+
+   }
+
 
 
 module.exports = {
@@ -323,5 +366,7 @@ module.exports = {
     getStatistics,
 
     loadHistory
+
+   getLearningData
 
 };
