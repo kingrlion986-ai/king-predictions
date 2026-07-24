@@ -219,10 +219,8 @@ async function getDailyPredictions() {
 
   } catch (err) {
 
-    console.error(
-      "❌ DAILY PREDICTIONS ERROR:",
-      err.message
-    );
+    console.error("❌ DAILY PREDICTIONS ERROR");
+console.error(err.stack);
 
 
     return [];
