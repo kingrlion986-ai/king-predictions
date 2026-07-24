@@ -858,22 +858,16 @@ async function loadUpcomingDatabase(){
 
 async function getMatches(){
 
-    if(UPCOMING_MATCH_DATABASE.length === 0){
+    if(
+        UPCOMING_MATCH_DATABASE.length === 0
+    ){
 
         await loadUpcomingDatabase();
 
     }
 
-    return UPCOMING_MATCH_DATABASE;
 
-}
-
-
-    const matches =
-        await loadUpcomingDatabase();
-
-
-    matches.sort((a,b)=>{
+    UPCOMING_MATCH_DATABASE.sort((a,b)=>{
 
         const da =
             new Date(a.utcDate);
@@ -882,18 +876,18 @@ async function getMatches(){
             new Date(b.utcDate);
 
 
-        return da-db;
+        return da - db;
 
     });
 
 
     console.log(
         "🔥 MATCHES READY:",
-        matches.length
+        UPCOMING_MATCH_DATABASE.length
     );
 
 
-    return matches;
+    return UPCOMING_MATCH_DATABASE;
 
 }
 
