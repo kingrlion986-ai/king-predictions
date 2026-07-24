@@ -796,9 +796,10 @@ async function getTeamMatches(teamId) {
 
   // 3. API
   const data = await apiGet(
-    `/teams/${teamId}/matches?status=FINISHED`
-  );
-
+    `/teams/${teamId}/matches?limit=10`
+);
+   console.log(JSON.stringify(data, null, 2));
+   
   if (!data || !Array.isArray(data.matches)) {
     return [];
   }
