@@ -114,6 +114,8 @@ console.time(timer);
                 away: awayElo
             }
         );
+
+    console.log("XG OBJECT =", xg);
     console.log("3 - POISSON");
 
     const poisson =
