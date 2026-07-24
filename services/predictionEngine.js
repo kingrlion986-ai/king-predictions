@@ -126,6 +126,38 @@ consensus.away +=
     ((1 - eloProbability) * 100) *
     weights.elo;
 
+    consensus.home +=
+    homeStats.strength *
+    weights.strength;
+
+consensus.away +=
+    awayStats.strength *
+    weights.strength;
+
+    consensus.home +=
+    homeStats.formScore *
+    weights.form;
+
+consensus.away +=
+    awayStats.formScore *
+    weights.form;
+
+    consensus.home +=
+    homeStats.momentum * 10 *
+    weights.momentum;
+
+consensus.away +=
+    awayStats.momentum * 10 *
+    weights.momentum;
+
+    consensus.home +=
+    homeStats.reliability * 100 *
+    weights.reliability;
+
+consensus.away +=
+    awayStats.reliability * 100 *
+    weights.reliability;
+
     const eloProbability =
         calculateEloProbability(
             homeElo,
