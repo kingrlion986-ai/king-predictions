@@ -287,8 +287,23 @@ async function analyzeMatches(matches) {
 
 for (const match of uniqueMatches) {
 
-  const result = await analyzeMatch(match);
+  try {
 
+    console.log("➡️ Analyse :", match.homeTeam.name);
+
+    const result = await analyzeMatch(match);
+
+    console.log("✅ Analyse OK :", match.homeTeam.name);
+
+    if (result) analyses.push(result);
+
+} catch (err) {
+
+    console.error("❌ ERREUR SUR :", match.homeTeam.name);
+
+    console.error(err.stack);
+
+  }
   if (result) {
     analyses.push(result);
   }
