@@ -694,12 +694,12 @@ async function loadHistoryDatabase(){
 
     CACHE.history = {
 
-        data: HISTORY_MATCH_DATABASE,
+    data: [...HISTORY_MATCH_DATABASE],
 
-        expiresAt:
-        Date.now() + HISTORY_CACHE_TTL
+    expiresAt:
+        Date.now()+HISTORY_CACHE_TTL
 
-    };
+};
 
 
     console.log(
@@ -840,14 +840,14 @@ async function loadUpcomingDatabase(){
 
 
 
-    CACHE.upcoming={
+    CACHE.upcoming = {
 
-        data:UPCOMING_MATCH_DATABASE,
+    data: [...UPCOMING_MATCH_DATABASE],
 
-        expiresAt:
-            Date.now()+MATCH_CACHE_TTL
+    expiresAt:
+        Date.now()+MATCH_CACHE_TTL
 
-    };
+};
 
 
     console.log(
@@ -991,15 +991,30 @@ async function initializeDatabase(){
         );
 
 
-         const history = await loadHistoryDatabase();
+        const history =
+            await loadHistoryDatabase();
 
-         const upcoming = await loadUpcomingDatabase();
 
-      console.log(
-      "INIT DONE",
-      history.length,
-      upcoming.length
-  );
+        console.log(
+            "✅ HISTORY LOADED:",
+            history.length
+        );
+
+
+        const upcoming =
+            await loadUpcomingDatabase();
+
+
+        console.log(
+            "✅ UPCOMING LOADED:",
+            upcoming.length
+        );
+
+
+        console.log(
+            "======================"
+        );
+
 
         console.log(
             "✅ DATABASE READY"
@@ -1018,12 +1033,29 @@ async function initializeDatabase(){
         );
 
 
+        console.log(
+            "======================"
+        );
+
+
+        return {
+            history,
+            upcoming
+        };
+
+
     }catch(error){
 
         console.log(
             "❌ DATABASE INIT ERROR:",
             error.message
         );
+
+
+        return {
+            history:[],
+            upcoming:[]
+        };
 
     }
 
