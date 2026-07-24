@@ -96,13 +96,14 @@ console.time(timer);
     const weights =
     getWeights();
 
-    
+    console.log("1 - ELO");
 
     const eloProbability =
         calculateEloProbability(
             homeElo,
             awayElo
         );
+    console.log("2 - XG");
 
     const xg =
         calculateExpectedGoals(
@@ -113,6 +114,7 @@ console.time(timer);
                 away: awayElo
             }
         );
+    console.log("3 - POISSON");
 
     const poisson =
         buildPoissonMatrix(
@@ -203,6 +205,7 @@ console.log("CONSENSUS WINNER :", consensusWinner);
     poisson.uncertainty,
     poisson.dominance
 );
+    console.log("5 - CONFIDENCE");
 
     const confidence =
         calculateConfidence({
@@ -218,6 +221,7 @@ console.log("CONSENSUS WINNER :", consensusWinner);
 
         });
 
+    console.log("4 - LEARNING");
     const learning =
     buildLearningModel();
 
