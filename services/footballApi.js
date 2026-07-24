@@ -602,30 +602,21 @@ async function loadHistoryDatabase(){
         CACHE.history.data &&
         Date.now() < CACHE.history.expiresAt
     ){
-
         HISTORY_MATCH_DATABASE.length = 0;
-
-        HISTORY_MATCH_DATABASE.push(
-            ...CACHE.history.data
-        );
-
+        HISTORY_MATCH_DATABASE.push(...CACHE.history.data);
         return HISTORY_MATCH_DATABASE;
     }
 
-
     console.log("📚 LOADING HISTORY DATABASE");
-
 
     const history = [];
 
-
     for(const competition of PRIMARY_COMPETITIONS){
 
-        await sleep(2000);
-
+        await sleep(2500);
 
         const data = await apiGet(
-            `/competitions/${competition}/matches`
+            `/competitions/${competition}/matches?status=FINISHED`
         );
 
 
@@ -633,24 +624,12 @@ async function loadHistoryDatabase(){
             !data ||
             !Array.isArray(data.matches)
         ){
-
             console.log(
-                "❌ NO DATA:",
+                "❌ NO HISTORY:",
                 competition
             );
-
             continue;
-
         }
-
-
-
-        const finished =
-            data.matches.filter(
-                match =>
-                match.status === "FINISHED"
-            );
-
 
 
         console.log(
@@ -658,44 +637,39 @@ async function loadHistoryDatabase(){
             competition
         );
 
+
         console.log(
             "RAW HISTORY:",
             data.matches.length
         );
 
-        console.log(
-            "FINISHED HISTORY:",
-            finished.length
-        );
-
-
 
         const formatted =
-            finished
+            data.matches
+            .filter(
+                match =>
+                match.status === "FINISHED"
+            )
             .map(formatMatch)
             .filter(Boolean);
 
+
+        console.log(
+            competition,
+            "FINISHED:",
+            formatted.length
+        );
 
 
         history.push(
             ...formatted
         );
 
-
-        console.log(
-            competition,
-            "HISTORY:",
-            formatted.length
-        );
-
     }
 
 
-
-    // SUPPRESSION DES DOUBLONS
-
+    // Suppression doublons
     const unique = [];
-
     const seen = new Set();
 
 
@@ -704,7 +678,6 @@ async function loadHistoryDatabase(){
         if(!seen.has(match.id)){
 
             seen.add(match.id);
-
             unique.push(match);
 
         }
@@ -712,27 +685,21 @@ async function loadHistoryDatabase(){
     }
 
 
-
     HISTORY_MATCH_DATABASE.length = 0;
-
 
     HISTORY_MATCH_DATABASE.push(
         ...unique
     );
 
 
-
     CACHE.history = {
 
-        data:HISTORY_MATCH_DATABASE,
+        data: HISTORY_MATCH_DATABASE,
 
         expiresAt:
-            Date.now()
-            +
-            HISTORY_CACHE_TTL
+        Date.now() + HISTORY_CACHE_TTL
 
     };
-
 
 
     console.log(
@@ -741,12 +708,9 @@ async function loadHistoryDatabase(){
     );
 
 
-
     return HISTORY_MATCH_DATABASE;
 
 }
-
-
 
 /* =========================
    LOAD UPCOMING DATABASE
@@ -894,11 +858,15 @@ async function loadUpcomingDatabase(){
 
 async function getMatches(){
 
-    if(
-        UPCOMING_MATCH_DATABASE.length>0
-    ){
-        return UPCOMING_MATCH_DATABASE;
+    if(UPCOMING_MATCH_DATABASE.length === 0){
+
+        await loadUpcomingDatabase();
+
     }
+
+    return UPCOMING_MATCH_DATABASE;
+
+}
 
 
     const matches =
@@ -1022,10 +990,15 @@ async function initializeDatabase(){
         );
 
 
-        await loadHistoryDatabase();
+         const history = await loadHistoryDatabase();
 
-        await loadUpcomingDatabase();
+         const upcoming = await loadUpcomingDatabase();
 
+      console.log(
+      "INIT DONE",
+      history.length,
+      upcoming.length
+  );
 
         console.log(
             "✅ DATABASE READY"
