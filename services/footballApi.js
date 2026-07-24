@@ -541,6 +541,13 @@ function filterMatches(matches) {
 maxDate.setDate(maxDate.getDate() + 60);
 
 if (matchDate > maxDate) {
+   console.log("MAX HOURS =", MAX_HOURS);
+console.log(
+    "TEST =",
+    diffHours,
+    diffHours >= 0,
+    diffHours <= MAX_HOURS
+);
   return false;
 }
 
@@ -559,13 +566,9 @@ if (matchDate > maxDate) {
     );
 
 
-    const MAX_HOURS =
-    matches.length < 15
-        ? 60 * 24
-        : 7 * 24;
 
+     const MAX_HOURS = 60 * 24;
 return diffHours >= 0 && diffHours <= MAX_HOURS;
-
   });
 
   console.log("APRES FILTER:", filtered.length);
