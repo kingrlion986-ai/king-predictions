@@ -623,6 +623,13 @@ async function analyzeTeam(team) {
 
     const matches = await getTeamMatches(team.id);
 
+     console.log("TEAM:", team.name);
+console.log("MATCHES RECEIVED:", matches?.length);
+
+if (matches?.length > 0) {
+    console.log("FIRST MATCH:", JSON.stringify(matches[0], null, 2));
+}
+
     /*
       FALLBACK
       Si l'API ne donne aucune donnée
