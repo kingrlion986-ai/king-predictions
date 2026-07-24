@@ -803,10 +803,21 @@ async function getTeamMatches(teamId) {
     return [];
   }
 
-  const matches = data.matches
+  console.log("API MATCHES COUNT:", data.matches.length);
+
+if (data.matches.length > 0) {
+    console.log("FIRST RAW MATCH:");
+    console.log(JSON.stringify(data.matches[0], null, 2));
+}
+
+const formatted = data.matches
     .slice(0, 8)
-    .map(formatMatch)
-    .filter(Boolean);
+    .map(formatMatch);
+
+console.log("AFTER FORMAT:", formatted.length);
+console.log("VALID AFTER FORMAT:", formatted.filter(Boolean).length);
+
+const matches = formatted.filter(Boolean);
 
   const cacheEntry = {
     data: matches,
