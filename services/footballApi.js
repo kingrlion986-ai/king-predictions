@@ -2,6 +2,8 @@ const fetch = require("node-fetch");
 const fs = require("fs");
 const path = require("path");
 
+const MATCH_DATABASE = [];
+
 /* =========================
    CONFIGURATION
 ========================= */
@@ -749,6 +751,11 @@ matches.sort((a, b) => {
 
       console.log(matches.slice(0,3));
 
+       MATCH_DATABASE.length = 0;
+MATCH_DATABASE.push(...matches);
+
+console.log("📦 MATCH DATABASE:", MATCH_DATABASE.length);
+
       return matches;
 
 
@@ -771,71 +778,36 @@ matches.sort((a, b) => {
 ========================= */
 async function getTeamMatches(teamId) {
 
-  // 1. Cache mémoire
-  const cached = CACHE.teamMatches.get(teamId);
+    if (MATCH_DATABASE.length === 0) {
+        await getMatches();
+    }
 
-  if (cached && Date.now() < cached.expiresAt) {
-    console.log("⚡ MEMORY CACHE:", teamId);
-    return cached.data;
-  }
+    const teamMatches = MATCH_DATABASE
+        .filter(match =>
 
-  // 2. Cache disque
-  const persistent = PERSISTENT_TEAM_CACHE[teamId];
+            match.status === "FINISHED" &&
 
-  if (
-    persistent &&
-    Date.now() < persistent.expiresAt
-  ) {
+            (
+                match.homeTeam.id === teamId ||
+                match.awayTeam.id === teamId
+            )
+        )
+        .sort(
+            (a, b) =>
+                new Date(b.utcDate) -
+                new Date(a.utcDate)
+        )
+        .slice(0, 8);
 
-    console.log("💾 DISK CACHE:", teamId);
+    console.log(
+        "📊 TEAM MATCHES:",
+        teamId,
+        teamMatches.length
+    );
 
-    CACHE.teamMatches.set(teamId, persistent);
-
-    return persistent.data;
-  }
-
-  // 3. API
-  const data = await apiGet(
-    `/teams/${teamId}/matches?limit=10`
-);
-   console.log(JSON.stringify(data, null, 2));
-   
-  if (!data || !Array.isArray(data.matches)) {
-    return [];
-  }
-
-  console.log("API MATCHES COUNT:", data.matches.length);
-
-if (data.matches.length > 0) {
-    console.log("FIRST RAW MATCH:");
-    console.log(JSON.stringify(data.matches[0], null, 2));
+    return teamMatches;
 }
 
-const formatted = data.matches
-    .slice(0, 8)
-    .map(formatMatch);
-
-console.log("AFTER FORMAT:", formatted.length);
-console.log("VALID AFTER FORMAT:", formatted.filter(Boolean).length);
-
-const matches = formatted.filter(Boolean);
-
-  const cacheEntry = {
-    data: matches,
-    expiresAt: Date.now() + TEAM_CACHE_TTL
-  };
-
-  // Sauvegarde mémoire
-  CACHE.teamMatches.set(teamId, cacheEntry);
-
-  // Sauvegarde disque
-  PERSISTENT_TEAM_CACHE[teamId] = cacheEntry;
-  savePersistentTeamCache(PERSISTENT_TEAM_CACHE);
-
-  console.log("💾 TEAM SAVED:", teamId);
-
-  return matches;
-}
 /* =========================
    EXPORTS
 ========================= */
