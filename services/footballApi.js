@@ -697,7 +697,6 @@ async function loadHistoryDatabase(){
 }
 
 
-
 /* =========================
    LOAD UPCOMING DATABASE
 ========================= */
