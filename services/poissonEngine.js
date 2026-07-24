@@ -52,18 +52,10 @@ function buildGoalDistribution(expectedGoals) {
 
 function buildPoissonMatrix(homeXG, awayXG) {
 
-   function buildPoissonMatrix(homeXG, awayXG) {
-
     console.log("HOME XG =", homeXG);
     console.log("AWAY XG =", awayXG);
 
     const home = buildGoalDistribution(homeXG);
-    const away = buildGoalDistribution(awayXG);
-
-    ...
-   }
-    const home = buildGoalDistribution(homeXG);
-
     const away = buildGoalDistribution(awayXG);
 
     const matrix = [];
@@ -74,8 +66,7 @@ function buildPoissonMatrix(homeXG, awayXG) {
 
         for (let a = 0; a <= MAX_GOALS; a++) {
 
-            matrix[h][a] =
-                home[h] * away[a];
+            matrix[h][a] = home[h] * away[a];
 
         }
 
@@ -83,17 +74,17 @@ function buildPoissonMatrix(homeXG, awayXG) {
 
     const analysis = analyzeMatrix(matrix);
 
-return {
+    return {
 
-    matrix,
+        matrix,
 
-    homeDistribution: home,
+        homeDistribution: home,
 
-    awayDistribution: away,
+        awayDistribution: away,
 
-    ...analysis
+        ...analysis
 
-};
+    };
 
 }
 
