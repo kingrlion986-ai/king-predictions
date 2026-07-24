@@ -126,7 +126,6 @@ console.log("AWAY STATS =", {
     formPoints: awayStats.formPoints,
     strength: awayStats.strength
 });
-    console.log("XG =", xg);
     
     const xg =
         calculateExpectedGoals(
@@ -137,6 +136,8 @@ console.log("AWAY STATS =", {
                 away: awayElo
             }
         );
+
+    console.log("XG =", xg);
 
     console.log("3 - POISSON");
 
