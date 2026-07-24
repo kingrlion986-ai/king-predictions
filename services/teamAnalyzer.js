@@ -758,6 +758,11 @@ formScore: 50,
     const stability =
       computeStability(stats);
 
+     console.log("STATS DEBUG =", {
+    attackPower: stats.attackPower,
+    defensePower: stats.defensePower
+});
+
 
 
 
@@ -877,6 +882,11 @@ formScore:
 
     };
 
+
+     console.log("RESULT DEBUG =", {
+    attackPower: result.attackPower,
+    defensePower: result.defensePower
+});
 
 
 
