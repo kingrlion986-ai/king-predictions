@@ -737,6 +737,15 @@ formScore: 50,
         m.status === "FINISHED"
       )
 
+         console.log(
+  "TEAM DATA DEBUG:",
+  team.name,
+  "TOTAL:",
+  matches.length,
+  "FINISHED:",
+  recentMatches.length
+);
+
       .sort(
         (a,b)=>
         new Date(b.utcDate)
