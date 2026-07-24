@@ -602,88 +602,137 @@ async function loadHistoryDatabase(){
         CACHE.history.data &&
         Date.now() < CACHE.history.expiresAt
     ){
+
         HISTORY_MATCH_DATABASE.length = 0;
-        HISTORY_MATCH_DATABASE.push(...CACHE.history.data);
+
+        HISTORY_MATCH_DATABASE.push(
+            ...CACHE.history.data
+        );
+
         return HISTORY_MATCH_DATABASE;
     }
 
+
     console.log("📚 LOADING HISTORY DATABASE");
+
 
     const history = [];
 
-    for (const competition of PRIMARY_COMPETITIONS) {
+
+    for(const competition of PRIMARY_COMPETITIONS){
 
         await sleep(2000);
+
 
         const data = await apiGet(
             `/competitions/${competition}/matches`
         );
 
-        if (!data || !Array.isArray(data.matches)) {
-            console.log("❌ NO DATA:", competition);
+
+        if(
+            !data ||
+            !Array.isArray(data.matches)
+        ){
+
+            console.log(
+                "❌ NO DATA:",
+                competition
+            );
+
             continue;
+
         }
 
-        const finished = data.matches.filter(
-            m => m.status === "FINISHED"
+
+
+        const finished =
+            data.matches.filter(
+                match =>
+                match.status === "FINISHED"
+            );
+
+
+
+        console.log(
+            "COMPETITION:",
+            competition
         );
 
-        console.log("COMPETITION:", competition);
-        console.log("RAW HISTORY:", data.matches.length);
-        console.log("FINISHED HISTORY:", finished.length);
+        console.log(
+            "RAW HISTORY:",
+            data.matches.length
+        );
 
-        const formatted = finished
+        console.log(
+            "FINISHED HISTORY:",
+            finished.length
+        );
+
+
+
+        const formatted =
+            finished
             .map(formatMatch)
             .filter(Boolean);
 
-        history.push(...formatted);
+
+
+        history.push(
+            ...formatted
+        );
+
 
         console.log(
             competition,
             "HISTORY:",
             formatted.length
         );
+
     }
 
-    console.log(
-        "📚 TOTAL HISTORY:",
-        history.length
-    );
 
-    HISTORY_MATCH_DATABASE.length = 0;
-    HISTORY_MATCH_DATABASE.push(...history);
 
-    CACHE.history = {
-        data: history,
-        expiresAt: Date.now() + MATCH_CACHE_TTL
-    };
-
-    return HISTORY_MATCH_DATABASE;
-}
+    // SUPPRESSION DES DOUBLONS
 
     const unique = [];
 
     const seen = new Set();
 
+
     for(const match of history){
 
         if(!seen.has(match.id)){
+
             seen.add(match.id);
+
             unique.push(match);
+
         }
 
     }
 
 
+
     HISTORY_MATCH_DATABASE.length = 0;
-    HISTORY_MATCH_DATABASE.push(...unique);
+
+
+    HISTORY_MATCH_DATABASE.push(
+        ...unique
+    );
+
 
 
     CACHE.history = {
+
         data:HISTORY_MATCH_DATABASE,
+
         expiresAt:
-            Date.now()+HISTORY_CACHE_TTL
+            Date.now()
+            +
+            HISTORY_CACHE_TTL
+
     };
+
 
 
     console.log(
@@ -692,9 +741,11 @@ async function loadHistoryDatabase(){
     );
 
 
+
     return HISTORY_MATCH_DATABASE;
 
 }
+
 
 
 /* =========================
