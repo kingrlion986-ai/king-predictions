@@ -2,811 +2,989 @@ const fetch = require("node-fetch");
 const fs = require("fs");
 const path = require("path");
 
-const MATCH_DATABASE = [];
+/* =====================================================
+   KING PREDICTIONS V16
+   FOOTBALL API ENGINE
+   HISTORICAL DATABASE SYSTEM
+===================================================== */
+
+
+/* =========================
+   DATABASES
+========================= */
+
+// Matchs à venir pour les prédictions
+const UPCOMING_MATCH_DATABASE = [];
+
+// Matchs terminés pour analyser les équipes
+const HISTORY_MATCH_DATABASE = [];
+
 
 /* =========================
    CONFIGURATION
 ========================= */
 
 const API_KEY = process.env.API_KEY;
-const BASE_URL = "https://api.football-data.org/v4";
-const TEAM_CACHE_FILE = path.join(__dirname, "..", "teamCache.json");
+
+const BASE_URL =
+    "https://api.football-data.org/v4";
+
+
+const TEAM_CACHE_FILE =
+    path.join(
+        __dirname,
+        "..",
+        "teamCache.json"
+    );
+
 
 /* =========================
    COMPETITIONS
 ========================= */
 
 const PRIMARY_COMPETITIONS = [
-  "PL",
-  "PD",
-  "SA",
-  "BL1",
-  "FL1"
+
+    "PL",
+    "PD",
+    "SA",
+    "BL1",
+    "FL1"
+
 ];
 
 
 const SECONDARY_COMPETITIONS = [
 
-  // Bons championnats
-  "CL",
-  "DED",
-  "BSA",
-  "PPL",
+    "CL",
+    "DED",
+    "BSA",
+    "PPL",
 
-  // Deuxièmes divisions
-  "ELC",   // Championship Angleterre
-  "BL2",   // Bundesliga 2
-  "FL2",   // Ligue 2 France
-  "SD",    // Segunda Espagne
-  "SA2"    // Serie B Italie
+    "ELC",
+    "BL2",
+    "FL2",
+    "SD",
+    "SA2"
+
 ];
+
+
+
 /* =========================
-   COMPETITION WEIGHT SYSTEM
+   COMPETITION WEIGHTS
 ========================= */
 
 const COMPETITION_WEIGHTS = {
 
-  PL: 1.20,
-  PD: 1.20,
-  SA: 1.15,
-  BL1: 1.15,
-  FL1: 1.10,
 
-  CL: 1.10,
-  DED: 0.90,
-  BSA: 0.95,
-  ELC: 0.85,
-  PPL: 0.80,
+    PL:1.20,
+    PD:1.20,
+    SA:1.15,
+    BL1:1.15,
+    FL1:1.10,
 
-  // Deuxièmes divisions
-  BL2: 0.95,
-  FL2: 0.95,
-  SD: 0.95,
-  SA2: 0.90
+    CL:1.10,
+
+    DED:0.90,
+    BSA:0.95,
+    PPL:0.80,
+
+    ELC:0.85,
+    BL2:0.95,
+    FL2:0.95,
+    SD:0.95,
+    SA2:0.90
 
 };
-function loadPersistentTeamCache() {
 
-  try {
-
-    if (!fs.existsSync(TEAM_CACHE_FILE)) {
-      fs.writeFileSync(
-        TEAM_CACHE_FILE,
-        JSON.stringify({})
-      );
-    }
-
-    return JSON.parse(
-      fs.readFileSync(
-        TEAM_CACHE_FILE,
-        "utf8"
-      )
-    );
-
-  } catch (err) {
-
-    console.log("❌ TEAM CACHE LOAD:", err.message);
-
-    return {};
-
-  }
-
-}
-
-function savePersistentTeamCache(cache) {
-
-  try {
-
-    fs.writeFileSync(
-      TEAM_CACHE_FILE,
-      JSON.stringify(cache, null, 2)
-    );
-
-  } catch (err) {
-
-    console.log("❌ TEAM CACHE SAVE:", err.message);
-
-  }
-
-}
 
 
 /* =========================
-   CACHE SYSTEM
+   PERSISTENT CACHE
 ========================= */
+
+
+function loadPersistentCache(){
+
+    try{
+
+        if(
+            !fs.existsSync(
+                TEAM_CACHE_FILE
+            )
+        ){
+
+            fs.writeFileSync(
+                TEAM_CACHE_FILE,
+                JSON.stringify({})
+            );
+
+        }
+
+
+        return JSON.parse(
+
+            fs.readFileSync(
+                TEAM_CACHE_FILE,
+                "utf8"
+            )
+
+        );
+
+
+    }catch(error){
+
+        console.log(
+            "CACHE LOAD ERROR:",
+            error.message
+        );
+
+
+        return {};
+
+    }
+
+}
+
+
+
+function savePersistentCache(cache){
+
+    try{
+
+        fs.writeFileSync(
+
+            TEAM_CACHE_FILE,
+
+            JSON.stringify(
+                cache,
+                null,
+                2
+            )
+
+        );
+
+
+    }catch(error){
+
+        console.log(
+            "CACHE SAVE ERROR:",
+            error.message
+        );
+
+    }
+
+}
+
+
+
+const PERSISTENT_TEAM_CACHE =
+    loadPersistentCache();
+
+
+
+/* =========================
+   MEMORY CACHE
+========================= */
+
 
 const CACHE = {
 
-  matches: {
-    data: null,
-    expiresAt: 0
-  },
 
-  teamMatches: new Map()
+    upcoming:{
+
+        data:null,
+
+        expiresAt:0
+
+    },
+
+
+    history:{
+
+        data:null,
+
+        expiresAt:0
+
+    },
+
+
+    teamMatches:new Map()
+
 
 };
 
 
-const MATCH_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
-const TEAM_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
-const PERSISTENT_TEAM_CACHE =
-  loadPersistentTeamCache();
+
+const MATCH_CACHE_TTL =
+    30 * 60 * 1000;
+
+
+const HISTORY_CACHE_TTL =
+    24 * 60 * 60 * 1000;
+
+
+const TEAM_CACHE_TTL =
+    7 *
+    24 *
+    60 *
+    60 *
+    1000;
 
 
 
 /* =========================
-   API QUEUE SYSTEM
+   API QUEUE
 ========================= */
 
-// Nombre maximum d'appels API simultanés
+
 const MAX_CONCURRENT_REQUESTS = 1;
 
+
 let activeRequests = 0;
+
 
 const REQUEST_QUEUE = [];
 
 
+
+function sleep(ms){
+
+    return new Promise(
+        resolve=>setTimeout(resolve,ms)
+    );
+
+}
+
+
+
+function enqueue(task){
+
+    return new Promise(
+        (resolve,reject)=>{
+
+
+            REQUEST_QUEUE.push({
+
+                task,
+
+                resolve,
+
+                reject
+
+            });
+
+
+            processQueue();
+
+
+        }
+    );
+
+}
+
+
+
+
+async function processQueue(){
+
+
+    if(
+        activeRequests >=
+        MAX_CONCURRENT_REQUESTS
+        ||
+        REQUEST_QUEUE.length===0
+    ){
+
+        return;
+
+    }
+
+
+
+    const job =
+        REQUEST_QUEUE.shift();
+
+
+
+    activeRequests++;
+
+
+
+    try{
+
+        const result =
+            await job.task();
+
+
+        job.resolve(result);
+
+
+
+    }catch(error){
+
+        job.reject(error);
+
+    }
+
+
+
+    activeRequests--;
+
+
+    setImmediate(
+        processQueue
+    );
+
+
+}
+
+
+
+
 /* =========================
-   HELPERS
+   API REQUEST
 ========================= */
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-
-/*
-  Gestionnaire de file d'attente.
-  Empêche Football-Data de recevoir
-  trop de requêtes en même temps.
-*/
-
-function enqueue(task) {
-
-  return new Promise((resolve, reject) => {
-
-    REQUEST_QUEUE.push({
-      task,
-      resolve,
-      reject
-    });
-
-    processQueue();
-
-  });
-
-}
-
-
-async function processQueue() {
-
-  if (
-    activeRequests >= MAX_CONCURRENT_REQUESTS ||
-    REQUEST_QUEUE.length === 0
-  ) {
-    return;
-  }
-
-
-  const job = REQUEST_QUEUE.shift();
-
-  activeRequests++;
-
-
-  try {
-
-    const result = await job.task();
-
-    job.resolve(result);
-
-  } catch (error) {
-
-    job.reject(error);
-
-  }
-
-
-  activeRequests--;
-
-setImmediate(processQueue);
-
-}
-
-
-
-/* =========================
-   API RETRY CONFIG
-========================= */
 
 const MAX_RETRIES = 3;
 
 
-/*
- La vraie requête API sera ajoutée
- dans la partie 2.
-*/
 
-/* =========================
-   API REQUEST V17
-========================= */
-
-async function apiGet(endpoint, retry = 0) {
-
-  return enqueue(async () => {
-
-    try {
-
-      const controller = new AbortController();
-
-const timeout = setTimeout(
-  () => controller.abort(),
-  10000
-);
-
-       await sleep(3000);
-       
-       console.log("➡️ API CALL:", endpoint);
+async function apiGet(
+    endpoint,
+    retry=0
+){
 
 
-const res = await fetch(
- `${BASE_URL}${endpoint}`,
- {
-   headers:{
-    "X-Auth-Token": API_KEY
-   },
-   signal: controller.signal
- }
-);
-       console.log("✅ API RESPONSE:", endpoint, res.status);
+    return enqueue(async()=>{
 
 
-clearTimeout(timeout);
+        try{
 
-      if (res.status === 429) {
 
-    console.log("⚠️ RATE LIMIT 429:", endpoint);
+            await sleep(2500);
 
-    if (retry < MAX_RETRIES) {
 
-        const delay = 15000 * (retry + 1);
 
-        console.log(`⏳ RETRY ${retry + 1} AFTER ${delay}ms`);
+            console.log(
+                "➡️ API:",
+                endpoint
+            );
 
-        await sleep(delay);
 
-        return await apiGet(endpoint, retry + 1);
 
-    }
+            const controller =
+                new AbortController();
 
-    return null;
-      }
 
-      if (!res.ok) {
 
-        console.log(`❌ API ERROR ${res.status} → ${endpoint}`);
+            const timeout =
+                setTimeout(
+                    ()=>controller.abort(),
+                    10000
+                );
 
-        return null;
-      }
 
-      return await res.json();
 
-    } catch (error) {
+            const response =
+                await fetch(
 
-      console.log("❌ API FAILURE:", error.message);
+                    `${BASE_URL}${endpoint}`,
 
-      return null;
-    }
+                    {
 
-  });
+                        headers:{
+
+                            "X-Auth-Token":
+                                API_KEY
+
+                        },
+
+                        signal:
+                            controller.signal
+
+                    }
+
+                );
+
+
+
+            clearTimeout(timeout);
+
+
+
+            console.log(
+                "STATUS:",
+                response.status
+            );
+
+
+
+            if(
+                response.status===429
+            ){
+
+                if(
+                    retry <
+                    MAX_RETRIES
+                ){
+
+                    const delay =
+                        15000 *
+                        (retry+1);
+
+
+                    console.log(
+                        "RETRY:",
+                        delay
+                    );
+
+
+                    await sleep(delay);
+
+
+                    return apiGet(
+                        endpoint,
+                        retry+1
+                    );
+
+                }
+
+
+                return null;
+
+            }
+
+
+
+            if(
+                !response.ok
+            ){
+
+                return null;
+
+            }
+
+
+
+            return await response.json();
+
+
+
+        }catch(error){
+
+
+            console.log(
+                "API ERROR:",
+                error.message
+            );
+
+
+            return null;
+
+
+        }
+
+
+    });
+
 
 }
+
+
+
 
 /* =========================
    FORMAT MATCH
 ========================= */
 
-function formatMatch(match) {
 
-  if (!match || !match.homeTeam || !match.awayTeam) {
-    return null;
-  }
-
-  return {
-
-    id: match.id,
-
-    utcDate: match.utcDate,
-
-    status: match.status,
-
-    competition: {
-
-  code: match.competition?.code,
-
-  name: match.competition?.name,
-
-  weight:
-    COMPETITION_WEIGHTS[
-      match.competition?.code
-    ] || 0.70
-
-},
-
-    homeTeam: {
-      id: match.homeTeam.id,
-      name: match.homeTeam.name
-    },
-
-    awayTeam: {
-      id: match.awayTeam.id,
-      name: match.awayTeam.name
-    },
-
-    score: match.score
-
-  };
-
-}
-
-console.log("FORMAT MATCH TYPE =", typeof formatMatch);
-
-/* =========================
-   GET COMPETITION MATCHES
-========================= */
-
-async function getCompetitionMatches(code) {
-
-  console.log(">>> GET COMPETITION", code);
-
-  const today = new Date();
-
-  const dateFrom = today.toISOString().split("T")[0];
-
-  const futureDate = new Date(
-    today.getTime() + 14 * 24 * 60 * 60 * 1000
-  );
-
-  const dateTo = futureDate.toISOString().split("T")[0];
+function formatMatch(match){
 
 
-  try {
+    if(
+        !match ||
+        !match.homeTeam ||
+        !match.awayTeam
+    ){
 
-    const data = await apiGet(
-      `/competitions/${code}/matches?dateFrom=${dateFrom}&dateTo=${dateTo}`
-    );
-
-
-    if (
-      !data ||
-      !Array.isArray(data.matches)
-    ) {
-
-      console.log(
-        "⚠️ NO MATCHES FOR COMPETITION:",
-        code
-      );
-
-      return [];
+        return null;
 
     }
 
 
+
+    return {
+
+
+        id:
+            match.id,
+
+
+        utcDate:
+            match.utcDate,
+
+
+        status:
+            match.status,
+
+
+
+        competition:{
+
+
+            code:
+                match.competition?.code,
+
+
+            name:
+                match.competition?.name,
+
+
+            weight:
+                COMPETITION_WEIGHTS[
+                    match.competition?.code
+                ]
+                ||
+                0.70
+
+
+        },
+
+
+
+        homeTeam:{
+
+
+            id:
+                match.homeTeam.id,
+
+
+            name:
+                match.homeTeam.name
+
+
+        },
+
+
+
+        awayTeam:{
+
+
+            id:
+                match.awayTeam.id,
+
+
+            name:
+                match.awayTeam.name
+
+
+        },
+
+
+
+        score:
+            match.score
+
+
+    };
+
+
+           }
+/* =========================
+   LOAD HISTORY DATABASE
+========================= */
+
+async function loadHistoryDatabase(){
+
+    if(
+        CACHE.history.data &&
+        Date.now() < CACHE.history.expiresAt
+    ){
+        HISTORY_MATCH_DATABASE.length = 0;
+        HISTORY_MATCH_DATABASE.push(...CACHE.history.data);
+        return HISTORY_MATCH_DATABASE;
+    }
+
+    console.log("📚 LOADING HISTORY DATABASE");
+
+    const history = [];
+
+    for(const competition of PRIMARY_COMPETITIONS){
+
+        const data = await apiGet(
+            `/competitions/${competition}/matches?status=FINISHED`
+        );
+
+        if(
+            !data ||
+            !Array.isArray(data.matches)
+        ){
+            continue;
+        }
+
+        const formatted = data.matches
+            .map(formatMatch)
+            .filter(Boolean);
+
+        history.push(...formatted);
+
+        console.log(
+            competition,
+            "HISTORY:",
+            formatted.length
+        );
+
+        await sleep(2000);
+    }
+
+
+    const unique = [];
+
+    const seen = new Set();
+
+    for(const match of history){
+
+        if(!seen.has(match.id)){
+            seen.add(match.id);
+            unique.push(match);
+        }
+
+    }
+
+
+    HISTORY_MATCH_DATABASE.length = 0;
+    HISTORY_MATCH_DATABASE.push(...unique);
+
+
+    CACHE.history = {
+        data:HISTORY_MATCH_DATABASE,
+        expiresAt:
+            Date.now()+HISTORY_CACHE_TTL
+    };
+
+
     console.log(
-      "MATCHES API BRUT:",
-      data.matches.length
+        "📚 TOTAL HISTORY:",
+        HISTORY_MATCH_DATABASE.length
     );
 
 
-    const matches = data.matches
-      .map(formatMatch)
-      .filter(Boolean)
-      .filter(match => {
+    return HISTORY_MATCH_DATABASE;
 
-        const matchDate =
-          new Date(match.utcDate);
+}
 
 
-        return (
-          matchDate >= today &&
-          matchDate <= futureDate
+
+/* =========================
+   LOAD UPCOMING DATABASE
+========================= */
+
+
+async function loadUpcomingDatabase(){
+
+    if(
+        CACHE.upcoming.data &&
+        Date.now() < CACHE.upcoming.expiresAt
+    ){
+
+        UPCOMING_MATCH_DATABASE.length=0;
+        UPCOMING_MATCH_DATABASE.push(
+            ...CACHE.upcoming.data
         );
 
-      });
+        return UPCOMING_MATCH_DATABASE;
+    }
 
 
     console.log(
-      "MATCHES APRÈS DATE FILTER:",
-      matches.length
+        "🔮 LOADING UPCOMING MATCHES"
+    );
+
+
+    const upcoming=[];
+
+
+    const today =
+        new Date();
+
+
+    const future =
+        new Date();
+
+
+    future.setDate(
+        future.getDate()+60
+    );
+
+
+    const from =
+        today.toISOString()
+        .split("T")[0];
+
+
+    const to =
+        future.toISOString()
+        .split("T")[0];
+
+
+
+    for(const competition of PRIMARY_COMPETITIONS){
+
+        const data =
+            await apiGet(
+                `/competitions/${competition}/matches?dateFrom=${from}&dateTo=${to}`
+            );
+
+
+        if(
+            !data ||
+            !Array.isArray(data.matches)
+        ){
+            continue;
+        }
+
+
+        const formatted =
+            data.matches
+            .map(formatMatch)
+            .filter(Boolean);
+
+
+        upcoming.push(
+            ...formatted
+        );
+
+
+        console.log(
+            competition,
+            "UPCOMING:",
+            formatted.length
+        );
+
+
+        await sleep(2000);
+
+    }
+
+
+
+    const unique=[];
+
+    const seen=new Set();
+
+
+    for(const match of upcoming){
+
+        if(!seen.has(match.id)){
+
+            seen.add(match.id);
+
+            unique.push(match);
+
+        }
+
+    }
+
+
+
+    UPCOMING_MATCH_DATABASE.length=0;
+
+    UPCOMING_MATCH_DATABASE.push(
+        ...unique
+    );
+
+
+
+    CACHE.upcoming={
+
+        data:UPCOMING_MATCH_DATABASE,
+
+        expiresAt:
+            Date.now()+MATCH_CACHE_TTL
+
+    };
+
+
+    console.log(
+        "🔮 TOTAL UPCOMING:",
+        UPCOMING_MATCH_DATABASE.length
+    );
+
+
+    return UPCOMING_MATCH_DATABASE;
+
+}
+
+/* =========================
+   GET UPCOMING MATCHES
+========================= */
+
+async function getMatches(){
+
+    if(
+        UPCOMING_MATCH_DATABASE.length>0
+    ){
+        return UPCOMING_MATCH_DATABASE;
+    }
+
+
+    const matches =
+        await loadUpcomingDatabase();
+
+
+    matches.sort((a,b)=>{
+
+        const da =
+            new Date(a.utcDate);
+
+        const db =
+            new Date(b.utcDate);
+
+
+        return da-db;
+
+    });
+
+
+    console.log(
+        "🔥 MATCHES READY:",
+        matches.length
     );
 
 
     return matches;
 
-
-  } catch (error) {
-
-    console.error(
-      "❌ GET COMPETITION ERROR:",
-      code,
-      error.message
-    );
-
-    return [];
-
-  }
-
 }
-
-async function getCompetitionMatchesSmart(code) {
-
-  const dateFrom = new Date();
-
-  const dateTo = new Date();
-
-  dateTo.setDate(
-    dateTo.getDate() + 60
-  );
-
-  const from =
-    dateFrom
-      .toISOString()
-      .split("T")[0];
-
-  const to =
-    dateTo
-      .toISOString()
-      .split("T")[0];
-
-
-  console.log(
-    `🔍 ${code} : ${from} -> ${to}`
-  );
-
-
-  const data = await apiGet(
-    `/competitions/${code}/matches?dateFrom=${from}&dateTo=${to}`
-  );
-
-
-  if (
-    !data ||
-    !Array.isArray(data.matches)
-  ) {
-
-    console.log(
-      `ℹ️ ${code}: aucun match`
-    );
-
-    return [];
-
-  }
-
-
-  console.log(
-    `${code} : ${data.matches.length} matchs trouvés`
-  );
-
-
-  return data.matches
-
-    .map(formatMatch)
-
-    .filter(Boolean)
-
-    .sort(
-      (a, b) =>
-        new Date(a.utcDate) -
-        new Date(b.utcDate)
-    );
-
-}
-  
-/* =========================
-   MATCH CLEANERS
-========================= */
-
-function removeDuplicates(matches) {
-
-  const seen = new Set();
-
-  return matches.filter(match => {
-
-    if (seen.has(match.id)) {
-      return false;
-    }
-
-    seen.add(match.id);
-
-    return true;
-
-  });
-
-}
-
-
-
-function filterMatches(matches) {
-
-  console.log("AVANT FILTER:", matches.length);
-
-  console.log("🚨 FILTER TEMPORAIRE DÉSACTIVÉ");
-
-  return matches;
-
-}
-
-function addMatchQuality(matches) {
-
-  const bigTeams = [
-    "Real Madrid",
-    "Barcelona",
-    "Manchester City",
-    "Liverpool",
-    "Arsenal",
-    "Bayern",
-    "PSG",
-    "Inter",
-    "Juventus",
-    "Milan"
-  ];
-
-  const result = matches.map(match => {
-
-    let quality =
-50 *
-(match.competition?.weight || 1);
-
-    if (
-      bigTeams.some(team =>
-        match.homeTeam.name.includes(team) ||
-        match.awayTeam.name.includes(team)
-      )
-    ) {
-      quality += 25;
-    }
-
-    return {
-      ...match,
-      quality
-    };
-
-  });
-
-  console.log("QUALITY TEST:", result.length);
-
-  return result;
-
-}
-
-/* =========================
-   MATCH RUNNING LOCK
-========================= */
-
-let MATCH_LOADING = null;
 
 
 
 /* =========================
-   GET ALL MATCHES V17
+   GET TEAM HISTORY
 ========================= */
 
-async function getMatches() {
+async function getTeamMatches(teamId){
 
 
-  if (
-    CACHE.matches.data &&
-    Date.now() <
-    CACHE.matches.expiresAt
-  ) {
+    if(
+        HISTORY_MATCH_DATABASE.length===0
+    ){
 
-    console.log(
-      "⚡ CACHE MATCHES"
-    );
-
-    return CACHE.matches.data;
-
-  }
-
-
-
-  if (MATCH_LOADING) {
-
-    console.log(
-      "⏳ WAIT MATCH LOADING"
-    );
-
-    return MATCH_LOADING;
-
-  }
-
-
-
-  MATCH_LOADING =
-  (async () => {
-
-
-    let matches = [];
-
-
-
-    try {
-
-
-
-      for (const competition of PRIMARY_COMPETITIONS) {
-
-         if (matches.length >= 15) {
-    break;
-         }
-
-  await sleep(3000);
-
-  console.log("📡 PRIMARY:", competition);
-
-  const result = await getCompetitionMatchesSmart(competition);
-
-  console.log(competition, "=>", result.length);
-
-  matches.push(...result);
-
-  console.log("COMPÉTITION :", competition);
-  console.log("APRÈS PUSH =", matches.length);
-
-  console.log("TOTAL =", matches.length);
-
-      }
-
-
-      /*
-        On ajoute les compétitions secondaires
-        seulement si nécessaire
-      */
-
-      const MIN_MATCHES = 15;
-
-if (matches.length < MIN_MATCHES) {
-
-  console.log(
-    `📦 Seulement ${matches.length} matchs trouvés. Chargement des compétitions secondaires...`
-  );
-
-  for (const competition of SECONDARY_COMPETITIONS) {
-
-    console.log("📡 SECONDARY:", competition);
-
-    const result = await getCompetitionMatchesSmart(competition);
-
-    console.log("TYPE :", typeof result);
-    console.log("IS ARRAY :", Array.isArray(result));
-    console.log("RESULT :", result);
-
-    if (Array.isArray(result)) {
-      matches.push(...result);
-    } else {
-      console.error("❌ getCompetitionMatches ne retourne pas un tableau");
-    }
-
-    console.log("COMPÉTITION :", competition);
-    console.log("APRÈS PUSH =", matches.length);
-
-    // Arrête dès qu'on a assez de matchs
-    if (matches.length >= MIN_MATCHES) {
-      console.log("✅ Nombre minimum de matchs atteint.");
-      break;
-    }
-  }
-
-}
-
-       matches = removeDuplicates(matches);
-
-matches = addMatchQuality(matches);
-
-matches = filterMatches(matches);
-
-matches.sort((a, b) => {
-
-  const dateA = new Date(a.utcDate);
-  const dateB = new Date(b.utcDate);
-
-  const daysA =
-    (dateA - new Date()) / (1000 * 60 * 60 * 24);
-
-  const daysB =
-    (dateB - new Date()) / (1000 * 60 * 60 * 24);
-
-
-  // priorité aux matchs proches
-  if (Math.abs(daysA - daysB) > 3) {
-    return daysA - daysB;
-  }
-
-  // ensuite qualité
-  return b.quality - a.quality;
-
-});
-
-
-
-      CACHE.matches = {
-
-        data: matches,
-
-        expiresAt:
-          Date.now() + MATCH_CACHE_TTL
-
-      };
-
-
-
-            console.log(
-        "🔥 MATCHES TOTAL:",
-        matches.length
-      );
-
-      console.log(
-        "TOTAL MATCHES RETURNED =",
-        matches.length
-      );
-
-      console.log(matches.slice(0,3));
-
-       MATCH_DATABASE.length = 0;
-MATCH_DATABASE.push(...matches);
-
-console.log("📦 MATCH DATABASE:", MATCH_DATABASE.length);
-
-      return matches;
-
-
-    } finally {
-
-      MATCH_LOADING = null;
+        await loadHistoryDatabase();
 
     }
 
 
-  })();
 
+    const matches =
+        HISTORY_MATCH_DATABASE
+        .filter(match=>
 
-  return MATCH_LOADING;
-
-}
-
-/* =========================
-   TEAM MATCHES
-========================= */
-async function getTeamMatches(teamId) {
-
-    if (MATCH_DATABASE.length === 0) {
-        await getMatches();
-    }
-
-    const teamMatches = MATCH_DATABASE
-        .filter(match =>
-
-            match.status === "FINISHED" &&
+            match.status==="FINISHED" &&
 
             (
-                match.homeTeam.id === teamId ||
-                match.awayTeam.id === teamId
+                match.homeTeam.id===teamId ||
+                match.awayTeam.id===teamId
             )
+
         )
-        .sort(
-            (a, b) =>
-                new Date(b.utcDate) -
-                new Date(a.utcDate)
+        .sort((a,b)=>
+
+            new Date(b.utcDate) -
+            new Date(a.utcDate)
+
         )
-        .slice(0, 8);
+        .slice(0,8);
+
+
 
     console.log(
-        "📊 TEAM MATCHES:",
+        "📊 TEAM HISTORY:",
         teamId,
-        teamMatches.length
+        matches.length
     );
 
-    return teamMatches;
+
+
+    return matches;
+
 }
+
+
+
+/* =========================
+   SAFE TEAM STATS
+========================= */
+
+function getSafeMatches(matches){
+
+    if(
+        !Array.isArray(matches)
+    ){
+        return [];
+    }
+
+
+    return matches.filter(match=>
+
+        match &&
+        match.score &&
+        match.score.fullTime &&
+        typeof match.score.fullTime.home==="number" &&
+        typeof match.score.fullTime.away==="number"
+
+    );
+
+}
+
+/* =========================
+   INITIALIZATION
+========================= */
+
+async function initializeDatabase(){
+
+    try{
+
+        console.log(
+            "🚀 INITIALIZING DATABASE..."
+        );
+
+
+        await loadHistoryDatabase();
+
+        await loadUpcomingDatabase();
+
+
+        console.log(
+            "✅ DATABASE READY"
+        );
+
+
+        console.log(
+            "📚 HISTORY:",
+            HISTORY_MATCH_DATABASE.length
+        );
+
+
+        console.log(
+            "🔮 UPCOMING:",
+            UPCOMING_MATCH_DATABASE.length
+        );
+
+
+    }catch(error){
+
+        console.log(
+            "❌ DATABASE INIT ERROR:",
+            error.message
+        );
+
+    }
+
+}
+
+
 
 /* =========================
    EXPORTS
@@ -814,10 +992,18 @@ async function getTeamMatches(teamId) {
 
 module.exports = {
 
-  apiGet,
+    apiGet,
 
-  getMatches,
+    getMatches,
 
-  getTeamMatches
+    getTeamMatches,
+
+    loadHistoryDatabase,
+
+    loadUpcomingDatabase,
+
+    initializeDatabase,
+
+    getSafeMatches
 
 };
