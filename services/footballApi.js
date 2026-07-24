@@ -527,53 +527,9 @@ function filterMatches(matches) {
 
   console.log("AVANT FILTER:", matches.length);
 
-  const now = new Date();
+  console.log("🚨 FILTER TEMPORAIRE DÉSACTIVÉ");
 
-  const filtered = matches.filter(match => {
-
-    if (!match.homeTeam || !match.awayTeam) {
-      return false;
-    }
-
-    const matchDate = new Date(match.utcDate);
-
-     const maxDate = new Date();
-maxDate.setDate(maxDate.getDate() + 60);
-
-if (matchDate > maxDate) {
-   console.log("MAX HOURS =", MAX_HOURS);
-console.log(
-    "TEST =",
-    diffHours,
-    diffHours >= 0,
-    diffHours <= MAX_HOURS
-);
-  return false;
-}
-
-    const diffHours =
-      (matchDate - now) / (1000 * 60 * 60);
-
-    console.log(
-      "CHECK:",
-      match.homeTeam.name,
-      "vs",
-      match.awayTeam.name,
-      match.utcDate,
-      "dans",
-      Math.round(diffHours),
-      "heures"
-    );
-
-
-
-     const MAX_HOURS = 60 * 24;
-return diffHours >= 0 && diffHours <= MAX_HOURS;
-  });
-
-  console.log("APRES FILTER:", filtered.length);
-
-  return filtered;
+  return matches;
 
 }
 
