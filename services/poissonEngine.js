@@ -52,6 +52,16 @@ function buildGoalDistribution(expectedGoals) {
 
 function buildPoissonMatrix(homeXG, awayXG) {
 
+   function buildPoissonMatrix(homeXG, awayXG) {
+
+    console.log("HOME XG =", homeXG);
+    console.log("AWAY XG =", awayXG);
+
+    const home = buildGoalDistribution(homeXG);
+    const away = buildGoalDistribution(awayXG);
+
+    ...
+   }
     const home = buildGoalDistribution(homeXG);
 
     const away = buildGoalDistribution(awayXG);
