@@ -611,31 +611,42 @@ async function loadHistoryDatabase(){
 
     const history = [];
 
-    for(const competition of PRIMARY_COMPETITIONS){
+for (const competition of PRIMARY_COMPETITIONS) {
 
-        const data = await apiGet(
-            `/competitions/${competition}/matches?status=FINISHED`
-        );
+  const data = await apiGet(
+    `/competitions/${competition}/matches`
+  );
 
-        if(
-            !data ||
-            !Array.isArray(data.matches)
-        ){
-            continue;
-        }
+  if (!data || !Array.isArray(data.matches)) {
+    console.log("❌ NO DATA:", competition);
+    continue;
+  }
 
-        const formatted = data.matches
-            .map(formatMatch)
-            .filter(Boolean);
+  const finished = data.matches.filter(
+    m => m.status === "FINISHED"
+  );
 
-        history.push(...formatted);
+  console.log("COMPETITION:", competition);
+  console.log("RAW HISTORY:", data.matches.length);
+  console.log("FINISHED HISTORY:", finished.length);
 
-        console.log(
-            competition,
-            "HISTORY:",
-            formatted.length
-        );
+  const formatted = finished
+    .map(formatMatch)
+    .filter(Boolean);
 
+  history.push(...formatted);
+
+  console.log(
+    competition,
+    "HISTORY:",
+    formatted.length
+  );
+}
+
+console.log(
+  "📚 TOTAL HISTORY:",
+  history.length
+);
         await sleep(2000);
     }
 
