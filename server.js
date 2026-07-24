@@ -825,7 +825,10 @@ async function preloadPredictions() {
 }
 
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log("KING PREDICTIONS V16 RUNNING ⚽🔥");
+app.listen(PORT, "0.0.0.0", async () => {
+
+    console.log("KING PREDICTIONS V16 RUNNING ⚽🔥");
+
+    await preloadPredictions();
+
 });
-  
