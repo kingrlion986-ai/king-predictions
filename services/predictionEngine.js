@@ -158,6 +158,22 @@ consensus.away +=
     awayStats.reliability * 100 *
     weights.reliability;
 
+    const consensusWinner =
+    consensus.home > consensus.away &&
+    consensus.home > consensus.draw
+
+        ? match.homeTeam.name
+
+        : consensus.away > consensus.home &&
+          consensus.away > consensus.draw
+
+        ? match.awayTeam.name
+
+        : "DRAW";
+
+    console.log("CONSENSUS :", consensus);
+console.log("CONSENSUS WINNER :", consensusWinner);
+
     const eloProbability =
         calculateEloProbability(
             homeElo,
