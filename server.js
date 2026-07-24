@@ -4,7 +4,8 @@ const fs = require("fs");
 const path = require("path");
 
 const {
-  getMatches
+  getMatches,
+  initializeDatabase
 } = require("./services/footballApi");
 
 function sleep(ms) {
@@ -29,6 +30,13 @@ const {
 const {
   startDailyScheduler
 } = require("./services/dailyScheduler");
+
+
+const app = express();
+
+
+// Chargement des bases IA
+initializeDatabase();
 
 const app = express();
 
