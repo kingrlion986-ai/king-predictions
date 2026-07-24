@@ -665,6 +665,9 @@ async function analyzeTeam(team) {
         avgConceded:1,
 
 
+        attackPower:1,
+
+        defensePower:1,
 
         homeAttack:1,
 
