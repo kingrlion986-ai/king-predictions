@@ -559,7 +559,12 @@ if (matchDate > maxDate) {
     );
 
 
-    return diffHours >= 0 && diffHours <= 168;
+    const MAX_HOURS =
+    matches.length < 15
+        ? 60 * 24
+        : 7 * 24;
+
+return diffHours >= 0 && diffHours <= MAX_HOURS;
 
   });
 
