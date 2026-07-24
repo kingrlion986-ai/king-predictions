@@ -616,8 +616,8 @@ async function loadHistoryDatabase(){
         await sleep(2500);
 
         const data = await apiGet(
-            `/competitions/${competition}/matches?status=FINISHED`
-        );
+    `/competitions/${competition}/matches?season=2025`
+);
 
 
         if(
