@@ -720,18 +720,26 @@ async function loadHistoryDatabase(){
 async function loadUpcomingDatabase(){
 
     if(
-        CACHE.upcoming.data &&
-        Date.now() < CACHE.upcoming.expiresAt
-    ){
+    CACHE.upcoming.data &&
+    CACHE.upcoming.data.length > 0 &&
+    Date.now() < CACHE.upcoming.expiresAt
+){
 
-        UPCOMING_MATCH_DATABASE.length=0;
-        UPCOMING_MATCH_DATABASE.push(
-            ...CACHE.upcoming.data
-        );
+    UPCOMING_MATCH_DATABASE.length = 0;
 
-        return UPCOMING_MATCH_DATABASE;
+    UPCOMING_MATCH_DATABASE.push(
+        ...CACHE.upcoming.data
+    );
+
+
+    console.log(
+        "🔮 CACHE UPCOMING USED:",
+        UPCOMING_MATCH_DATABASE.length
+    );
+
+
+    return UPCOMING_MATCH_DATABASE;
     }
-
 
     console.log(
         "🔮 LOADING UPCOMING MATCHES"
@@ -855,39 +863,38 @@ async function loadUpcomingDatabase(){
 /* =========================
    GET UPCOMING MATCHES
 ========================= */
-
 async function getMatches(){
 
+    let matches = UPCOMING_MATCH_DATABASE;
+
+
     if(
-        UPCOMING_MATCH_DATABASE.length === 0
+        !matches ||
+        matches.length === 0
     ){
 
-        await loadUpcomingDatabase();
+        matches = await loadUpcomingDatabase();
 
     }
 
 
-    UPCOMING_MATCH_DATABASE.sort((a,b)=>{
+    matches.sort((a,b)=>{
 
-        const da =
-            new Date(a.utcDate);
-
-        const db =
-            new Date(b.utcDate);
-
-
-        return da - db;
+        return (
+            new Date(a.utcDate) -
+            new Date(b.utcDate)
+        );
 
     });
 
 
     console.log(
         "🔥 MATCHES READY:",
-        UPCOMING_MATCH_DATABASE.length
+        matches.length
     );
 
 
-    return UPCOMING_MATCH_DATABASE;
+    return matches;
 
 }
 
