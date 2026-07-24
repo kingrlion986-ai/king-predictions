@@ -96,7 +96,31 @@ console.time(timer);
     const weights =
     getWeights();
 
-    const consensus = {
+    
+
+    const eloProbability =
+        calculateEloProbability(
+            homeElo,
+            awayElo
+        );
+
+    const xg =
+        calculateExpectedGoals(
+            homeStats,
+            awayStats,
+            {
+                home: homeElo,
+                away: awayElo
+            }
+        );
+
+    const poisson =
+        buildPoissonMatrix(
+            xg.expectedHomeGoals,
+            xg.expectedAwayGoals
+        );
+
+            const consensus = {
 
     home: 0,
 
@@ -173,28 +197,6 @@ consensus.away +=
 
     console.log("CONSENSUS :", consensus);
 console.log("CONSENSUS WINNER :", consensusWinner);
-
-    const eloProbability =
-        calculateEloProbability(
-            homeElo,
-            awayElo
-        );
-
-    const xg =
-        calculateExpectedGoals(
-            homeStats,
-            awayStats,
-            {
-                home: homeElo,
-                away: awayElo
-            }
-        );
-
-    const poisson =
-        buildPoissonMatrix(
-            xg.expectedHomeGoals,
-            xg.expectedAwayGoals
-        );
 
     console.log(
     "POISSON DEBUG:",
