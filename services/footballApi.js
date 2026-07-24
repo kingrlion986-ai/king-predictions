@@ -611,45 +611,55 @@ async function loadHistoryDatabase(){
 
     const history = [];
 
-for (const competition of PRIMARY_COMPETITIONS) {
+    for (const competition of PRIMARY_COMPETITIONS) {
 
-  const data = await apiGet(
-    `/competitions/${competition}/matches`
-  );
-
-  if (!data || !Array.isArray(data.matches)) {
-    console.log("❌ NO DATA:", competition);
-    continue;
-  }
-
-  const finished = data.matches.filter(
-    m => m.status === "FINISHED"
-  );
-
-  console.log("COMPETITION:", competition);
-  console.log("RAW HISTORY:", data.matches.length);
-  console.log("FINISHED HISTORY:", finished.length);
-
-  const formatted = finished
-    .map(formatMatch)
-    .filter(Boolean);
-
-  history.push(...formatted);
-
-  console.log(
-    competition,
-    "HISTORY:",
-    formatted.length
-  );
-}
-
-console.log(
-  "📚 TOTAL HISTORY:",
-  history.length
-);
         await sleep(2000);
+
+        const data = await apiGet(
+            `/competitions/${competition}/matches`
+        );
+
+        if (!data || !Array.isArray(data.matches)) {
+            console.log("❌ NO DATA:", competition);
+            continue;
+        }
+
+        const finished = data.matches.filter(
+            m => m.status === "FINISHED"
+        );
+
+        console.log("COMPETITION:", competition);
+        console.log("RAW HISTORY:", data.matches.length);
+        console.log("FINISHED HISTORY:", finished.length);
+
+        const formatted = finished
+            .map(formatMatch)
+            .filter(Boolean);
+
+        history.push(...formatted);
+
+        console.log(
+            competition,
+            "HISTORY:",
+            formatted.length
+        );
     }
 
+    console.log(
+        "📚 TOTAL HISTORY:",
+        history.length
+    );
+
+    HISTORY_MATCH_DATABASE.length = 0;
+    HISTORY_MATCH_DATABASE.push(...history);
+
+    CACHE.history = {
+        data: history,
+        expiresAt: Date.now() + MATCH_CACHE_TTL
+    };
+
+    return HISTORY_MATCH_DATABASE;
+}
 
     const unique = [];
 
