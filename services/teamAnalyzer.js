@@ -294,6 +294,12 @@ else {
 }, 0);
 
 
+   console.log("BUILD STATS =", {
+    attackPower,
+    defensePower,
+    weightTotal
+});
+
 
   return {
 
