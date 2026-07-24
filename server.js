@@ -304,9 +304,7 @@ for (const match of uniqueMatches) {
     console.error(err.stack);
 
   }
-  if (result) {
-    analyses.push(result);
-  }
+  
 
   await sleep(6000);
 
