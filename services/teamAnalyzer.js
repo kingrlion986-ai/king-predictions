@@ -300,6 +300,13 @@ else {
     weightTotal
 });
 
+   console.log("BUILD STATS DEBUG:", {
+  attackPower,
+  defensePower,
+  weightTotal,
+  matches: matches.length
+});
+
 
   return {
 
