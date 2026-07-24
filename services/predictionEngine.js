@@ -105,6 +105,29 @@ console.time(timer);
         );
     console.log("2 - XG");
 
+    console.log("HOME STATS =", {
+    attackPower: homeStats.attackPower,
+    defensePower: homeStats.defensePower,
+    homeAttack: homeStats.homeAttack,
+    homeDefense: homeStats.homeDefense,
+    avgScored: homeStats.avgScored,
+    avgConceded: homeStats.avgConceded,
+    formPoints: homeStats.formPoints,
+    strength: homeStats.strength
+});
+
+console.log("AWAY STATS =", {
+    attackPower: awayStats.attackPower,
+    defensePower: awayStats.defensePower,
+    awayAttack: awayStats.awayAttack,
+    awayDefense: awayStats.awayDefense,
+    avgScored: awayStats.avgScored,
+    avgConceded: awayStats.avgConceded,
+    formPoints: awayStats.formPoints,
+    strength: awayStats.strength
+});
+    console.log("XG =", xg);
+    
     const xg =
         calculateExpectedGoals(
             homeStats,
@@ -115,7 +138,6 @@ console.time(timer);
             }
         );
 
-    console.log("XG OBJECT =", xg);
     console.log("3 - POISSON");
 
     const poisson =
