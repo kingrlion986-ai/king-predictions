@@ -31,7 +31,6 @@ const {
   startDailyScheduler
 } = require("./services/dailyScheduler");
 
-
 const app = express();
 
 app.use(cors());
