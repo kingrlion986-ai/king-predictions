@@ -204,31 +204,20 @@ if (match.predictions.aiRating) {
 
 }
 
+if (match.predictions.aiDecision?.risk === "LOW") {
 
-  // Bonus si les deux équipes sont fiables
-score += (
-    home.reliability +
-    away.reliability
-) * 5;
+    score += 8;
 
-// Bonus si le match est déséquilibré (plus facile à prédire)
-score += Math.abs(
-    home.strength -
-    away.strength
-) * 0.15;
+} else if (match.predictions.aiDecision?.risk === "MEDIUM") {
 
-// Bonus Elo
-if (match.model.elo) {
+    score += 4;
 
-    score += Math.min(
-        Math.abs(
-            match.model.elo.home -
-            match.model.elo.away
-        ) / 15,
-        12
-    );
+} else {
+
+    score -= 6;
 
 }
+
 
   return Math.round(
   clamp(
@@ -302,14 +291,16 @@ function rankMatches(matches) {
     (a,b)=>{
 
         const scoreA =
-    a.qualityScore +
-    (a.predictions.aiRating || 0) +
-    (a.predictions.aiDecision?.score || 0) * 0.30;
+    a.qualityScore * 0.50 +
+    (a.predictions.aiRating || 0) * 0.25 +
+    (a.predictions.winnerConfidence || 0) * 0.15 +
+    (a.predictions.aiDecision?.score || 0) * 0.10;
 
 const scoreB =
-    b.qualityScore +
-    (b.predictions.aiRating || 0) +
-    (b.predictions.aiDecision?.score || 0) * 0.30;
+    b.qualityScore * 0.50 +
+    (b.predictions.aiRating || 0) * 0.25 +
+    (b.predictions.winnerConfidence || 0) * 0.15 +
+    (b.predictions.aiDecision?.score || 0) * 0.10;
         return scoreB - scoreA;
 
     }
