@@ -64,25 +64,28 @@ function evaluateDecision({
     ===============================
     */
 
-if (poisson.dominance >= 30) {
+if (poisson && poisson.dominance) {
 
-    score += 25;
-    reasons.push("Poisson strong agreement");
+    if (poisson.dominance >= 30) {
+
+        score += 25;
+        reasons.push("Poisson strong agreement");
+
+    }
+    else if (poisson.dominance >= 15) {
+
+        score += 15;
+        reasons.push("Poisson moderate");
+
+    }
+    else {
+
+        score -= 10;
+        reasons.push("Poisson uncertain");
+
+    }
 
 }
-else if (poisson.dominance >= 15) {
-
-    score += 15;
-    reasons.push("Poisson moderate");
-
-}
-else {
-
-    score -= 10;
-    reasons.push("Poisson uncertain");
-
-}
-
     /*
     ===============================
     TEAM STRENGTH
