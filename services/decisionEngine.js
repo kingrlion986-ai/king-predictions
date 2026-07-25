@@ -59,10 +59,10 @@ function evaluateDecision({
 
 
     /*
-    ===============================
-    POISSON VALIDATION
-    ===============================
-    */
+===============================
+POISSON VALIDATION
+===============================
+*/
 
 if (poisson && poisson.dominance) {
 
