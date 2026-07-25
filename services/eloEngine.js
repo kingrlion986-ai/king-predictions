@@ -95,8 +95,6 @@ function setTeamElo(teamId, elo) {
         )
     );
 
-   saveRatings();
-
 }
 
 /* =========================
@@ -105,17 +103,18 @@ function setTeamElo(teamId, elo) {
 
 function calculateEloProbability(homeElo, awayElo) {
 
+    const HOME_ADVANTAGE = 65;
+
     return 1 /
     (
         1 +
         Math.pow(
             10,
-            (awayElo - homeElo) / 400
+            ((awayElo) - (homeElo + HOME_ADVANTAGE)) / 400
         )
     );
 
 }
-
 /* =========================
    UPDATE BOTH TEAMS
 ========================= */
@@ -166,11 +165,24 @@ function updateMatchElo(
         );
 
     const multiplier =
-        1 + goalDifference * 0.15;
+
+goalDifference <= 1 ? 1 :
+
+goalDifference === 2 ? 1.30 :
+
+goalDifference === 3 ? 1.55 :
+
+1.75;
+
+                  const eloGap = Math.abs(homeElo - awayElo);
+
+const adjustment =
+    eloGap > 250 ? 0.70 : 1;
 
     const newHomeElo =
         homeElo +
         K_FACTOR *
+        adjustment *
         multiplier *
         (
             actualHome -
@@ -180,6 +192,7 @@ function updateMatchElo(
     const newAwayElo =
         awayElo +
         K_FACTOR *
+        adjustment *
         multiplier *
         (
             actualAway -
@@ -195,6 +208,8 @@ function updateMatchElo(
         awayTeamId,
         newAwayElo
     );
+
+   saveRatings();
 
     return {
 
