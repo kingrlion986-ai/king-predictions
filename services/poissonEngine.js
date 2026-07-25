@@ -1,4 +1,4 @@
-const MAX_GOALS = 8;
+const MAX_GOALS = 10;
 
 /* =========================
    FACTORIAL
@@ -205,14 +205,12 @@ const favoriteProbability = Math.max(
     awayWin
 );
 
-   const secondProbability = Math.max(
-    Math.min(homeWin, draw),
-    Math.min(
-        Math.max(homeWin, draw),
-        awayWin
-    )
-);
+   const probabilities = [homeWin, draw, awayWin]
+.sort((a,b)=>b-a);
 
+const favoriteProbability = probabilities[0];
+const secondProbability = probabilities[1];
+   
 const predictionGap =
     favoriteProbability -
     secondProbability;
@@ -232,9 +230,9 @@ const dominance =
 
    const matchScore =
 (
-    favoriteProbability * 40 +
-    dominance * 0.35 +
-    (1 - uncertainty / 100) * 25
+favoriteProbability * 55 +
+dominance * 0.25 +
+((100 - uncertainty) * 0.20)
 );
 
        /*
@@ -252,6 +250,14 @@ const sum = homeWin + draw + awayWin;
 homeWin /= sum;
 draw /= sum;
 awayWin /= sum;
+
+   let risk = "HIGH";
+
+if (favoriteProbability >= 0.70)
+    risk = "LOW";
+
+else if (favoriteProbability >= 0.55)
+    risk = "MEDIUM";
    
 return {
 
@@ -305,6 +311,8 @@ Number(matchScore.toFixed(2)),
     uncertainty,
 
        dominance,
+
+       risk,
 
     exactScore: {
         score: exactScore,
