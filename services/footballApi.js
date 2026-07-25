@@ -30,13 +30,6 @@ const BASE_URL =
     "https://api.football-data.org/v4";
 
 
-const TEAM_CACHE_FILE =
-    path.join(
-        __dirname,
-        "..",
-        "teamCache.json"
-    );
-
 
 /* =========================
    COMPETITIONS
@@ -96,90 +89,6 @@ const COMPETITION_WEIGHTS = {
     SA2:0.90
 
 };
-
-
-
-/* =========================
-   PERSISTENT CACHE
-========================= */
-
-
-function loadPersistentCache(){
-
-    try{
-
-        if(
-            !fs.existsSync(
-                TEAM_CACHE_FILE
-            )
-        ){
-
-            fs.writeFileSync(
-                TEAM_CACHE_FILE,
-                JSON.stringify({})
-            );
-
-        }
-
-
-        return JSON.parse(
-
-            fs.readFileSync(
-                TEAM_CACHE_FILE,
-                "utf8"
-            )
-
-        );
-
-
-    }catch(error){
-
-        console.log(
-            "CACHE LOAD ERROR:",
-            error.message
-        );
-
-
-        return {};
-
-    }
-
-}
-
-
-
-function savePersistentCache(cache){
-
-    try{
-
-        fs.writeFileSync(
-
-            TEAM_CACHE_FILE,
-
-            JSON.stringify(
-                cache,
-                null,
-                2
-            )
-
-        );
-
-
-    }catch(error){
-
-        console.log(
-            "CACHE SAVE ERROR:",
-            error.message
-        );
-
-    }
-
-}
-
-
-
-const PERSISTENT_TEAM_CACHE =
-    loadPersistentCache();
 
 
 
@@ -598,6 +507,10 @@ function formatMatch(match){
 
 async function loadHistoryDatabase(){
 
+   if (HISTORY_MATCH_DATABASE.length > 0) {
+    return HISTORY_MATCH_DATABASE;
+   }
+
     if(
         CACHE.history.data &&
         Date.now() < CACHE.history.expiresAt
@@ -718,6 +631,10 @@ async function loadHistoryDatabase(){
 
 
 async function loadUpcomingDatabase(){
+
+   if (UPCOMING_MATCH_DATABASE.length > 0) {
+    return UPCOMING_MATCH_DATABASE;
+   }
 
     if(
     CACHE.upcoming.data &&
@@ -878,15 +795,10 @@ async function getMatches(){
     }
 
 
-    matches.sort((a,b)=>{
-
-        return (
-            new Date(a.utcDate) -
-            new Date(b.utcDate)
-        );
-
-    });
-
+    return [...matches].sort(
+    (a,b)=>
+        new Date(a.utcDate)-new Date(b.utcDate)
+);
 
     console.log(
         "🔥 MATCHES READY:",
