@@ -151,22 +151,22 @@ const awayOpponent =
     */
 
     let homeXG =
-    (
-        homeAttack * 0.65
-    )
-    +
-    (
-        awayDefense * 0.35
-    );
+(
+    homeAttack * 0.72
+)
+-
+(
+    awayDefense * 0.18
+);
 
 let awayXG =
-    (
-        awayAttack * 0.65
-    )
-    +
-    (
-        homeDefense * 0.35
-    );
+(
+    awayAttack * 0.72
+)
+-
+(
+    homeDefense * 0.18
+);
 
 homeXG *=
     (0.80 +
@@ -229,6 +229,14 @@ awayXG +=
 const strengthDifference =
     home.strength -
     away.strength;
+
+   const formDifference =
+    home.formPoints -
+    away.formPoints;
+
+homeXG += clamp(formDifference * 0.10, -0.25, 0.25);
+
+awayXG += clamp(-formDifference * 0.10, -0.25, 0.25);
 
 const strengthFactor =
     clamp(
@@ -395,6 +403,8 @@ else if (dominance >= 15) {
 }
 
 
+   homeXG = clamp(homeXG, 0.20, 3.50);
+awayXG = clamp(awayXG, 0.20, 3.50);
 
     return {
 
