@@ -207,8 +207,7 @@ const favoriteProbability = Math.max(
 
    const probabilities = [homeWin, draw, awayWin]
 .sort((a,b)=>b-a);
-
-const favoriteProbability = probabilities[0];
+   
 const secondProbability = probabilities[1];
    
 const predictionGap =
