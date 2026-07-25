@@ -109,6 +109,13 @@ const stability =
     /
     2;
 
+   const reliability =
+(
+    homeStats.reliability +
+    awayStats.reliability
+)
+/2 * 100;
+
 
 /*
     Différence de niveau
@@ -153,6 +160,17 @@ const formBonus = clamp(
 
 );
 
+   const momentumGap = Math.abs(
+    homeStats.momentum -
+    awayStats.momentum
+);
+
+const momentumBonus = clamp(
+    momentumGap * 8,
+    0,
+    10
+);
+
 
 /*
     Accord Elo / modèle
@@ -188,32 +206,35 @@ if (eloProbability) {
 
 let confidence =
 
-    10 +
+15 +
 
-    separation * 0.35 +
+separation * 0.32 +
 
-    favoriteBonus +
+favoriteBonus +
 
-    dataQuality * 0.15 +
+dataQuality * 0.12 +
 
-    stability * 0.12 +
+stability * 0.10 +
 
-    eloAgreement * 0.10 +
+reliability * 0.10 +
 
-    strengthBonus * 0.18 +
+eloAgreement * 0.10 +
 
-    formBonus * 0.10;
+strengthBonus * 0.16 +
 
+formBonus * 0.08 +
 
-    if (favoriteProbability >= 70)
+momentumBonus;
+
+    if (favoriteProbability >= 80)
     confidence += 8;
 
-else if (favoriteProbability >= 60)
+else if (favoriteProbability >= 70)
     confidence += 5;
 
-else if (favoriteProbability >= 50)
-    confidence += 2;
-
+else if (favoriteProbability >= 60)
+    confidence += 3;
+   
 return Math.round(
     clamp(
         confidence,
