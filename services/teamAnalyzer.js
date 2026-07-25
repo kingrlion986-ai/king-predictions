@@ -67,17 +67,6 @@ const COMPETITION_LEVEL = {
 
   DEFAULT: 1.00
 };
-const TEAM_STRENGTHS = new Map();
-
-function getOpponentStrength(opponent) {
-
-  if (!opponent || !opponent.id) {
-    return 50;
-  }
-
-  return TEAM_STRENGTHS.get(opponent.id) || 50;
-
-}
 
 /* =========================
    BUILD TEAM STATISTICS
@@ -91,6 +80,8 @@ function buildStats(matches, teamId) {
 
    let homeWeight = 0;
    let awayWeight = 0;
+
+   let weightTotal = 0;
 
    let attackPower = 0;
    let defensePower = 0;
@@ -150,9 +141,8 @@ const opponent =
     ? match.awayTeam
     : match.homeTeam;
 
-const opponentStrength =
-  getOpponentStrength(opponent);
-
+const opponentStrength = 50;
+       
 const competitionWeight =
   COMPETITION_LEVEL[
     match.competition?.code
@@ -165,6 +155,8 @@ const weight =
   (2 - (index / totalMatches)) *
   competitionWeight *
   opponentFactor;
+       
+       weightTotal += weight;
 
 opponentStrengthTotal +=
   opponentStrength * weight;
@@ -262,36 +254,6 @@ else {
 
     }
   );
-
-
-  const weightTotal = matches.reduce((sum, match, index) => {
-
-  const isHome = match.homeTeam.id === teamId;
-
-  const opponent =
-    isHome
-      ? match.awayTeam
-      : match.homeTeam;
-
-  const opponentStrength =
-    getOpponentStrength(opponent);
-
-  const competitionWeight =
-    COMPETITION_LEVEL[
-      match.competition?.code
-    ] || COMPETITION_LEVEL.DEFAULT;
-
-  const opponentFactor =
-    0.75 + (opponentStrength / 100) * 0.5;
-
-  const weight =
-    (2 - (index / totalMatches)) *
-    competitionWeight *
-    opponentFactor;
-
-  return sum + weight;
-
-}, 0);
 
 
    console.log("BUILD STATS =", {
@@ -777,8 +739,6 @@ formScore: 50,
 
     const strength =
       computeStrength(stats);
-
-     TEAM_STRENGTHS.set(team.id, strength);
 
 
 
