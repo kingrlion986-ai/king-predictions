@@ -64,46 +64,24 @@ function evaluateDecision({
     ===============================
     */
 
-    if (
-        poisson &&
-        poisson.dominance
-    ) {
+if (poisson.dominance >= 30) {
 
-        if (poisson.dominance >= 0.65) {
+    score += 25;
+    reasons.push("Poisson strong agreement");
 
-            score += 25;
+}
+else if (poisson.dominance >= 15) {
 
-            reasons.push(
-                "Poisson strong agreement"
-            );
+    score += 15;
+    reasons.push("Poisson moderate");
 
-        }
+}
+else {
 
-        else if (
-            poisson.dominance >= 0.50
-        ) {
+    score -= 10;
+    reasons.push("Poisson uncertain");
 
-            score += 15;
-
-            reasons.push(
-                "Poisson moderate"
-            );
-
-        }
-
-        else {
-
-            score -= 10;
-
-            reasons.push(
-                "Poisson uncertain"
-            );
-
-        }
-
-    }
-
-
+}
 
     /*
     ===============================
@@ -181,6 +159,25 @@ function evaluateDecision({
 
     }
 
+ const favoriteProbability = Math.max(
+    poisson.probabilities.homeWin,
+    poisson.probabilities.draw,
+    poisson.probabilities.awayWin
+);
+
+if (favoriteProbability >= 65) {
+
+    score += 10;
+    reasons.push("Clear favorite");
+
+}
+else if (favoriteProbability < 45) {
+
+    score -= 10;
+    reasons.push("No clear favorite");
+
+}
+
 
  /*
 ===============================
@@ -220,6 +217,20 @@ if (reliability < 0.60) {
 
     trapScore += 20;
     reasons.push("Low reliability");
+
+}
+
+ if (confidence < 55) {
+
+    trapScore += 15;
+    reasons.push("Low confidence");
+
+}
+
+if (Math.abs(homeStats.formScore - awayStats.formScore) <= 5) {
+
+    trapScore += 10;
+    reasons.push("Similar form");
 
 }
 
@@ -290,10 +301,10 @@ if (trapScore >= 45) {
 
         risk,
 
-        score: Math.min(
-            100,
-            score
-        ),
+        score: Math.max(
+    0,
+    Math.min(100, score)
+),
 
      trapScore,
 
