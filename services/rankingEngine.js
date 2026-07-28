@@ -150,12 +150,9 @@ function calculateQuality(match) {
 
   score +=
 (
-  home.recentForm +
-  away.recentForm
-)
-/ 2
-*
-0.15;
+  home.formPoints +
+  away.formPoints
+) / 2 * 0.15;
 
   score +=
 (
