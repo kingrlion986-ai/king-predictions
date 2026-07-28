@@ -386,11 +386,6 @@ function computeStability(stats) {
       offensiveStability * 0.30
     )* 100;
 
-
-   strength +=
-    (stats.averageOpponentStrength - 50) * 0.15;
-
-
   return Math.round(
     clamp(
       stability,
@@ -410,6 +405,10 @@ function computeStability(stats) {
 function computeStrength(stats) {
 
   let strength = 40;
+
+    strength +=
+    (stats.averageOpponentStrength - 50) * 0.15;
+    
 
   // Attaque
 strength += stats.avgScored * 6;
