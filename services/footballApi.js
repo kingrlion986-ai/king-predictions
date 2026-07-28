@@ -790,6 +790,17 @@ async function getMatches() {
 
     const now = new Date();
 
+console.log("NOW:", now.toISOString());
+
+matches.slice(0, 10).forEach(match => {
+    console.log(
+        match.homeTeam.name,
+        "vs",
+        match.awayTeam.name,
+        match.utcDate
+    );
+});
+
     matches = matches.filter(match => {
         const hours =
             (new Date(match.utcDate) - now) / 3600000;
