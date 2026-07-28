@@ -240,9 +240,9 @@ awayXG += clamp(-formDifference * 0.10, -0.25, 0.25);
 
 const strengthFactor =
     clamp(
-        strengthDifference / 150,
-        -0.35,
-        0.35
+        strengthDifference / 180,
+        -0.25,
+        0.25
     );
 
 homeXG += strengthFactor;
@@ -262,7 +262,7 @@ homeXG +=
 
 awayXG +=
     clamp(
-        (awayMomentum - homeMomentum) * 0.08,
+        (awayMomentum - homeMomentum) * 0.05,
         -0.25,
         0.25
     );
@@ -273,7 +273,7 @@ awayXG +=
 
 homeXG +=
     clamp(
-        (homeOpponent - awayOpponent) / 100,
+        (homeOpponent - awayOpponent) / 150,
         -0.15,
         0.15
     );
@@ -328,23 +328,19 @@ awayXG -=
 */
 
 homeXG +=
-    (home.over25Rate / 100) * 0.18;
+    (home.over25Rate / 100) * 0.12;
 
 awayXG +=
     (away.over25Rate / 100) * 0.18;
 
 homeXG +=
-    (home.bttsRate / 100) * 0.10;
+    (home.bttsRate / 100) * 0.8;
 
 awayXG +=
     (away.bttsRate / 100) * 0.10;
 
-homeXG +=
-    (home.attackPower / 10) * 0.05;
-
-awayXG +=
-    (away.attackPower / 10) * 0.05;
-
+homeXG += home.attackPower * 0.08;
+awayXG += away.attackPower * 0.08;
     /*
        Limites réalistes football
     */
@@ -371,41 +367,39 @@ awayXG +=
 const dominance =
     Math.abs(home.strength - away.strength);
 
-if (dominance >= 25) {
+if (dominance >= 30) {
 
     if (home.strength > away.strength) {
 
-        homeXG += 0.25;
-        awayXG -= 0.15;
+        homeXG += 0.20;
+        awayXG -= 0.10;
 
     } else {
 
-        awayXG += 0.25;
-        homeXG -= 0.15;
+        awayXG += 0.20;
+        homeXG -= 0.10;
 
     }
 
 }
-else if (dominance >= 15) {
+else if (dominance >= 18) {
 
     if (home.strength > away.strength) {
 
-        homeXG += 0.15;
-        awayXG -= 0.08;
+        homeXG += 0.10;
+        awayXG -= 0.05;
 
     } else {
 
-        awayXG += 0.15;
-        homeXG -= 0.08;
+        awayXG += 0.10;
+        homeXG -= 0.05;
 
     }
 
 }
 
-
-   homeXG = clamp(homeXG, 0.20, 3.50);
+homeXG = clamp(homeXG, 0.20, 3.50);
 awayXG = clamp(awayXG, 0.20, 3.50);
-
     return {
 
         expectedHomeGoals:
