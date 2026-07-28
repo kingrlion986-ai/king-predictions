@@ -29,9 +29,12 @@ function evaluateDecision({
     ===============================
     */
 
-    if (confidence >= 70) {
-
+    if (confidence >= 85) {
+    score += 35;
+}
+else if (confidence >= 70) {
     score += 30;
+}
     reasons.push(
         "High confidence"
     );
@@ -65,12 +68,12 @@ POISSON VALIDATION
 
 if (poisson && poisson.dominance) {
 
-    if (poisson.dominance >= 25) {
-
-        score += 25;
-        reasons.push("Poisson strong agreement");
-
-    }
+    if (poisson.dominance >= 35) {
+    score += 30;
+}
+else if (poisson.dominance >= 25) {
+    score += 25;
+}
     else if (poisson.dominance >= 15) {
 
         score += 15;
@@ -130,13 +133,13 @@ if (poisson && poisson.dominance) {
 
 
 
-    if (reliability >= 0.80) {
+    if (reliability >= 0.75) {
 
-        score += 10;
+    score += 10;
 
-        reasons.push(
-            "Reliable data"
-        );
+    reasons.push(
+        "Reliable data"
+    );
 
     }
 
@@ -167,11 +170,11 @@ if (poisson && poisson.dominance) {
     poisson.probabilities.awayWin
 );
 
-if (favoriteProbability >= 60) {
-
+if (favoriteProbability >= 65) {
+    score += 15;
+}
+else if (favoriteProbability >= 60) {
     score += 10;
-    reasons.push("Clear favorite");
-
 }
 else if (favoriteProbability < 45) {
 
