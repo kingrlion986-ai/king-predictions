@@ -37,48 +37,35 @@ const BASE_URL =
 
 const PRIMARY_COMPETITIONS = [
 
-    // Top 5
-    "PL",
-    "PD",
-    "SA",
-    "BL1",
-    "FL1",
+    // TOP 5 EUROPE
+    "PL",    // Premier League Angleterre
+    "PD",    // La Liga Espagne
+    "SA",    // Serie A Italie
+    "BL1",   // Bundesliga Allemagne
+    "FL1",   // Ligue 1 France
 
-    // Europe
-    "DED",
-    "PPL",
-    "BSA",
-    "ELC",
-    "BL2",
-    "FL2",
-    "SD",
-    "SA2",
 
-    // Coupes d'Europe
-    "CL",
-    "EL",
-    "ECL",
+    // CHAMPIONNATS FIABLES DISPONIBLES
+    "DED",   // Eredivisie Pays-Bas
+    "PPL",   // Primeira Liga Portugal
+    "BSA",   // Brasileirão Série A Brésil
+    "ELC",   // Championship Angleterre
 
-    // Championnats jouant l'été
-    "ALLSV", // Suède
-    "ELITESERIEN", // Norvège
-    "BRL1" // Brésil Série A
+
+    // COMPETITIONS EUROPEENNES
+    "CL"     // Champions League
 
 ];
 
 
+
 const SECONDARY_COMPETITIONS = [
 
-    "CL",
     "DED",
-    "BSA",
     "PPL",
-
+    "BSA",
     "ELC",
-    "BL2",
-    "FL2",
-    "SD",
-    "SA2"
+    "CL"
 
 ];
 
@@ -90,35 +77,25 @@ const SECONDARY_COMPETITIONS = [
 
 const COMPETITION_WEIGHTS = {
 
-    // Top 5
+
+    // TOP 5
     PL: 1.20,
     PD: 1.20,
     SA: 1.15,
     BL1: 1.15,
     FL1: 1.10,
 
-    // Coupes d'Europe
+
+    // EUROPE
     CL: 1.10,
-    EL: 1.05,
-    ECL: 1.00,
 
-    // Europe
     DED: 0.90,
+    PPL: 0.85,
     BSA: 0.95,
-    PPL: 0.80,
-    ELC: 0.85,
-    BL2: 0.95,
-    FL2: 0.95,
-    SD: 0.95,
-    SA2: 0.90,
+    ELC: 0.85
 
-    // Championnats été
-    ALLSV: 0.85,
-    ELITESERIEN: 0.90,
-    BRL1: 1.00
 
 };
-
 
 
 /* =========================
