@@ -37,11 +37,32 @@ const BASE_URL =
 
 const PRIMARY_COMPETITIONS = [
 
+    // Top 5
     "PL",
     "PD",
     "SA",
     "BL1",
-    "FL1"
+    "FL1",
+
+    // Europe
+    "DED",
+    "PPL",
+    "BSA",
+    "ELC",
+    "BL2",
+    "FL2",
+    "SD",
+    "SA2",
+
+    // Coupes d'Europe
+    "CL",
+    "EL",
+    "ECL",
+
+    // Championnats jouant l'été
+    "ALLSV", // Suède
+    "ELITESERIEN", // Norvège
+    "BRL1" // Brésil Série A
 
 ];
 
@@ -69,24 +90,32 @@ const SECONDARY_COMPETITIONS = [
 
 const COMPETITION_WEIGHTS = {
 
+    // Top 5
+    PL: 1.20,
+    PD: 1.20,
+    SA: 1.15,
+    BL1: 1.15,
+    FL1: 1.10,
 
-    PL:1.20,
-    PD:1.20,
-    SA:1.15,
-    BL1:1.15,
-    FL1:1.10,
+    // Coupes d'Europe
+    CL: 1.10,
+    EL: 1.05,
+    ECL: 1.00,
 
-    CL:1.10,
+    // Europe
+    DED: 0.90,
+    BSA: 0.95,
+    PPL: 0.80,
+    ELC: 0.85,
+    BL2: 0.95,
+    FL2: 0.95,
+    SD: 0.95,
+    SA2: 0.90,
 
-    DED:0.90,
-    BSA:0.95,
-    PPL:0.80,
-
-    ELC:0.85,
-    BL2:0.95,
-    FL2:0.95,
-    SD:0.95,
-    SA2:0.90
+    // Championnats été
+    ALLSV: 0.85,
+    ELITESERIEN: 0.90,
+    BRL1: 1.00
 
 };
 
@@ -790,33 +819,35 @@ async function getMatches() {
 
     const now = new Date();
 
-console.log("NOW:", now.toISOString());
+    matches = matches
+        .filter(match => new Date(match.utcDate) > now)
+        .sort(
+            (a, b) =>
+                new Date(a.utcDate) -
+                new Date(b.utcDate)
+        );
 
-matches.slice(0, 10).forEach(match => {
-    console.log(
-        match.homeTeam.name,
-        "vs",
-        match.awayTeam.name,
-        match.utcDate
+    if (matches.length === 0) {
+
+        console.log("🔥 MATCHES READY: 0");
+
+        return [];
+
+    }
+
+    const firstDay =
+        matches[0].utcDate.split("T")[0];
+
+    matches = matches.filter(
+        match =>
+            match.utcDate.startsWith(firstDay)
     );
-});
 
-    matches = matches.filter(match => {
-        const hours =
-            (new Date(match.utcDate) - now) / 3600000;
-
-        return hours >= 0 && hours <= 72;
-    });
-
-    matches.sort(
-        (a, b) =>
-            new Date(a.utcDate) -
-            new Date(b.utcDate)
-    );
-
+    console.log("📅 FIRST MATCH DAY:", firstDay);
     console.log("🔥 MATCHES READY:", matches.length);
 
     return matches;
+
 }
 
 
