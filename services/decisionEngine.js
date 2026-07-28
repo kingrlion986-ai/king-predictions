@@ -29,16 +29,32 @@ function evaluateDecision({
     ===============================
     */
 
-    if (confidence >= 75) {
+    if (confidence >= 70) {
 
-        score += 30;
-        reasons.push(
-            "High confidence"
-        );
+    score += 30;
+    reasons.push(
+        "High confidence"
+    );
 
-    }
+}
 
-    else if (confidence >= 60) {
+else if (confidence >= 60) {
+
+    score += 20;
+    reasons.push(
+        "Good confidence"
+    );
+
+}
+
+else {
+
+    score += 5;
+    reasons.push(
+        "Low confidence"
+    );
+
+}
 
         score += 20;
         reasons.push(
@@ -66,7 +82,7 @@ POISSON VALIDATION
 
 if (poisson && poisson.dominance) {
 
-    if (poisson.dominance >= 30) {
+    if (poisson.dominance >= 25) {
 
         score += 25;
         reasons.push("Poisson strong agreement");
@@ -168,7 +184,7 @@ if (poisson && poisson.dominance) {
     poisson.probabilities.awayWin
 );
 
-if (favoriteProbability >= 65) {
+if (favoriteProbability >= 60) {
 
     score += 10;
     reasons.push("Clear favorite");
@@ -260,7 +276,7 @@ if (
 }
 
 // On retire le score des matchs dangereux
-score -= trapScore * 0.60;
+score -= trapScore * 0.35;
 
 
 
@@ -282,14 +298,14 @@ if (trapScore >= 45) {
 }
 
 
-    if (trapScore < 45 && score >= 75) {
+    if (trapScore < 45 && score >= 72) {
 
         decision = "VIP PICK";
         risk = "LOW";
 
     }
 
-    else if (trapScore < 45 && score >= 55) {
+    else if (trapScore < 45 && score >= 50) {
 
         decision = "NORMAL";
         risk = "MEDIUM";
