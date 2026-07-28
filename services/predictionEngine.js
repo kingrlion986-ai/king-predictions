@@ -359,10 +359,18 @@ if (Math.abs(homeScore - awayScore) > 4) {
 
 }
 
-    const overScore =
-    (poisson.over25 * 0.60) +
-    (((homeStats.over25Rate + awayStats.over25Rate) / 2) * 0.25) +
-    (Math.min(xg.totalExpectedGoals, 4) / 4 * 100 * 0.15);
+    // =========================
+// OVER 2.5
+// =========================
+
+let overScore =
+    (poisson.over25 * 0.45) +
+    (((homeStats.over25Rate + awayStats.over25Rate) / 2) * 0.20) +
+    (Math.min(xg.totalExpectedGoals, 4) / 4 * 100 * 0.25) +
+    (((homeStats.reliability + awayStats.reliability) / 2) * 100 * 0.05) +
+    (((homeStats.momentum + awayStats.momentum) / 2) * 10 * 0.05);
+
+overScore = Math.max(5, Math.min(95, overScore));
 
 const over25Prediction =
     overScore >= 55
@@ -372,10 +380,19 @@ const over25Prediction =
 const over25Confidence =
     Math.round(overScore);
 
-    const bttsScore =
-    (poisson.btts * 0.60) +
+
+// =========================
+// BTTS
+// =========================
+
+let bttsScore =
+    (poisson.btts * 0.45) +
     (((homeStats.bttsRate + awayStats.bttsRate) / 2) * 0.25) +
-    (((homeStats.avgScored + awayStats.avgScored) / 2) * 20 * 0.15);
+    (((homeStats.avgScored + awayStats.avgScored) / 2) * 15 * 0.15) +
+    (((homeStats.reliability + awayStats.reliability) / 2) * 100 * 0.05) +
+    (Math.min(xg.expectedHomeGoals + xg.expectedAwayGoals, 4) / 4 * 100 * 0.10);
+
+bttsScore = Math.max(5, Math.min(95, bttsScore));
 
 const bttsPrediction =
     bttsScore >= 55
@@ -385,7 +402,7 @@ const bttsPrediction =
 const bttsConfidence =
     Math.round(bttsScore);
 
-    const goalDiff =
+const goalDiff =
     Math.abs(homeStats.strength - awayStats.strength);
 
 let correctScore =
