@@ -56,24 +56,7 @@ else {
 
 }
 
-        score += 20;
-        reasons.push(
-            "Good confidence"
-        );
-
-    }
-
-    else {
-
-        score += 5;
-        reasons.push(
-            "Low confidence"
-        );
-
-    }
-
-
-
+     
 /*
 ===============================
 POISSON VALIDATION
