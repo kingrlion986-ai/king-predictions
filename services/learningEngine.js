@@ -43,6 +43,18 @@ function buildLearningModel() {
         ).length /
         completed.length;
 
+    const overAccuracy =
+    completed.filter(
+        h => h.evaluation.over25Correct
+    ).length /
+    completed.length;
+
+const bttsAccuracy =
+    completed.filter(
+        h => h.evaluation.bttsCorrect
+    ).length /
+    completed.length;
+
     const averageScore =
         completed.reduce(
             (sum, h) =>
@@ -72,18 +84,48 @@ function buildLearningModel() {
         );
 
     model.xgWeight =
-        clamp(
-            averageScore / 90,
-            0.90,
-            1.20
-        );
+    clamp(
+        (averageScore / 100 + overAccuracy) / 2,
+        0.90,
+        1.20
+    );
 
-    model.poissonWeight =
-        clamp(
-            averageScore / 95,
-            0.90,
-            1.20
-        );
+model.poissonWeight =
+    clamp(
+        (winnerAccuracy + bttsAccuracy) / 2 + 0.20,
+        0.90,
+        1.20
+    );
+
+    const recent = completed.slice(-20);
+
+const recentAccuracy =
+    recent.filter(
+        h => h.evaluation.winnerCorrect
+    ).length /
+    Math.max(recent.length, 1);
+
+model.confidenceWeight *=
+    clamp(
+        recentAccuracy + 0.20,
+        0.90,
+        1.15
+    );
+
+        model.winnerWeight =
+    clamp(model.winnerWeight, 0.85, 1.25);
+
+model.eloWeight =
+    clamp(model.eloWeight, 0.90, 1.20);
+
+model.xgWeight =
+    clamp(model.xgWeight, 0.90, 1.20);
+
+model.poissonWeight =
+    clamp(model.poissonWeight, 0.90, 1.20);
+
+model.confidenceWeight =
+    clamp(model.confidenceWeight, 0.90, 1.20);
 
     return model;
 
