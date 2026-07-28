@@ -23,42 +23,36 @@ function evaluateDecision({
  let trapScore = 0;
 
 
-    /*
-    ===============================
-    CONFIDENCE SCORE
-    ===============================
-    */
+/*
+===============================
+CONFIDENCE SCORE
+===============================
+*/
 
-    if (confidence >= 85) {
+if (confidence >= 85) {
+
     score += 35;
+    reasons.push("High confidence");
+
 }
 else if (confidence >= 70) {
+
     score += 30;
-}
-    reasons.push(
-        "High confidence"
-    );
+    reasons.push("High confidence");
 
 }
-
 else if (confidence >= 60) {
 
     score += 20;
-    reasons.push(
-        "Good confidence"
-    );
+    reasons.push("Good confidence");
 
 }
-
 else {
 
     score += 5;
-    reasons.push(
-        "Low confidence"
-    );
+    reasons.push("Low confidence");
 
 }
-
      
 /*
 ===============================
@@ -69,11 +63,17 @@ POISSON VALIDATION
 if (poisson && poisson.dominance) {
 
     if (poisson.dominance >= 35) {
-    score += 30;
-}
-else if (poisson.dominance >= 25) {
-    score += 25;
-}
+
+        score += 30;
+        reasons.push("Poisson very strong");
+
+    }
+    else if (poisson.dominance >= 25) {
+
+        score += 25;
+        reasons.push("Poisson strong");
+
+    }
     else if (poisson.dominance >= 15) {
 
         score += 15;
