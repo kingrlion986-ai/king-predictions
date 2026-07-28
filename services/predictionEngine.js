@@ -301,14 +301,6 @@ if (reliabilityGap >= 0.20) {
 
 }
 
-    const probabilityGap =
-    Math.abs(
-        poisson.probabilities.homeWin -
-        poisson.probabilities.awayWin
-    );
-
-adjustedConfidence += probabilityGap * 0.12;
-
 
 const probabilityGap =
     Math.abs(
@@ -318,6 +310,8 @@ const probabilityGap =
             poisson.probabilities.awayWin
         )
     );
+
+    adjustedConfidence += probabilityGap * 0.12;
 
 adjustedConfidence =
     Math.round(
