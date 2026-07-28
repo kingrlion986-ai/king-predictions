@@ -106,20 +106,7 @@ if (!matches || matches.length === 0) {
 
 
 // Sélection intelligente des meilleurs matchs
-const selectedMatches = matches
-  .sort((a, b) => {
-
-    const scoreA =
-      (a.quality || 50);
-
-    const scoreB =
-      (b.quality || 50);
-
-    return scoreB - scoreA;
-
-  })
-  .slice(0, 5);
-
+const selectedMatches = matches.slice(0, 5);
 
 console.log(
   "🏆 TOP MATCHES SELECTED:",
@@ -149,9 +136,7 @@ async function getVipAnalyses() {
 
   const matches = await getMatches();
 
-  const selectedMatches = matches
-.sort((a,b)=>(b.quality || 0)-(a.quality || 0))
-.slice(0,5);
+  const selectedMatches = matches.slice(0, 5);
 
   console.log(
     "🏆 VIP MATCHES:",
