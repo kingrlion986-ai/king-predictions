@@ -780,34 +780,33 @@ async function loadUpcomingDatabase(){
 /* =========================
    GET UPCOMING MATCHES
 ========================= */
-async function getMatches(){
+async function getMatches() {
 
     let matches = UPCOMING_MATCH_DATABASE;
 
-
-    if(
-        !matches ||
-        matches.length === 0
-    ){
-
+    if (!matches || matches.length === 0) {
         matches = await loadUpcomingDatabase();
-
     }
 
+    const now = new Date();
 
-    return [...matches].sort(
-    (a,b)=>
-        new Date(a.utcDate)-new Date(b.utcDate)
-);
+    matches = matches.filter(match => {
 
-    console.log(
-        "🔥 MATCHES READY:",
-        matches.length
+        const hours =
+            (new Date(match.utcDate) - now) / 3600000;
+
+        return hours >= 0 && hours <= 48;
+
+    });
+
+    matches.sort(
+        (a, b) =>
+            new Date(a.utcDate) - new Date(b.utcDate)
     );
 
+    console.log("🔥 MATCHES READY:", matches.length);
 
     return matches;
-
 }
 
 
