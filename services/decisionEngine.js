@@ -296,6 +296,21 @@ if (trapScore >= 45) {
     }
 
 
+  console.log("===== DECISION DEBUG =====");
+
+console.log({
+    confidence,
+    strengthGap,
+    reliability,
+    favoriteProbability,
+    trapScore,
+    score,
+    poissonDominance: poisson.dominance,
+    poissonUncertainty: poisson.uncertainty,
+    eloProbability
+});
+
+
 
     return {
 
