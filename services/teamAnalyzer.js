@@ -1,5 +1,9 @@
 const { getTeamMatches } = require("./footballApi");
 
+const {
+    getTeamElo
+} = require("./eloEngine");
+
 
 /* =========================
    HELPERS
@@ -141,7 +145,13 @@ const opponent =
     ? match.awayTeam
     : match.homeTeam;
 
-const opponentStrength = 50;
+const opponentElo = getTeamElo(opponent.id);
+
+const opponentStrength = clamp(
+    ((opponentElo - 1200) / (2000 - 1200)) * 100,
+    20,
+    95
+);
        
 const competitionWeight =
   COMPETITION_LEVEL[
@@ -149,8 +159,8 @@ const competitionWeight =
   ] || COMPETITION_LEVEL.DEFAULT;
 
 const opponentFactor =
-  0.75 + (opponentStrength / 100) * 0.5;
-
+    0.80 + (opponentStrength / 100) * 0.40;
+       
 const weight =
   (2 - (index / totalMatches)) *
   competitionWeight *
@@ -374,8 +384,11 @@ function computeStability(stats) {
       resultSpread * 0.35 +
       defensiveStability * 0.35 +
       offensiveStability * 0.30
-    ) * 100;
+    )* 100;
 
+
+   strength +=
+    (stats.averageOpponentStrength - 50) * 0.15;
 
 
   return Math.round(
@@ -436,9 +449,8 @@ strength += stats.avgScored * 6;
   strength +=
 computeStability(stats) * 0.15;
 
-   strength += stats.recentForm * 6;
-
-   strength += stats.momentum * 5;
+   strength += stats.recentForm * 4;
+strength += stats.momentum * 3;
 
   return Math.round(
     clamp(
