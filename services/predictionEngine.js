@@ -259,7 +259,7 @@ adjustedConfidence -= poisson.uncertainty * 0.15;
 
 adjustedConfidence = Math.max(
     20,
-    Math.min(85, Math.round(adjustedConfidence))
+    Math.min(95, Math.round(adjustedConfidence))
 );
             // =========================
 // ADAPTIVE CONFIDENCE V17
@@ -301,11 +301,19 @@ if (reliabilityGap >= 0.20) {
 
 }
 
+    const probabilityGap =
+    Math.abs(
+        poisson.probabilities.homeWin -
+        poisson.probabilities.awayWin
+    );
+
+adjustedConfidence += probabilityGap * 0.12;
+
 
 adjustedConfidence =
 Math.min(
     Math.round(adjustedConfidence),
-    85
+    95
 );
 
     let predictionQuality = "LOW";
