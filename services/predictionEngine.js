@@ -310,10 +310,24 @@ if (reliabilityGap >= 0.20) {
 adjustedConfidence += probabilityGap * 0.12;
 
 
+const probabilityGap =
+    Math.abs(
+        poisson.probabilities.homeWin -
+        Math.max(
+            poisson.probabilities.draw,
+            poisson.probabilities.awayWin
+        )
+    );
+
 adjustedConfidence =
-Math.min(
-    Math.round(adjustedConfidence),
-    95
+    Math.round(
+        adjustedConfidence * 0.75 +
+        probabilityGap * 0.35
+    );
+
+adjustedConfidence = Math.max(
+    40,
+    Math.min(92, adjustedConfidence)
 );
 
     let predictionQuality = "LOW";
