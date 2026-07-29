@@ -810,51 +810,47 @@ async function getMatches() {
    GET TEAM HISTORY
 ========================= */
 
-async function getTeamMatches(teamId){
+async function getTeamMatches(teamId) {
 
-
-    if(
-        HISTORY_MATCH_DATABASE.length===0
-    ){
-
+    if (HISTORY_MATCH_DATABASE.length === 0) {
         await loadHistoryDatabase();
-
     }
 
+    console.log("SEARCH TEAM:", teamId);
 
-
-    const matches =
-        HISTORY_MATCH_DATABASE
-        .filter(match=>
-
-            match.status==="FINISHED" &&
-
+    const matches = HISTORY_MATCH_DATABASE.filter(
+        match =>
+            match.status === "FINISHED" &&
             (
-                match.homeTeam.id===teamId ||
-                match.awayTeam.id===teamId
+                match.homeTeam.id === teamId ||
+                match.awayTeam.id === teamId
             )
-
-        )
-        .sort((a,b)=>
-
-            new Date(b.utcDate) -
-            new Date(a.utcDate)
-
-        )
-        .slice(0,8);
-
-
-
-    console.log(
-        "📊 TEAM HISTORY:",
-        teamId,
-        matches.length
     );
 
+    console.log("FOUND BY ID:", matches.length);
 
+    if (matches.length === 0) {
+        HISTORY_MATCH_DATABASE
+            .filter(
+                m =>
+                    m.homeTeam.name.toLowerCase().includes("parana") ||
+                    m.awayTeam.name.toLowerCase().includes("parana")
+            )
+            .forEach(m => {
+                console.log(
+                    "PARANA:",
+                    m.homeTeam.id,
+                    m.homeTeam.name,
+                    "vs",
+                    m.awayTeam.id,
+                    m.awayTeam.name
+                );
+            });
+    }
 
-    return matches;
-
+    return matches
+        .sort((a, b) => new Date(b.utcDate) - new Date(a.utcDate))
+        .slice(0, 8);
 }
 
 
