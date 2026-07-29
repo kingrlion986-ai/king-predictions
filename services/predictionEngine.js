@@ -147,81 +147,9 @@ console.log("AWAY STATS =", {
             xg.expectedAwayGoals
         );
 
-            const homeScore =
-(
-    poisson.probabilities.homeWin * weights.poisson
-)
-+
-(
-    eloProbability * 100 * weights.elo
-)
-+
-(
-    homeStats.strength * weights.strength
-)
-+
-(
-    homeStats.formScore * weights.form
-)
-+
-(
-    homeStats.momentum * 100 * weights.momentum
-)
-+
-(
-    homeStats.reliability * 100 * weights.reliability
-);
+            
 
-const awayScore =
-(
-    poisson.probabilities.awayWin * weights.poisson
-)
-+
-(
-    (1 - eloProbability) * 100 * weights.elo
-)
-+
-(
-    awayStats.strength * weights.strength
-)
-+
-(
-    awayStats.formScore * weights.form
-)
-+
-(
-    awayStats.momentum * 100 * weights.momentum
-)
-+
-(
-    awayStats.reliability * 100 * weights.reliability
-);
-
-const drawScore =
-(
-    poisson.probabilities.draw * 0.70
-)
-+
-(
-    (100 - Math.abs(homeScore - awayScore)) * 0.30
-);
-
-    const consensusWinner =
-    consensus.home > consensus.away &&
-    consensus.home > consensus.draw
-
-        ? match.homeTeam.name
-
-        : consensus.away > consensus.home &&
-          consensus.away > consensus.draw
-
-        ? match.awayTeam.name
-
-        : "DRAW";
-
-    console.log("CONSENSUS :", consensus);
-console.log("CONSENSUS WINNER :", consensusWinner);
-
+    
     console.log(
     "POISSON DEBUG:",
     poisson.uncertainty,
