@@ -898,7 +898,6 @@ function getSafeMatches(matches){
 /* =========================
    INITIALIZATION
 ========================= */
-
 async function initializeDatabase() {
 
     if (DATABASE_INITIALIZING) {
@@ -921,11 +920,17 @@ async function initializeDatabase() {
 
     })();
 
-    await DATABASE_INITIALIZING;
+    try {
 
-    DATABASE_INITIALIZING = null;
+        await DATABASE_INITIALIZING;
+
+    } finally {
+
+        DATABASE_INITIALIZING = null;
+
+    }
+
 }
-
 
 /* =========================
    EXPORTS
