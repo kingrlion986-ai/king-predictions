@@ -19,6 +19,8 @@ const UPCOMING_MATCH_DATABASE = [];
 // Matchs terminés pour analyser les équipes
 const HISTORY_MATCH_DATABASE = [];
 
+let DATABASE_INITIALIZING = null;
+
 
 /* =========================
    CONFIGURATION
@@ -788,43 +790,30 @@ async function loadUpcomingDatabase(){
 ========================= */
 async function getMatches() {
 
-    let matches = UPCOMING_MATCH_DATABASE;
-
-    if (!matches || matches.length === 0) {
-        matches = await loadUpcomingDatabase();
+    if (!UPCOMING_MATCH_DATABASE || UPCOMING_MATCH_DATABASE.length === 0) {
+        await initializeDatabase();
     }
+
+    let matches = [...UPCOMING_MATCH_DATABASE];
 
     const now = new Date();
 
-    matches = matches
-        .filter(match => new Date(match.utcDate) > now)
-        .sort(
-            (a, b) =>
-                new Date(a.utcDate) -
-                new Date(b.utcDate)
-        );
+    matches = matches.filter(match => {
+        const hours =
+            (new Date(match.utcDate) - now) / 3600000;
 
-    if (matches.length === 0) {
+        return hours >= 0 && hours <= 72;
+    });
 
-        console.log("🔥 MATCHES READY: 0");
-
-        return [];
-
-    }
-
-    const firstDay =
-        matches[0].utcDate.split("T")[0];
-
-    matches = matches.filter(
-        match =>
-            match.utcDate.startsWith(firstDay)
+    matches.sort(
+        (a, b) =>
+            new Date(a.utcDate) -
+            new Date(b.utcDate)
     );
 
-    console.log("📅 FIRST MATCH DAY:", firstDay);
     console.log("🔥 MATCHES READY:", matches.length);
 
     return matches;
-
 }
 
 
@@ -910,85 +899,32 @@ function getSafeMatches(matches){
    INITIALIZATION
 ========================= */
 
-async function initializeDatabase(){
+async function initializeDatabase() {
 
-    try{
-
-        console.log(
-            "🚀 INITIALIZING DATABASE..."
-        );
-
-
-        const history =
-            await loadHistoryDatabase();
-
-
-        console.log(
-            "✅ HISTORY LOADED:",
-            history.length
-        );
-
-
-        const upcoming =
-            await loadUpcomingDatabase();
-
-
-        console.log(
-            "✅ UPCOMING LOADED:",
-            upcoming.length
-        );
-
-
-        console.log(
-            "======================"
-        );
-
-
-        console.log(
-            "✅ DATABASE READY"
-        );
-
-
-        console.log(
-            "📚 HISTORY:",
-            HISTORY_MATCH_DATABASE.length
-        );
-
-
-        console.log(
-            "🔮 UPCOMING:",
-            UPCOMING_MATCH_DATABASE.length
-        );
-
-
-        console.log(
-            "======================"
-        );
-
-
-        return {
-            history,
-            upcoming
-        };
-
-
-    }catch(error){
-
-        console.log(
-            "❌ DATABASE INIT ERROR:",
-            error.message
-        );
-
-
-        return {
-            history:[],
-            upcoming:[]
-        };
-
+    if (DATABASE_INITIALIZING) {
+        return DATABASE_INITIALIZING;
     }
 
-}
+    DATABASE_INITIALIZING = (async () => {
 
+        console.log("🚀 INITIALIZING DATABASE...");
+
+        await loadHistoryDatabase();
+
+        await loadUpcomingDatabase();
+
+        console.log("======================");
+        console.log("✅ DATABASE READY");
+        console.log("📚 HISTORY:", HISTORY_MATCH_DATABASE.length);
+        console.log("🔮 UPCOMING:", UPCOMING_MATCH_DATABASE.length);
+        console.log("======================");
+
+    })();
+
+    await DATABASE_INITIALIZING;
+
+    DATABASE_INITIALIZING = null;
+}
 
 
 /* =========================
