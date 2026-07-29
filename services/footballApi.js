@@ -36,42 +36,27 @@ const BASE_URL =
 /* =========================
    COMPETITIONS
 ========================= */
-
 const PRIMARY_COMPETITIONS = [
-
-    // TOP 5 EUROPE
-    "PL",    // Premier League Angleterre
-    "PD",    // La Liga Espagne
-    "SA",    // Serie A Italie
-    "BL1",   // Bundesliga Allemagne
-    "FL1",   // Ligue 1 France
-
-
-    // CHAMPIONNATS FIABLES DISPONIBLES
-    "DED",   // Eredivisie Pays-Bas
-    "PPL",   // Primeira Liga Portugal
-    "BSA",   // Brasileirão Série A Brésil
-    "ELC",   // Championship Angleterre
-
-
-    // COMPETITIONS EUROPEENNES
-    "CL"     // Champions League
-
-];
-
-
-
-const SECONDARY_COMPETITIONS = [
-
+    "PL",
+    "PD",
+    "SA",
+    "BL1",
+    "FL1",
+    "CL",
     "DED",
     "PPL",
     "BSA",
-    "ELC",
-    "CL"
-
+    "ELC"
 ];
 
 
+const SECONDARY_COMPETITIONS = [
+    "CL",
+    "DED",
+    "PPL",
+    "BSA",
+    "ELC"
+];
 
 /* =========================
    COMPETITION WEIGHTS
@@ -530,6 +515,8 @@ async function loadHistoryDatabase(){
 
     console.log("📚 LOADING HISTORY DATABASE");
 
+HISTORY_MATCH_DATABASE.length = 0;
+
     const history = [];
 
     for(const competition of PRIMARY_COMPETITIONS){
@@ -669,6 +656,8 @@ async function loadUpcomingDatabase(){
     console.log(
         "🔮 LOADING UPCOMING MATCHES"
     );
+
+   UPCOMING_MATCH_DATABASE.length = 0;
 
 
     const upcoming=[];
