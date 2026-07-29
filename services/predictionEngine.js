@@ -147,67 +147,64 @@ console.log("AWAY STATS =", {
             xg.expectedAwayGoals
         );
 
-            const consensus = {
+            const homeScore =
+(
+    poisson.probabilities.homeWin * weights.poisson
+)
++
+(
+    eloProbability * 100 * weights.elo
+)
++
+(
+    homeStats.strength * weights.strength
+)
++
+(
+    homeStats.formScore * weights.form
+)
++
+(
+    homeStats.momentum * 100 * weights.momentum
+)
++
+(
+    homeStats.reliability * 100 * weights.reliability
+);
 
-    home: 0,
+const awayScore =
+(
+    poisson.probabilities.awayWin * weights.poisson
+)
++
+(
+    (1 - eloProbability) * 100 * weights.elo
+)
++
+(
+    awayStats.strength * weights.strength
+)
++
+(
+    awayStats.formScore * weights.form
+)
++
+(
+    awayStats.momentum * 100 * weights.momentum
+)
++
+(
+    awayStats.reliability * 100 * weights.reliability
+);
 
-    away: 0,
-
-    draw: 0
-
-};
-
-    consensus.home +=
-    poisson.probabilities.homeWin *
-    weights.poisson;
-
-consensus.draw +=
-    poisson.probabilities.draw *
-    weights.poisson;
-
-consensus.away +=
-    poisson.probabilities.awayWin *
-    weights.poisson;
-
-    consensus.home +=
-    (eloProbability * 100) *
-    weights.elo;
-
-consensus.away +=
-    ((1 - eloProbability) * 100) *
-    weights.elo;
-
-    consensus.home +=
-    homeStats.strength *
-    weights.strength;
-
-consensus.away +=
-    awayStats.strength *
-    weights.strength;
-
-    consensus.home +=
-    homeStats.formScore *
-    weights.form;
-
-consensus.away +=
-    awayStats.formScore *
-    weights.form;
-
-    consensus.home +=
-    homeStats.momentum * 10 *
-    weights.momentum;
-
-consensus.away +=
-    awayStats.momentum * 10 *
-    weights.momentum;
-
-    consensus.home +=
-    homeStats.reliability * 100 *
-    weights.reliability;
-
-consensus.away +=
-    awayStats.reliability * 100 *
-    weights.reliability;
+const drawScore =
+(
+    poisson.probabilities.draw * 0.70
+)
++
+(
+    (100 - Math.abs(homeScore - awayScore)) * 0.30
+);
 
     const consensusWinner =
     consensus.home > consensus.away &&
