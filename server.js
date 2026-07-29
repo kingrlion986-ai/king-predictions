@@ -215,21 +215,6 @@ console.error(err.stack);
 
 }
 
-    startDailyScheduler(async () => {
-
-  console.log("♻️ RESET DAILY SYSTEM");
-
-  DAILY_PREDICTIONS = null;
-  DAILY_DATE = null;
-
-  PRELOADED_ANALYSES = null;
-  PRELOAD_TIME = 0;
-
-
-  await getDailyPredictions();
-
-});
-
 async function analyzeMatches(matches) {
 
   const uniqueMatches = [
