@@ -334,13 +334,13 @@ awayXG +=
     (away.over25Rate / 100) * 0.18;
 
 homeXG +=
-    (home.bttsRate / 100) * 0.8;
+    (home.bttsRate / 100) * 0.12;
 
 awayXG +=
-    (away.bttsRate / 100) * 0.10;
-
-homeXG += home.attackPower * 0.08;
-awayXG += away.attackPower * 0.08;
+    (away.bttsRate / 100) * 0.12;
+   
+homeXG += home.attackPower * 0.04;
+awayXG += away.attackPower * 0.04;
     /*
        Limites réalistes football
     */
@@ -371,8 +371,8 @@ if (dominance >= 30) {
 
     if (home.strength > away.strength) {
 
-        homeXG += 0.20;
-        awayXG -= 0.10;
+        homeXG += 0.12;
+        awayXG -= 0.06;
 
     } else {
 
@@ -386,8 +386,8 @@ else if (dominance >= 18) {
 
     if (home.strength > away.strength) {
 
-        homeXG += 0.10;
-        awayXG -= 0.05;
+        homeXG += 0.06;
+        awayXG -= 0.03;
 
     } else {
 
@@ -398,8 +398,8 @@ else if (dominance >= 18) {
 
 }
 
-homeXG = clamp(homeXG, 0.20, 3.50);
-awayXG = clamp(awayXG, 0.20, 3.50);
+homeXG = clamp(homeXG, 0.30, 3.00);
+awayXG = clamp(awayXG, 0.30, 3.00);
     return {
 
         expectedHomeGoals:
