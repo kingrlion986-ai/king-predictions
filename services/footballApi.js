@@ -793,7 +793,7 @@ async function getMatches() {
         const hours =
             (new Date(match.utcDate) - now) / 3600000;
 
-        return hours >= 0 && hours <= 72;
+        return hours >= 0 && hours <= 24 * 14;
     });
 
     matches.sort(
