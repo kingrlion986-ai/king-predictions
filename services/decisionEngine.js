@@ -191,10 +191,14 @@ TRAP MATCH DETECTOR V20
 */
 
 // Équipes trop proches
-if (strengthGap <= 6) {
+if (strengthGap <= 4) {
 
-    trapScore += 20;
-    reasons.push("Balanced teams");
+    trapScore += 15;
+
+}
+else if (strengthGap <= 8) {
+
+    trapScore += 8;
 
 }
 
@@ -210,10 +214,14 @@ if (
 }
 
 // Trop de risque selon Poisson
-if (poisson.uncertainty >= 45) {
+if (poisson.uncertainty >= 55) {
 
     trapScore += 20;
-    reasons.push("High uncertainty");
+
+}
+else if (poisson.uncertainty >= 45) {
+
+    trapScore += 10;
 
 }
 
@@ -262,7 +270,7 @@ if (
 }
 
 // On retire le score des matchs dangereux
-score -= trapScore * 0.35;
+score -= trapScore * 0.25;
 
 
 
