@@ -305,21 +305,35 @@ const awayProbability =
 );
 
 const drawProbability =
-poisson.probabilities.draw;
+(
+    poisson.probabilities.draw * 0.80
+) +
+(
+    Math.max(
+        0,
+        20 - Math.abs(homeStats.strength - awayStats.strength)
+    )
+);
 
 let winner = "DRAW";
 
-if (
-    homeProbability > awayProbability &&
-    homeProbability > drawProbability
-) {
-    winner = match.homeTeam.name;
+    const winnerGap =
+Math.abs(homeProbability - awayProbability);
+
+if (winnerGap < 5 && drawProbability >= 35) {
+
+    winner = "DRAW";
+
 }
-else if (
-    awayProbability > homeProbability &&
-    awayProbability > drawProbability
-) {
+else if (homeProbability > awayProbability) {
+
+    winner = match.homeTeam.name;
+
+}
+else {
+
     winner = match.awayTeam.name;
+
 }
 
     // =========================
