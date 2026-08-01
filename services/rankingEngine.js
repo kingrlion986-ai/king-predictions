@@ -65,10 +65,13 @@ function calculateQuality(match) {
 
   score +=
 (
-  match.predictions.winnerConfidence || 0
-)
-*
-0.35;
+    match.predictions.winnerConfidence || 0
+) * 0.28;
+
+score +=
+(
+    match.predictions.predictionStrength || 0
+) * 0.18;
 
 
 
@@ -186,8 +189,15 @@ Math.abs(
     probabilities.awayWin
 );
 
-if (probabilityGap < 8) {
-    score -= 8;
+if (probabilityGap < 5) {
+
+    score -= 10;
+
+}
+else if (probabilityGap < 10) {
+
+    score -= 5;
+
 }
 
   // =========================
@@ -288,11 +298,12 @@ function rankMatches(matches) {
     (a,b)=>{
 
         const scoreA =
-    a.qualityScore * 0.50 +
-    (a.predictions.aiRating || 0) * 0.25 +
-    (a.predictions.winnerConfidence || 0) * 0.15 +
-    (a.predictions.aiDecision?.score || 0) * 0.10;
-
+    a.qualityScore * 0.40 +
+    (a.predictions.predictionStrength || 0) * 0.25 +
+    (a.predictions.aiRating || 0) * 0.20 +
+    (a.predictions.winnerConfidence || 0) * 0.10 +
+    (a.predictions.aiDecision?.score || 0) * 0.05;
+      
 const scoreB =
     b.qualityScore * 0.50 +
     (b.predictions.aiRating || 0) * 0.25 +
@@ -324,7 +335,7 @@ function rankOver25Matches(matches) {
 
 
       return (
-    match.predictions.over25Confidence >= 30
+    match.predictions.over25Confidence >= 55
 );
 
 
@@ -387,7 +398,7 @@ function rankBTTSMatches(matches) {
         match.predictions
 .bttsConfidence
 >=
-30
+55
 
       );
 
