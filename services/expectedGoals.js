@@ -328,19 +328,16 @@ awayXG -=
 */
 
 homeXG +=
-    (home.over25Rate / 100) * 0.12;
+    (home.over25Rate / 100) * 0.08;
 
 awayXG +=
-    (away.over25Rate / 100) * 0.18;
+    (away.over25Rate / 100) * 0.08;
 
 homeXG +=
-    (home.bttsRate / 100) * 0.12;
+    (home.bttsRate / 100) * 0.06;
 
 awayXG +=
-    (away.bttsRate / 100) * 0.12;
-   
-homeXG += home.attackPower * 0.04;
-awayXG += away.attackPower * 0.04;
+    (away.bttsRate / 100) * 0.06;
     /*
        Limites réalistes football
     */
