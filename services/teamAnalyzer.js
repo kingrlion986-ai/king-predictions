@@ -348,6 +348,12 @@ averageOpponentStrength: round(
         weightTotal
       ),
 
+      goalBalance:
+  round(
+    (weightedScored - weightedConceded) /
+    weightTotal
+  ),
+
 
     homeAttack: round(homeScored / Math.max(homeWeight, 1)),
     awayAttack: round(awayScored / Math.max(awayWeight, 1)),
@@ -452,6 +458,8 @@ function computeStrength(stats) {
   // Attaque
 strength += stats.avgScored * 6;
 
+    strength += stats.goalBalance * 8;
+
   // Défense
   strength += Math.max(
     0,
@@ -487,7 +495,7 @@ strength += stats.avgScored * 6;
   strength +=
 computeStability(stats) * 0.15;
 
-   strength += stats.recentForm * 4;
+   strength += stats.recentForm * 5;
 strength += stats.momentum * 3;
 
   return Math.round(
@@ -854,6 +862,9 @@ formScore: 50,
 
       avgConceded:
         stats.avgConceded,
+
+        goalBalance:
+  stats.goalBalance,
 
        
 
