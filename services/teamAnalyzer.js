@@ -123,6 +123,15 @@ let recentForm = 0;
   const totalMatches =
     matches.length || 1;
 
+            let winStreak = 0;
+let drawStreak = 0;
+let loseStreak = 0;
+
+let currentWinStreak = 0;
+let currentDrawStreak = 0;
+let currentLoseStreak = 0;
+    
+
 
 
   matches.forEach(
@@ -222,19 +231,46 @@ defensePower += Math.max(0, 3 - goalsAgainst) * weight;
 
 
       if (goalsFor > goalsAgainst) {
+
     wins++;
+
     recentForm += weight * 3;
+
     momentum += 3 * weight;
+
+    currentWinStreak++;
+    currentDrawStreak = 0;
+    currentLoseStreak = 0;
+
+    winStreak = Math.max(winStreak, currentWinStreak);
+
 }
 else if (goalsFor === goalsAgainst) {
+
     draws++;
+
     recentForm += weight;
-    momentum += 1 * weight;
+
+    momentum += weight;
+
+    currentDrawStreak++;
+    currentWinStreak = 0;
+    currentLoseStreak = 0;
+
+    drawStreak = Math.max(drawStreak, currentDrawStreak);
+
 }
 else {
-    losses++;
-}
 
+    losses++;
+
+    currentLoseStreak++;
+    currentWinStreak = 0;
+    currentDrawStreak = 0;
+
+    loseStreak = Math.max(loseStreak, currentLoseStreak);
+
+}
 
 
       if (goalsAgainst === 0)
@@ -288,6 +324,9 @@ else {
     wins,
     draws,
     losses,
+      winStreak,
+drawStreak,
+loseStreak,
 
 
      momentum: round(momentum / weightTotal),
@@ -850,6 +889,15 @@ formScore: 50,
 
       losses:
         stats.losses,
+
+        winStreak:
+  stats.winStreak,
+
+drawStreak:
+  stats.drawStreak,
+
+loseStreak:
+  stats.loseStreak,
 
 
 
