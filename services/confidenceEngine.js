@@ -206,40 +206,37 @@ if (eloProbability) {
 
 let confidence =
 
-15 +
+25 +
 
-separation * 0.32 +
+separation * 0.45 +
 
-favoriteBonus +
+favoriteBonus * 0.70 +
 
-dataQuality * 0.12 +
+dataQuality * 0.08 +
 
 stability * 0.10 +
 
 reliability * 0.10 +
 
-eloAgreement * 0.10 +
+eloAgreement * 0.12 +
 
-strengthBonus * 0.16 +
+strengthBonus * 0.08 +
 
-formBonus * 0.08 +
+formBonus * 0.05 +
 
-momentumBonus;
+momentumBonus * 0.05;
 
-    if (favoriteProbability >= 80)
-    confidence += 8;
-
-else if (favoriteProbability >= 70)
+    if (favoriteProbability >= 75)
     confidence += 5;
 
-else if (favoriteProbability >= 60)
+else if (favoriteProbability >= 65)
     confidence += 3;
    
 return Math.round(
     clamp(
         confidence,
-        25,
-        95
+        35,
+        90
     )
 );
 
