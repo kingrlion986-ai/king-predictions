@@ -47,21 +47,17 @@ function calculateExpectedGoals(
     */
 
     const homeAttack =
-    (
-        home.attackPower * 0.35
-    )
-    +
-    (
-        home.homeAttack * 0.30
-    )
-    +
-    (
-        home.avgScored * 0.20
-    )
-    +
-    (
-        home.formPoints * 0.15
-    );
+(
+    home.attackPower * 0.45
+)
++
+(
+    home.homeAttack * 0.35
+)
++
+(
+    home.avgScored * 0.20
+);
 
 
 
@@ -70,21 +66,17 @@ function calculateExpectedGoals(
     */
 
     const awayAttack =
-    (
-        away.attackPower * 0.35
-    )
-    +
-    (
-        away.awayAttack * 0.30
-    )
-    +
-    (
-        away.avgScored * 0.20
-    )
-    +
-    (
-        away.formPoints * 0.15
-    );
+(
+    away.attackPower * 0.45
+)
++
+(
+    away.awayAttack * 0.35
+)
++
+(
+    away.avgScored * 0.20
+);
 
    const homeReliability =
     home.reliability ?? 0.7;
