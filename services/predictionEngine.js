@@ -276,20 +276,50 @@ const awayScore =
     awayStats.reliability * weights.reliability +
     (1 - eloProbability) * 100 * weights.elo;
     
+const homeProbability =
+(
+    poisson.probabilities.homeWin * 0.45
+) +
+(
+    eloProbability * 100 * 0.25
+) +
+(
+    homeStats.strength * 0.20
+) +
+(
+    homeStats.formScore * 0.10
+);
+
+const awayProbability =
+(
+    poisson.probabilities.awayWin * 0.45
+) +
+(
+    (1 - eloProbability) * 100 * 0.25
+) +
+(
+    awayStats.strength * 0.20
+) +
+(
+    awayStats.formScore * 0.10
+);
+
+const drawProbability =
+poisson.probabilities.draw;
+
 let winner = "DRAW";
-    const drawChance = poisson.probabilities.draw;
 
-if (drawChance >= 32) {
-    winner = "DRAW";
+if (
+    homeProbability > awayProbability &&
+    homeProbability > drawProbability
+) {
+    winner = match.homeTeam.name;
 }
-
-if (Math.abs(homeScore - awayScore) > 4) {
-
-    winner =
-        homeScore > awayScore
-            ? match.homeTeam.name
-            : match.awayTeam.name;
-
+else if (
+    awayProbability > homeProbability &&
+    awayProbability > drawProbability
+) {
+    winner = match.awayTeam.name;
 }
 
     // =========================
