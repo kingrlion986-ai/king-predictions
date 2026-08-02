@@ -848,9 +848,20 @@ async function getTeamMatches(teamId) {
             });
     }
 
-    return matches
-        .sort((a, b) => new Date(b.utcDate) - new Date(a.utcDate))
-        .slice(0, 8);
+    const recent = matches
+    .sort((a, b) => new Date(b.utcDate) - new Date(a.utcDate))
+    .slice(0, 8);
+
+if (recent.length < 5) {
+    console.log(
+        "⚠ HISTORIQUE INSUFFISANT :",
+        teamId,
+        recent.length,
+        "match(s)"
+    );
+}
+
+return recent;
 }
 
 
