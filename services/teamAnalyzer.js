@@ -660,10 +660,9 @@ if (matches?.length > 0) {
     */
 
     if (
-      !matches ||
-      matches.length === 0
-    ) {
-
+  !matches ||
+  matches.length < 5
+) {
 
       const fallback = {
 
