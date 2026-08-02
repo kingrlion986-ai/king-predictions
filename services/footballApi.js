@@ -863,6 +863,26 @@ async function getTeamMatches(teamId) {
         );
     }
 
+       if (matches.length === 0) {
+
+    console.log("TEAM NOT FOUND:", teamId);
+
+    HISTORY_MATCH_DATABASE
+        .slice(0, 20)
+        .forEach(match => {
+
+            console.log(
+                match.homeTeam.id,
+                match.homeTeam.name,
+                "vs",
+                match.awayTeam.id,
+                match.awayTeam.name
+            );
+
+        });
+
+       }
+
     return recent;
 }
 
