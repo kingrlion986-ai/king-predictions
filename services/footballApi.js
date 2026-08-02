@@ -818,7 +818,12 @@ async function getTeamMatches(teamId) {
 
     console.log("SEARCH TEAM:", teamId);
 
+   console.log("HISTORY SIZE:", HISTORY_MATCH_DATABASE.length);
+console.log("SEARCH TEAM ID:", teamId);
+
     const matches = HISTORY_MATCH_DATABASE.filter(
+
+       console.log("FOUND MATCHES:", matches.length);
         match =>
             match.status === "FINISHED" &&
             (
