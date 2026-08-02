@@ -809,7 +809,6 @@ async function getMatches() {
 /* =========================
    GET TEAM HISTORY
 ========================= */
-
 async function getTeamMatches(teamId) {
 
     if (HISTORY_MATCH_DATABASE.length === 0) {
@@ -817,14 +816,21 @@ async function getTeamMatches(teamId) {
     }
 
     console.log("SEARCH TEAM:", teamId);
-
-   console.log("HISTORY SIZE:", HISTORY_MATCH_DATABASE.length);
-console.log("SEARCH TEAM ID:", teamId);
+    console.log("HISTORY SIZE:", HISTORY_MATCH_DATABASE.length);
+    console.log("SEARCH TEAM ID:", teamId);
 
     const matches = HISTORY_MATCH_DATABASE.filter(
-
-       console.log("FOUND MATCHES:", matches.length);
         match =>
+            match.status === "FINISHED" &&
+            (
+                match.homeTeam.id === teamId ||
+                match.awayTeam.id === teamId
+            )
+    );
+
+    console.log("FOUND MATCHES:", matches.length);
+
+match =>
             match.status === "FINISHED" &&
             (
                 match.homeTeam.id === teamId ||
