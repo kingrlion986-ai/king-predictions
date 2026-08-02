@@ -883,6 +883,13 @@ async function getTeamMatches(teamId) {
 
        }
 
+   console.log("TEAM ID:", teamId);
+console.log("MATCH IDS FOUND:", matches.map(m => ({
+    home: m.homeTeam.id,
+    away: m.awayTeam.id,
+    comp: m.competition.code
+})));
+
     return recent;
 }
 
