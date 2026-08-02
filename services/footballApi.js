@@ -829,15 +829,6 @@ async function getTeamMatches(teamId) {
     );
 
     console.log("FOUND MATCHES:", matches.length);
-
-match =>
-            match.status === "FINISHED" &&
-            (
-                match.homeTeam.id === teamId ||
-                match.awayTeam.id === teamId
-            )
-    );
-
     console.log("FOUND BY ID:", matches.length);
 
     if (matches.length === 0) {
@@ -860,19 +851,19 @@ match =>
     }
 
     const recent = matches
-    .sort((a, b) => new Date(b.utcDate) - new Date(a.utcDate))
-    .slice(0, 8);
+        .sort((a, b) => new Date(b.utcDate) - new Date(a.utcDate))
+        .slice(0, 8);
 
-if (recent.length < 5) {
-    console.log(
-        "⚠ HISTORIQUE INSUFFISANT :",
-        teamId,
-        recent.length,
-        "match(s)"
-    );
-}
+    if (recent.length < 5) {
+        console.log(
+            "⚠ HISTORIQUE INSUFFISANT :",
+            teamId,
+            recent.length,
+            "match(s)"
+        );
+    }
 
-return recent;
+    return recent;
 }
 
 
