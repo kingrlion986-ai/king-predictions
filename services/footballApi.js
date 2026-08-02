@@ -573,6 +573,17 @@ HISTORY_MATCH_DATABASE.length = 0;
             ...formatted
         );
 
+   const willemMatches = formatted.filter(
+    m => m.homeTeam.id === 672 || m.awayTeam.id === 672
+);
+
+console.log(
+    "WILLEM II IN",
+    competition,
+    "=",
+    willemMatches.length
+);
+
     }
 
 
