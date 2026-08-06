@@ -648,6 +648,27 @@ teamsWillem.forEach(m => {
     );
 });
 
+   const teamsWillem = HISTORY_MATCH_DATABASE.filter(
+    m =>
+        m.homeTeam.name.toLowerCase().includes("willem") ||
+        m.awayTeam.name.toLowerCase().includes("willem")
+);
+
+console.log("========== WILLEM DEBUG ==========");
+console.log("WILLEM FOUND:", teamsWillem.length);
+
+teamsWillem.forEach(m => {
+    console.log(
+        m.homeTeam.id,
+        m.homeTeam.name,
+        "vs",
+        m.awayTeam.id,
+        m.awayTeam.name
+    );
+});
+
+console.log("==================================");
+
 
     CACHE.history = {
 
