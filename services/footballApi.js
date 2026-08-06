@@ -610,6 +610,26 @@ console.log(
         ...unique
     );
 
+   const willem = HISTORY_MATCH_DATABASE.filter(
+    m =>
+        m.homeTeam.id === 672 ||
+        m.awayTeam.id === 672
+);
+
+console.log("WILLEM MATCHES:", willem.length);
+
+willem.slice(0,5).forEach(m=>{
+
+    console.log(
+        m.homeTeam.id,
+        m.homeTeam.name,
+        "vs",
+        m.awayTeam.id,
+        m.awayTeam.name
+    );
+
+});
+
 
     CACHE.history = {
 
