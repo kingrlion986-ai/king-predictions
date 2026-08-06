@@ -861,6 +861,27 @@ async function getTeamMatches(teamId) {
             });
     }
 
+   console.log("SEARCHING TEAM:", teamId);
+
+HISTORY_MATCH_DATABASE.forEach(match => {
+    if (
+        match.homeTeam.id === teamId ||
+        match.awayTeam.id === teamId
+    ) {
+        console.log(
+            "FOUND:",
+            match.homeTeam.name,
+            "vs",
+            match.awayTeam.name,
+            "ID:",
+            match.homeTeam.id,
+            match.awayTeam.id,
+            "COMP:",
+            match.competition.code
+        );
+    }
+});
+
     const recent = matches
         .sort((a, b) => new Date(b.utcDate) - new Date(a.utcDate))
         .slice(0, 8);
