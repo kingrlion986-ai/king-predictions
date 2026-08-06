@@ -630,6 +630,24 @@ willem.slice(0,5).forEach(m=>{
 
 });
 
+   const teamsWillem = history.filter(
+    m =>
+        m.homeTeam.name.toLowerCase().includes("willem") ||
+        m.awayTeam.name.toLowerCase().includes("willem")
+);
+
+console.log("WILLEM FOUND:", teamsWillem.length);
+
+teamsWillem.forEach(m => {
+    console.log(
+        m.homeTeam.id,
+        m.homeTeam.name,
+        "vs",
+        m.awayTeam.id,
+        m.awayTeam.name
+    );
+});
+
 
     CACHE.history = {
 
