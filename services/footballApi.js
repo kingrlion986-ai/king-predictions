@@ -915,35 +915,36 @@ HISTORY_MATCH_DATABASE.forEach(match => {
         );
     }
 
-       if (matches.length === 0) {
-
-    console.log("TEAM NOT FOUND:", teamId);
-
-    HISTORY_MATCH_DATABASE
-        .slice(0, 20)
-        .forEach(match => {
-
-            console.log(
-                match.homeTeam.id,
-                match.homeTeam.name,
-                "vs",
-                match.awayTeam.id,
-                match.awayTeam.name
-            );
-
-        });
-
-       }
-
-   console.log("TEAM ID:", teamId);
-console.log("MATCH IDS FOUND:", matches.map(m => ({
-    home: m.homeTeam.id,
-    away: m.awayTeam.id,
-    comp: m.competition.code
-})));
-
+       if (matches.length > 0) {
     return recent;
 }
+
+console.log("⚠ TEAM NOT FOUND IN DATABASE:", teamId);
+
+const apiData = await apiGet(
+    `/teams/${teamId}/matches?status=FINISHED&limit=8`
+);
+
+if (
+    apiData &&
+    Array.isArray(apiData.matches)
+) {
+
+    const recentMatches = apiData.matches
+        .map(formatMatch)
+        .filter(Boolean)
+        .slice(0, 8);
+
+    console.log(
+        "✅ API FALLBACK:",
+        teamId,
+        recentMatches.length
+    );
+
+    return recentMatches;
+}
+
+return [];
 
 
 
