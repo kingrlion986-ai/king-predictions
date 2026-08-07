@@ -793,32 +793,46 @@ async function preloadPredictions() {
 
 }
 
-app.listen(PORT, "0.0.0.0", async () => {
+app.listen(PORT, "0.0.0.0", () => {
 
     console.log("KING PREDICTIONS V16 RUNNING ⚽🔥");
 
-    console.log("⏳ Initialisation...");
+    console.log("🚀 Server started");
 
-    await initializeDatabase();
+    (async () => {
 
-    console.log("✅ Database prête");
+        try {
 
-    await preloadPredictions();
+            console.log("⏳ Initialisation...");
 
-    console.log("✅ Préchargement terminé");
+            await initializeDatabase();
 
-    startDailyScheduler(async () => {
+            console.log("✅ Database prête");
 
-        console.log("♻️ RESET DAILY SYSTEM");
+            await preloadPredictions();
 
-        DAILY_PREDICTIONS = null;
-        DAILY_DATE = null;
+            console.log("✅ Préchargement terminé");
 
-        PRELOADED_ANALYSES = null;
-        PRELOAD_TIME = 0;
+            startDailyScheduler(async () => {
 
-        await getDailyPredictions();
+                console.log("♻️ RESET DAILY SYSTEM");
 
-    });
+                DAILY_PREDICTIONS = null;
+                DAILY_DATE = null;
+
+                PRELOADED_ANALYSES = null;
+                PRELOAD_TIME = 0;
+
+                await getDailyPredictions();
+
+            });
+
+        } catch (err) {
+
+            console.error("STARTUP ERROR:", err);
+
+        }
+
+    })();
 
 });
