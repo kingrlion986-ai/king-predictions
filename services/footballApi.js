@@ -553,6 +553,18 @@ for (const season of seasons) {
 
     history.push(...formatted);
 
+   const willemMatches = formatted.filter(
+    m => m.homeTeam.id === 672 || m.awayTeam.id === 672
+);
+
+console.log(
+    "WILLEM II IN",
+    competition,
+    season,
+    "=",
+    willemMatches.length
+);
+
     await sleep(2500);
 }
 
