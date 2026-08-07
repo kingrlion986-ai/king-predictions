@@ -943,7 +943,12 @@ HISTORY_MATCH_DATABASE.forEach(match => {
 console.log("⚠ TEAM NOT FOUND IN DATABASE:", teamId);
 
 const apiData = await apiGet(
-    `/teams/${teamId}/matches?status=FINISHED&limit=8`
+    `/teams/${teamId}/matches?status=FINISHED`
+);
+
+console.log(
+    "API RAW:",
+    JSON.stringify(apiData, null, 2)
 );
 
 if (
