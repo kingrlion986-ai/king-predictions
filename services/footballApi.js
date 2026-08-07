@@ -556,63 +556,7 @@ for (const season of seasons) {
     await sleep(2500);
 }
 
-        if(
-            !data ||
-            !Array.isArray(data.matches)
-        ){
-            console.log(
-                "❌ NO HISTORY:",
-                competition
-            );
-            continue;
-        }
-
-
-        console.log(
-            "COMPETITION:",
-            competition
-        );
-
-
-        console.log(
-            "RAW HISTORY:",
-            data.matches.length
-        );
-
-
-        const formatted =
-            data.matches
-            .filter(
-                match =>
-                match.status === "FINISHED"
-            )
-            .map(formatMatch)
-            .filter(Boolean);
-
-
-        console.log(
-            competition,
-            "FINISHED:",
-            formatted.length
-        );
-
-
-        history.push(
-            ...formatted
-        );
-
-   const willemMatches = formatted.filter(
-    m => m.homeTeam.id === 672 || m.awayTeam.id === 672
-);
-
-console.log(
-    "WILLEM II IN",
-    competition,
-    "=",
-    willemMatches.length
-);
-
-    }
+   }
 
 
     // Suppression doublons
