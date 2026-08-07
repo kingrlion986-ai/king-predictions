@@ -523,10 +523,38 @@ HISTORY_MATCH_DATABASE.length = 0;
 
         await sleep(2500);
 
-        const data = await apiGet(
-    `/competitions/${competition}/matches?season=2025`
-);
+        const seasons = [2025, 2024];
 
+for (const season of seasons) {
+
+    const data = await apiGet(
+        `/competitions/${competition}/matches?season=${season}`
+    );
+
+    if (
+        !data ||
+        !Array.isArray(data.matches)
+    ) {
+        continue;
+    }
+
+    console.log(
+        competition,
+        "SEASON",
+        season,
+        "RAW:",
+        data.matches.length
+    );
+
+    const formatted = data.matches
+        .filter(match => match.status === "FINISHED")
+        .map(formatMatch)
+        .filter(Boolean);
+
+    history.push(...formatted);
+
+    await sleep(2500);
+}
 
         if(
             !data ||
