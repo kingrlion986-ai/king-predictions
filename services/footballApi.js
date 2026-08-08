@@ -265,9 +265,6 @@ async function apiGet(
         try{
 
 
-            await sleep(2500);
-
-
 
             console.log(
                 "➡️ API:",
@@ -565,9 +562,7 @@ console.log(
     willemMatches.length
 );
 
-    await sleep(2500);
-}
-
+    
    }
 
 
@@ -762,8 +757,6 @@ async function loadUpcomingDatabase(){
             formatted.length
         );
 
-
-        await sleep(2000);
 
     }
 
