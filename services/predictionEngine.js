@@ -99,11 +99,29 @@ console.time(timer);
     console.log("1 - ELO");
 
     const eloProbability =
-        calculateEloProbability(
-            homeElo,
-            awayElo
-        );
-    console.log("2 - XG");
+    calculateEloProbability(
+        homeElo,
+        awayElo
+    );
+
+console.log("===== ELO DEBUG =====");
+console.log(
+    match.homeTeam.name,
+    "ELO:",
+    homeElo
+);
+console.log(
+    match.awayTeam.name,
+    "ELO:",
+    awayElo
+);
+console.log(
+    "ELO PROBABILITY:",
+    Math.round(eloProbability * 100)
+);
+console.log("=====================");
+
+console.log("2 - XG");
 
     console.log("HOME STATS =", {
     attackPower: homeStats.attackPower,
