@@ -241,154 +241,108 @@ async function processQueue(){
 
 }
 
-
-
-
 /* =========================
    API REQUEST
 ========================= */
 
-
 const MAX_RETRIES = 3;
 
+async function apiGet(endpoint) {
 
+    return enqueue(async () => {
 
-async function apiGet(
-    endpoint,
-    retry=0
-){
+        for (let retry = 0; retry <= MAX_RETRIES; retry++) {
 
+            try {
 
-    return enqueue(async()=>{
+                console.log("➡️ API:", endpoint);
 
+                const controller = new AbortController();
 
-        try{
-
-
-
-            console.log(
-                "➡️ API:",
-                endpoint
-            );
-
-
-
-            const controller =
-                new AbortController();
-
-
-
-            const timeout =
-                setTimeout(
-                    ()=>controller.abort(),
+                const timeout = setTimeout(
+                    () => controller.abort(),
                     10000
                 );
 
-
-
-            const response =
-                await fetch(
-
+                const response = await fetch(
                     `${BASE_URL}${endpoint}`,
-
                     {
-
-                        headers:{
-
-                            "X-Auth-Token":
-                                API_KEY
-
+                        headers: {
+                            "X-Auth-Token": API_KEY
                         },
-
-                        signal:
-                            controller.signal
-
+                        signal: controller.signal
                     }
-
                 );
 
+                clearTimeout(timeout);
 
+                console.log(
+                    "STATUS:",
+                    response.status
+                );
 
-            clearTimeout(timeout);
+                /*
+                   RATE LIMIT
+                */
 
+                if (response.status === 429) {
 
+                    if (retry < MAX_RETRIES) {
 
-            console.log(
-                "STATUS:",
-                response.status
-            );
+                        const delay =
+                            5000 * (retry + 1);
 
+                        console.log(
+                            "⚠️ RATE LIMIT 429 - RETRY:",
+                            delay
+                        );
 
+                        await sleep(delay);
 
-            if(
-                response.status===429
-            ){
-
-                if(
-                    retry <
-                    MAX_RETRIES
-                ){
-
-                    const delay =
-                        15000 *
-                        (retry+1);
-
+                        continue;
+                    }
 
                     console.log(
-                        "RETRY:",
-                        delay
+                        "❌ MAX RETRIES REACHED:",
+                        endpoint
                     );
 
-
-                    await sleep(delay);
-
-
-                    return apiGet(
-                        endpoint,
-                        retry+1
-                    );
-
+                    return null;
                 }
 
+                /*
+                   AUTRE ERREUR
+                */
+
+                if (!response.ok) {
+
+                    console.log(
+                        "❌ API ERROR STATUS:",
+                        response.status
+                    );
+
+                    return null;
+                }
+
+                /*
+                   SUCCÈS
+                */
+
+                return await response.json();
+
+            } catch (error) {
+
+                console.log(
+                    "API ERROR:",
+                    error.message
+                );
 
                 return null;
-
             }
-
-
-
-            if(
-                !response.ok
-            ){
-
-                return null;
-
-            }
-
-
-
-            return await response.json();
-
-
-
-        }catch(error){
-
-
-            console.log(
-                "API ERROR:",
-                error.message
-            );
-
-
-            return null;
-
-
         }
 
-
+        return null;
     });
-
-
 }
 
 
@@ -517,8 +471,6 @@ HISTORY_MATCH_DATABASE.length = 0;
     const history = [];
 
     for(const competition of PRIMARY_COMPETITIONS){
-
-        await sleep(2500);
 
         const seasons = [2025, 2024];
 
