@@ -594,6 +594,12 @@ console.log(
         ...unique
     );
 
+   const { buildHistoricalElo } = require("./eloEngine");
+
+buildHistoricalElo(
+    HISTORY_MATCH_DATABASE
+);
+
    const willem = HISTORY_MATCH_DATABASE.filter(
     m =>
         m.homeTeam.id === 672 ||
