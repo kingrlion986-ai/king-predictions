@@ -447,91 +447,90 @@ function formatMatch(match){
    LOAD HISTORY DATABASE
 ========================= */
 
-async function loadHistoryDatabase(){
+async function loadHistoryDatabase() {
 
-   if (HISTORY_MATCH_DATABASE.length > 0) {
-    return HISTORY_MATCH_DATABASE;
-   }
+    if (HISTORY_MATCH_DATABASE.length > 0) {
+        return HISTORY_MATCH_DATABASE;
+    }
 
-    if(
+    if (
         CACHE.history.data &&
         Date.now() < CACHE.history.expiresAt
-    ){
+    ) {
         HISTORY_MATCH_DATABASE.length = 0;
-        HISTORY_MATCH_DATABASE.push(...CACHE.history.data);
+
+        HISTORY_MATCH_DATABASE.push(
+            ...CACHE.history.data
+        );
+
         return HISTORY_MATCH_DATABASE;
     }
 
     console.log("📚 LOADING HISTORY DATABASE");
 
-HISTORY_MATCH_DATABASE.length = 0;
+    HISTORY_MATCH_DATABASE.length = 0;
 
     const history = [];
 
-    for(const competition of PRIMARY_COMPETITIONS){
+    for (const competition of PRIMARY_COMPETITIONS) {
 
         const seasons = [2025];
 
-for (const season of seasons) {
+        for (const season of seasons) {
 
-    const data = await apiGet(
-        `/competitions/${competition}/matches?season=${season}`
-    );
+            const data = await apiGet(
+                `/competitions/${competition}/matches?season=${season}`
+            );
 
-    if (
-        !data ||
-        !Array.isArray(data.matches)
-    ) {
-        continue;
+            if (
+                !data ||
+                !Array.isArray(data.matches)
+            ) {
+                console.log(
+                    `⚠️ NO DATA: ${competition} ${season}`
+                );
+
+                continue;
+            }
+
+            console.log(
+                competition,
+                "SEASON",
+                season,
+                "RAW:",
+                data.matches.length
+            );
+
+            const formatted = data.matches
+                .filter(
+                    match =>
+                        match.status === "FINISHED"
+                )
+                .map(formatMatch)
+                .filter(Boolean);
+
+            history.push(
+                ...formatted
+            );
+        }
     }
 
-    console.log(
-        competition,
-        "SEASON",
-        season,
-        "RAW:",
-        data.matches.length
-    );
+    /* =========================
+       SUPPRESSION DOUBLONS
+    ========================= */
 
-    const formatted = data.matches
-        .filter(match => match.status === "FINISHED")
-        .map(formatMatch)
-        .filter(Boolean);
-
-    history.push(...formatted);
-
-   const willemMatches = formatted.filter(
-    m => m.homeTeam.id === 672 || m.awayTeam.id === 672
-);
-
-console.log(
-    "WILLEM II IN",
-    competition,
-    season,
-    "=",
-    willemMatches.length
-);
-
-    
-   }
-
-
-    // Suppression doublons
     const unique = [];
     const seen = new Set();
 
+    for (const match of history) {
 
-    for(const match of history){
-
-        if(!seen.has(match.id)){
+        if (!seen.has(match.id)) {
 
             seen.add(match.id);
+
             unique.push(match);
-
         }
-
     }
-
 
     HISTORY_MATCH_DATABASE.length = 0;
 
@@ -539,73 +538,55 @@ console.log(
         ...unique
     );
 
-   const { buildHistoricalElo } = require("./eloEngine");
+    /* =========================
+       HISTORICAL ELO
+    ========================= */
 
-buildHistoricalElo(
-    HISTORY_MATCH_DATABASE
-);
+    try {
 
-   const willem = HISTORY_MATCH_DATABASE.filter(
-    m =>
-        m.homeTeam.id === 672 ||
-        m.awayTeam.id === 672
-);
+        const {
+            buildHistoricalElo
+        } = require("./eloEngine");
 
-console.log("WILLEM MATCHES:", willem.length);
+        buildHistoricalElo(
+            HISTORY_MATCH_DATABASE
+        );
 
-willem.slice(0,5).forEach(m=>{
+        console.log(
+            "✅ HISTORICAL ELO BUILT"
+        );
 
-    console.log(
-        m.homeTeam.id,
-        m.homeTeam.name,
-        "vs",
-        m.awayTeam.id,
-        m.awayTeam.name
-    );
+    } catch (error) {
 
-});
+        console.log(
+            "⚠️ ELO ERROR:",
+            error.message
+        );
+    }
 
-   const teamsWillem = HISTORY_MATCH_DATABASE.filter(
-    m =>
-        m.homeTeam.name.toLowerCase().includes("willem") ||
-        m.awayTeam.name.toLowerCase().includes("willem")
-);
-
-console.log("========== WILLEM DEBUG ==========");
-console.log("WILLEM FOUND:", teamsWillem.length);
-
-teamsWillem.forEach(m => {
-    console.log(
-        m.homeTeam.id,
-        m.homeTeam.name,
-        "vs",
-        m.awayTeam.id,
-        m.awayTeam.name
-    );
-});
-
-console.log("==================================");
-
+    /* =========================
+       CACHE HISTORY
+    ========================= */
 
     CACHE.history = {
 
-    data: [...HISTORY_MATCH_DATABASE],
+        data: [
+            ...HISTORY_MATCH_DATABASE
+        ],
 
-    expiresAt:
-        Date.now()+HISTORY_CACHE_TTL
-
-};
-
+        expiresAt:
+            Date.now() +
+            HISTORY_CACHE_TTL
+    };
 
     console.log(
         "📚 TOTAL HISTORY:",
         HISTORY_MATCH_DATABASE.length
     );
 
-
     return HISTORY_MATCH_DATABASE;
+               }
 
-}
 
 /* =========================
    LOAD UPCOMING DATABASE
@@ -935,6 +916,7 @@ function getSafeMatches(matches){
 /* =========================
    INITIALIZATION
 ========================= */
+
 async function initializeDatabase() {
 
     if (DATABASE_INITIALIZING) {
@@ -943,7 +925,9 @@ async function initializeDatabase() {
 
     DATABASE_INITIALIZING = (async () => {
 
-        console.log("🚀 INITIALIZING DATABASE...");
+        console.log(
+            "🚀 INITIALIZING DATABASE..."
+        );
 
         await loadHistoryDatabase();
 
@@ -951,8 +935,14 @@ async function initializeDatabase() {
 
         console.log("======================");
         console.log("✅ DATABASE READY");
-        console.log("📚 HISTORY:", HISTORY_MATCH_DATABASE.length);
-        console.log("🔮 UPCOMING:", UPCOMING_MATCH_DATABASE.length);
+        console.log(
+            "📚 HISTORY:",
+            HISTORY_MATCH_DATABASE.length
+        );
+        console.log(
+            "🔮 UPCOMING:",
+            UPCOMING_MATCH_DATABASE.length
+        );
         console.log("======================");
 
     })();
@@ -966,8 +956,8 @@ async function initializeDatabase() {
         DATABASE_INITIALIZING = null;
 
     }
-
 }
+
 
 /* =========================
    EXPORTS
