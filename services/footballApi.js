@@ -42,13 +42,11 @@ const PRIMARY_COMPETITIONS = [
     "SA",
     "BL1",
     "FL1",
-    "CL",
     "DED",
     "PPL",
     "BSA",
     "ELC"
 ];
-
 
 const SECONDARY_COMPETITIONS = [
     "CL",
@@ -472,7 +470,7 @@ HISTORY_MATCH_DATABASE.length = 0;
 
     for(const competition of PRIMARY_COMPETITIONS){
 
-        const seasons = [2025, 2024];
+        const seasons = [2025];
 
 for (const season of seasons) {
 
@@ -661,8 +659,8 @@ async function loadUpcomingDatabase(){
 
 
     future.setDate(
-        future.getDate()+60
-    );
+    future.getDate()+14
+);
 
 
     const from =
