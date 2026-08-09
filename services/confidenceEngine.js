@@ -2,7 +2,7 @@
 =========================================
  KING PREDICTIONS AI
  CONFIDENCE ENGINE V20
- CALIBRATED / CONSERVATIVE
+ CALIBRATED / ANTI-OVERCONFIDENCE
 =========================================
 */
 
@@ -10,37 +10,34 @@ function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
 }
 
-
 function calculateConfidence({
-
     probabilities,
     homeStats,
     awayStats,
     eloProbability,
-    poisson
-
+    poisson = null
 }) {
 
     /*
     =================================
-    1. PROBABILITÉS
+    1. PROBABILITÉ DU FAVORI
     =================================
     */
 
-    const homeWin = Number(probabilities?.homeWin || 0);
-    const draw = Number(probabilities?.draw || 0);
-    const awayWin = Number(probabilities?.awayWin || 0);
-
     const values = [
-        homeWin,
-        draw,
-        awayWin
+        Number(probabilities?.homeWin || 0),
+        Number(probabilities?.draw || 0),
+        Number(probabilities?.awayWin || 0)
     ];
 
     const sorted = [...values].sort((a, b) => b - a);
 
     const favoriteProbability = sorted[0];
     const secondProbability = sorted[1];
+
+    /*
+    Écart réel entre le favori et le second choix.
+    */
 
     const separation =
         favoriteProbability - secondProbability;
@@ -52,60 +49,75 @@ function calculateConfidence({
     =================================
     */
 
-    const homePlayed =
-        Number(homeStats?.played || 0);
+    const homePlayed = Number(
+        homeStats?.played ||
+        homeStats?.matchesPlayed ||
+        homeStats?.matches ||
+        0
+    );
 
-    const awayPlayed =
-        Number(awayStats?.played || 0);
+    const awayPlayed = Number(
+        awayStats?.played ||
+        awayStats?.matchesPlayed ||
+        awayStats?.matches ||
+        0
+    );
 
-    const minPlayed =
-        Math.min(homePlayed, awayPlayed);
-
-    const dataQuality =
-        clamp(
-            (minPlayed / 8) * 100,
-            0,
-            100
-        );
-
+    const minPlayed = Math.min(
+        homePlayed,
+        awayPlayed
+    );
 
     /*
-    =================================
-    3. STABILITÉ
-    =================================
+    8 matchs = données complètes.
     */
 
-    const stability =
-        (
-            Number(homeStats?.stability || 50) +
-            Number(awayStats?.stability || 50)
-        ) / 2;
+    const dataQuality = clamp(
+        (minPlayed / 8) * 100,
+        0,
+        100
+    );
 
 
     /*
     =================================
-    4. FIABILITÉ
+    3. FIABILITÉ
     =================================
     */
 
     const reliability =
         (
-            Number(homeStats?.reliability || 0.5) +
-            Number(awayStats?.reliability || 0.5)
+            Number(homeStats?.reliability ?? 0.5) +
+            Number(awayStats?.reliability ?? 0.5)
+        ) / 2;
+
+    const reliabilityScore =
+        clamp(reliability * 100, 0, 100);
+
+
+    /*
+    =================================
+    4. STABILITÉ
+    =================================
+    */
+
+    const stability =
+        (
+            Number(homeStats?.stability ?? 50) +
+            Number(awayStats?.stability ?? 50)
         ) / 2;
 
 
     /*
     =================================
-    5. FORCE
+    5. FORCE DES ÉQUIPES
     =================================
     */
 
-    const strengthGap =
-        Math.abs(
-            Number(homeStats?.strength || 50) -
-            Number(awayStats?.strength || 50)
-        );
+    const strengthGap = Math.abs(
+        Number(homeStats?.strength ?? 50) -
+        Number(awayStats?.strength ?? 50)
+    );
 
 
     /*
@@ -114,281 +126,201 @@ function calculateConfidence({
     =================================
     */
 
-    const formGap =
-        Math.abs(
-            Number(homeStats?.formPoints || 0) -
-            Number(awayStats?.formPoints || 0)
-        );
+    const formGap = Math.abs(
+        Number(homeStats?.formPoints ?? 0) -
+        Number(awayStats?.formPoints ?? 0)
+    );
 
 
     /*
     =================================
-    7. ELO
+    7. ELO / POISSON
     =================================
     */
 
-    let eloAgreement = 50;
+    let modelAgreement = 50;
 
     if (
         typeof eloProbability === "number" &&
         Number.isFinite(eloProbability)
     ) {
 
-        const eloHome =
-            eloProbability > 1
-                ? eloProbability / 100
-                : eloProbability;
-
         const poissonHome =
-            homeWin / 100;
+            Number(probabilities?.homeWin || 0) / 100;
+
+        const eloHome =
+            eloProbability;
 
         const difference =
-            Math.abs(
-                poissonHome - eloHome
-            );
+            Math.abs(poissonHome - eloHome);
 
-        eloAgreement =
-            clamp(
-                100 - difference * 100,
-                0,
-                100
-            );
+        /*
+        0 différence = 100%
+        0.50 différence = 0%
+        */
+
+        modelAgreement = clamp(
+            100 - difference * 200,
+            0,
+            100
+        );
     }
 
 
     /*
     =================================
-    8. POISSON
+    8. POISSON RISK
     =================================
     */
 
-    const poissonDominance =
-        Number(poisson?.dominance || 0);
+    let poissonRisk = 0;
 
-    const poissonUncertainty =
-        Number(poisson?.uncertainty || 0);
+    if (poisson) {
+
+        const uncertainty =
+            Number(poisson.uncertainty || 0);
+
+        const dominance =
+            Number(poisson.dominance || 0);
+
+        /*
+        Forte incertitude = pénalité.
+        */
+
+        if (uncertainty >= 55) {
+            poissonRisk -= 25;
+        }
+        else if (uncertainty >= 45) {
+            poissonRisk -= 15;
+        }
+        else if (uncertainty >= 35) {
+            poissonRisk -= 8;
+        }
+
+        /*
+        Une forte dominance peut légèrement
+        améliorer la confiance.
+        */
+
+        if (dominance >= 30) {
+            poissonRisk += 8;
+        }
+        else if (dominance >= 20) {
+            poissonRisk += 4;
+        }
+
+    }
 
 
     /*
     =================================
-    9. BASE
+    9. SCORE DE BASE
     =================================
 
     IMPORTANT :
-    On commence bas.
 
-    Un favori à 38 % ne doit jamais
-    obtenir 70+ de confiance.
+    La confiance ne doit PAS être
+    une simple copie de la probabilité.
+
+    Elle mesure :
+
+    - qualité des données
+    - séparation
+    - stabilité
+    - fiabilité
+    - accord des modèles
+    - risque Poisson
     */
 
-    let confidence = 30;
+    let confidence =
+
+        20 +
+
+        /*
+        Séparation
+        */
+
+        separation * 0.35 +
+
+        /*
+        Probabilité du favori
+        */
+
+        Math.max(
+            0,
+            favoriteProbability - 33
+        ) * 0.30 +
+
+        /*
+        Données
+        */
+
+        dataQuality * 0.12 +
+
+        /*
+        Stabilité
+        */
+
+        stability * 0.06 +
+
+        /*
+        Fiabilité
+        */
+
+        reliabilityScore * 0.08 +
+
+        /*
+        Accord ELO
+        */
+
+        modelAgreement * 0.08 +
+
+        /*
+        Force
+        */
+
+        Math.min(strengthGap, 20) * 0.10 +
+
+        /*
+        Forme
+        */
+
+        Math.min(formGap, 10) * 0.08 +
+
+        poissonRisk;
 
 
     /*
     =================================
-    10. FORCE DU FAVORI
+    10. PÉNALITÉ MATCH ÉQUILIBRÉ
     =================================
     */
 
-    if (favoriteProbability >= 80) {
-
-        confidence += 25;
-
-    }
-    else if (favoriteProbability >= 70) {
-
-        confidence += 18;
-
-    }
-    else if (favoriteProbability >= 65) {
-
-        confidence += 12;
-
-    }
-    else if (favoriteProbability >= 60) {
-
-        confidence += 6;
-
-    }
-    else if (favoriteProbability < 50) {
+    if (favoriteProbability < 45) {
 
         confidence -= 15;
 
     }
 
-
-    /*
-    =================================
-    11. SÉPARATION
-    =================================
-    */
-
-    if (separation >= 25) {
-
-        confidence += 15;
-
-    }
-    else if (separation >= 15) {
-
-        confidence += 10;
-
-    }
-    else if (separation >= 10) {
-
-        confidence += 5;
-
-    }
-    else if (separation < 7) {
-
-        confidence -= 12;
-
-    }
-
-
-    /*
-    =================================
-    12. DONNÉES
-    =================================
-    */
-
-    confidence +=
-        (dataQuality - 50) * 0.10;
-
-
-    /*
-    =================================
-    13. STABILITÉ
-    =================================
-    */
-
-    confidence +=
-        (stability - 50) * 0.08;
-
-
-    /*
-    =================================
-    14. FIABILITÉ
-    =================================
-    */
-
-    confidence +=
-        (reliability - 0.50) * 20;
-
-
-    /*
-    =================================
-    15. FORCE DES ÉQUIPES
-    =================================
-    */
-
-    if (strengthGap >= 20) {
-
-        confidence += 8;
-
-    }
-    else if (strengthGap >= 10) {
-
-        confidence += 4;
-
-    }
-    else if (strengthGap <= 4) {
-
-        confidence -= 8;
-
-    }
-
-
-    /*
-    =================================
-    16. FORME
-    =================================
-    */
-
-    if (formGap >= 1.0) {
-
-        confidence += 6;
-
-    }
-    else if (formGap >= 0.5) {
-
-        confidence += 3;
-
-    }
-    else if (formGap < 0.15) {
-
-        confidence -= 5;
-
-    }
-
-
-    /*
-    =================================
-    17. ACCORD ELO
-    =================================
-    */
-
-    if (eloAgreement >= 80) {
-
-        confidence += 6;
-
-    }
-    else if (eloAgreement >= 65) {
-
-        confidence += 3;
-
-    }
-    else if (eloAgreement < 55) {
-
-        confidence -= 6;
-
-    }
-
-
-    /*
-    =================================
-    18. POISSON DOMINANCE
-    =================================
-    */
-
-    if (poissonDominance >= 35) {
-
-        confidence += 10;
-
-    }
-    else if (poissonDominance >= 25) {
-
-        confidence += 6;
-
-    }
-    else if (poissonDominance >= 15) {
-
-        confidence += 3;
-
-    }
-    else if (poissonDominance < 10) {
-
-        confidence -= 8;
-
-    }
-
-
-    /*
-    =================================
-    19. POISSON UNCERTAINTY
-    =================================
-    */
-
-    if (poissonUncertainty >= 60) {
-
-        confidence -= 15;
-
-    }
-    else if (poissonUncertainty >= 50) {
+    if (favoriteProbability < 40) {
 
         confidence -= 10;
 
     }
-    else if (poissonUncertainty >= 40) {
+
+
+    /*
+    =================================
+    11. PÉNALITÉ FAIBLE SÉPARATION
+    =================================
+    */
+
+    if (separation < 5) {
+
+        confidence -= 10;
+
+    }
+    else if (separation < 10) {
 
         confidence -= 5;
 
@@ -397,14 +329,31 @@ function calculateConfidence({
 
     /*
     =================================
-    20. MATCH ÉQUILIBRÉ
+    12. PÉNALITÉ ÉQUIPES PROCHES
+    =================================
+    */
+
+    if (strengthGap <= 4) {
+
+        confidence -= 10;
+
+    }
+    else if (strengthGap <= 8) {
+
+        confidence -= 5;
+
+    }
+
+
+    /*
+    =================================
+    13. PÉNALITÉ ELO ÉQUILIBRÉ
     =================================
     */
 
     if (
-        favoriteProbability < 50 &&
-        separation < 10 &&
-        strengthGap <= 5
+        eloProbability >= 0.46 &&
+        eloProbability <= 0.54
     ) {
 
         confidence -= 10;
@@ -414,36 +363,38 @@ function calculateConfidence({
 
     /*
     =================================
-    21. HISTORIQUE INSUFFISANT
+    14. PÉNALITÉ DONNÉES INSUFFISANTES
     =================================
     */
 
     if (minPlayed < 3) {
 
-        confidence -= 15;
+        confidence -= 20;
 
     }
     else if (minPlayed < 5) {
 
-        confidence -= 8;
+        confidence -= 12;
+
+    }
+    else if (minPlayed < 8) {
+
+        confidence -= 5;
 
     }
 
 
     /*
     =================================
-    22. LIMITE FINALE
+    15. LIMITES FINALES
     =================================
     */
 
-    confidence =
-        Math.round(
-            clamp(
-                confidence,
-                20,
-                95
-            )
-        );
+    confidence = clamp(
+        Math.round(confidence),
+        20,
+        85
+    );
 
 
     /*
@@ -462,6 +413,8 @@ function calculateConfidence({
 
         dataQuality,
 
+        minPlayed,
+
         stability,
 
         reliability,
@@ -470,13 +423,9 @@ function calculateConfidence({
 
         formGap,
 
-        poissonDominance,
+        modelAgreement,
 
-        poissonUncertainty,
-
-        eloProbability,
-
-        eloAgreement,
+        poissonRisk,
 
         confidence
 
@@ -484,12 +433,9 @@ function calculateConfidence({
 
 
     return confidence;
-
 }
 
 
 module.exports = {
-
     calculateConfidence
-
 };
