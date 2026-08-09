@@ -1,10 +1,20 @@
+/*
+=========================================
+ KING PREDICTIONS AI
+ POISSON ENGINE V21
+ CALIBRATED & STABLE
+=========================================
+*/
+
 const MAX_GOALS = 10;
+
 
 /* =========================
    FACTORIAL
 ========================= */
 
 function factorial(n) {
+
     if (n <= 1) return 1;
 
     let result = 1;
@@ -16,47 +26,79 @@ function factorial(n) {
     return result;
 }
 
+
 /* =========================
-   POISSON PROBABILITY
+   POISSON
 ========================= */
 
-function poisson(lambda, goals) {
+function poissonProbability(lambda, goals) {
+
+    if (!Number.isFinite(lambda) || lambda < 0) {
+        return 0;
+    }
+
     return (
         Math.exp(-lambda) *
         Math.pow(lambda, goals)
     ) / factorial(goals);
 }
 
+
 /* =========================
-   GOAL DISTRIBUTION
+   DISTRIBUTION
 ========================= */
 
 function buildGoalDistribution(expectedGoals) {
 
-    const probabilities = [];
+    const distribution = [];
 
     for (let goals = 0; goals <= MAX_GOALS; goals++) {
 
-        probabilities.push(
-            poisson(expectedGoals, goals)
+        distribution.push(
+            poissonProbability(
+                expectedGoals,
+                goals
+            )
         );
 
     }
 
-    return probabilities;
+    return distribution;
 }
 
+
 /* =========================
-   BUILD MATRIX
+   MAIN
 ========================= */
 
 function buildPoissonMatrix(homeXG, awayXG) {
 
+    homeXG = Number(homeXG);
+    awayXG = Number(awayXG);
+
+    if (!Number.isFinite(homeXG) || homeXG < 0) {
+        homeXG = 0;
+    }
+
+    if (!Number.isFinite(awayXG) || awayXG < 0) {
+        awayXG = 0;
+    }
+
+    /*
+    Évite des XG absurdes
+    */
+
+    homeXG = Math.min(homeXG, 5);
+    awayXG = Math.min(awayXG, 5);
+
     console.log("HOME XG =", homeXG);
     console.log("AWAY XG =", awayXG);
 
-    const home = buildGoalDistribution(homeXG);
-    const away = buildGoalDistribution(awayXG);
+    const homeDistribution =
+        buildGoalDistribution(homeXG);
+
+    const awayDistribution =
+        buildGoalDistribution(awayXG);
 
     const matrix = [];
 
@@ -66,30 +108,31 @@ function buildPoissonMatrix(homeXG, awayXG) {
 
         for (let a = 0; a <= MAX_GOALS; a++) {
 
-            matrix[h][a] = home[h] * away[a];
+            matrix[h][a] =
+                homeDistribution[h] *
+                awayDistribution[a];
 
         }
 
     }
 
-    const analysis = analyzeMatrix(matrix);
-
     return {
 
         matrix,
 
-        homeDistribution: home,
+        homeDistribution,
 
-        awayDistribution: away,
+        awayDistribution,
 
-        ...analysis
+        ...analyzeMatrix(matrix)
 
     };
 
 }
 
+
 /* =========================
-   ANALYSE DE LA MATRICE
+   ANALYSE
 ========================= */
 
 function analyzeMatrix(matrix) {
@@ -99,63 +142,118 @@ function analyzeMatrix(matrix) {
     let awayWin = 0;
 
     let btts = 0;
+
     let over15 = 0;
     let over25 = 0;
     let over35 = 0;
 
-    let bestProbability = 0;
-    let exactScore = "0-0";
+    let cleanSheetHome = 0;
+    let cleanSheetAway = 0;
 
     let total = 0;
 
-   let homeGoalsExpectation = 0;
-let awayGoalsExpectation = 0;
+    let homeGoalsExpectation = 0;
+    let awayGoalsExpectation = 0;
 
-let cleanSheetHome = 0;
-let cleanSheetAway = 0;
+    let bestProbability = 0;
+    let exactScore = "0-0";
 
-    for (let h = 0; h <= MAX_GOALS; h++) {
 
-        for (let a = 0; a <= MAX_GOALS; a++) {
+    /* =========================
+       MATRIX
+    ========================= */
 
-            const p = matrix[h][a];
+    for (
+        let h = 0;
+        h <= MAX_GOALS;
+        h++
+    ) {
 
-            total += p;
+        for (
+            let a = 0;
+            a <= MAX_GOALS;
+            a++
+        ) {
 
-           homeGoalsExpectation += h * p;
-awayGoalsExpectation += a * p;
+            const probability =
+                matrix[h][a];
 
-if (a === 0)
-    cleanSheetHome += p;
+            total += probability;
 
-if (h === 0)
-    cleanSheetAway += p;
+            homeGoalsExpectation +=
+                h * probability;
 
-            if (h > a)
-                homeWin += p;
+            awayGoalsExpectation +=
+                a * probability;
 
-            else if (h === a)
-                draw += p;
 
-            else
-                awayWin += p;
+            /* WINNER */
 
-            if (h > 0 && a > 0)
-                btts += p;
+            if (h > a) {
 
-            if ((h + a) >= 3)
-                over25 += p;
+                homeWin += probability;
 
-           if ((h + a) >= 2)
-    over15 += p;
+            }
 
-if ((h + a) >= 4)
-    over35 += p;
+            else if (h === a) {
 
-            if (p > bestProbability) {
+                draw += probability;
 
-                bestProbability = p;
-                exactScore = `${h}-${a}`;
+            }
+
+            else {
+
+                awayWin += probability;
+
+            }
+
+
+            /* BTTS */
+
+            if (h > 0 && a > 0) {
+
+                btts += probability;
+
+            }
+
+
+            /* TOTAL GOALS */
+
+            const totalGoals = h + a;
+
+            if (totalGoals >= 2) {
+                over15 += probability;
+            }
+
+            if (totalGoals >= 3) {
+                over25 += probability;
+            }
+
+            if (totalGoals >= 4) {
+                over35 += probability;
+            }
+
+
+            /* CLEAN SHEET */
+
+            if (a === 0) {
+                cleanSheetHome += probability;
+            }
+
+            if (h === 0) {
+                cleanSheetAway += probability;
+            }
+
+
+            /* EXACT SCORE */
+
+            if (probability > bestProbability) {
+
+                bestProbability =
+                    probability;
+
+                exactScore =
+                    `${h}-${a}`;
 
             }
 
@@ -163,169 +261,365 @@ if ((h + a) >= 4)
 
     }
 
-    /*
-      Normalisation
-    */
+
+    if (total <= 0) {
+
+        throw new Error(
+            "Poisson matrix has invalid total probability"
+        );
+
+    }
+
+
+    /* =========================
+       NORMALISATION
+    ========================= */
 
     homeWin /= total;
     draw /= total;
     awayWin /= total;
 
     btts /= total;
+
+    over15 /= total;
     over25 /= total;
+    over35 /= total;
 
-   const doubleChance = {
+    homeGoalsExpectation /= total;
+    awayGoalsExpectation /= total;
 
-    homeOrDraw: Number(((homeWin + draw) * 100).toFixed(2)),
+    cleanSheetHome /= total;
+    cleanSheetAway /= total;
 
-    awayOrDraw: Number(((awayWin + draw) * 100).toFixed(2)),
 
-    homeOrAway: Number(((homeWin + awayWin) * 100).toFixed(2))
+    /* =========================
+       PROBABILITIES
+    ========================= */
 
-};
+    const probabilities = [
 
-let expectedGoals = 0;
+        homeWin,
+        draw,
+        awayWin
 
-for (let h = 0; h <= MAX_GOALS; h++) {
+    ].sort(
+        (a, b) => b - a
+    );
 
-    for (let a = 0; a <= MAX_GOALS; a++) {
 
-        expectedGoals +=
-            (h + a) * matrix[h][a];
+    const favoriteProbability =
+        probabilities[0];
+
+    const secondProbability =
+        probabilities[1];
+
+
+    /*
+    Écart réel entre le favori
+    et le deuxième scénario.
+    */
+
+    const predictionGap =
+        favoriteProbability -
+        secondProbability;
+
+
+    /*
+    DOMINANCE
+
+    0 = match totalement équilibré
+    20+ = avantage important
+    35+ = très fort avantage
+    */
+
+    const dominance =
+        Number(
+            (
+                predictionGap * 100
+            ).toFixed(2)
+        );
+
+
+    /*
+    INCERTITUDE
+
+    Plus le favori est faible,
+    plus le match est incertain.
+    */
+
+    const uncertainty =
+        Number(
+            (
+                (1 - favoriteProbability) * 100
+            ).toFixed(2)
+        );
+
+
+    /* =========================
+       DOUBLE CHANCE
+    ========================= */
+
+    const doubleChance = {
+
+        homeOrDraw:
+            Number(
+                (
+                    (homeWin + draw) * 100
+                ).toFixed(2)
+            ),
+
+        awayOrDraw:
+            Number(
+                (
+                    (awayWin + draw) * 100
+                ).toFixed(2)
+            ),
+
+        homeOrAway:
+            Number(
+                (
+                    (homeWin + awayWin) * 100
+                ).toFixed(2)
+            )
+
+    };
+
+
+    /* =========================
+       EXPECTED GOALS
+    ========================= */
+
+    const expectedGoals =
+        homeGoalsExpectation +
+        awayGoalsExpectation;
+
+
+    /* =========================
+       MATCH SCORE
+    =========================
+
+       IMPORTANT :
+
+       Ce score ne doit PAS
+       transformer un match équilibré
+       en bon pari.
+
+    */
+
+    const matchScore = Math.max(
+        0,
+        Math.min(
+            100,
+
+            favoriteProbability * 70 +
+
+            dominance * 0.30
+
+        )
+    );
+
+
+    /* =========================
+       RISK
+    ========================= */
+
+    let risk = "VERY HIGH";
+
+    if (
+        favoriteProbability >= 0.70 &&
+        dominance >= 20
+    ) {
+
+        risk = "LOW";
 
     }
 
-}
+    else if (
+        favoriteProbability >= 0.60 &&
+        dominance >= 12
+    ) {
 
-expectedGoals /= total;
+        risk = "MEDIUM";
 
-const favoriteProbability = Math.max(
-    homeWin,
-    draw,
-    awayWin
-);
+    }
 
-   const probabilities = [homeWin, draw, awayWin]
-.sort((a,b)=>b-a);
-   
-const secondProbability = probabilities[1];
-   
-const predictionGap =
-    favoriteProbability -
-    secondProbability;
+    else if (
+        favoriteProbability >= 0.50
+    ) {
 
-const uncertainty =
-    Number(
-        ((1 - favoriteProbability) * 100)
-        .toFixed(2)
+        risk = "HIGH";
+
+    }
+
+
+    /* =========================
+       DEBUG
+    ========================= */
+
+    console.log(
+        "===== POISSON V21 ====="
     );
 
-const dominance =
-    Number(
-        (
-            predictionGap * 100
-        ).toFixed(2)
-    );
+    console.log({
 
-   const matchScore =
-(
-favoriteProbability * 55 +
-dominance * 0.25 +
-((100 - uncertainty) * 0.20)
-);
+        homeWin:
+            Number(
+                (homeWin * 100).toFixed(2)
+            ),
 
-       /*
-   Calibration des probabilités
-*/
+        draw:
+            Number(
+                (draw * 100).toFixed(2)
+            ),
 
-const calibration = 0.96;
+        awayWin:
+            Number(
+                (awayWin * 100).toFixed(2)
+            ),
 
-homeWin *= calibration;
-draw *= (2 - calibration);
-awayWin *= calibration;
+        favoriteProbability:
+            Number(
+                (favoriteProbability * 100).toFixed(2)
+            ),
 
-const sum = homeWin + draw + awayWin;
+        predictionGap:
+            dominance,
 
-homeWin /= sum;
-draw /= sum;
-awayWin /= sum;
+        uncertainty,
 
-   let risk = "HIGH";
+        matchScore:
+            Number(
+                matchScore.toFixed(2)
+            ),
 
-if (favoriteProbability >= 0.70)
-    risk = "LOW";
+        expectedGoals:
+            Number(
+                expectedGoals.toFixed(2)
+            ),
 
-else if (favoriteProbability >= 0.55)
-    risk = "MEDIUM";
-   
-return {
+        exactScore,
 
-    probabilities: {
+        risk
 
-        homeWin: Number((homeWin * 100).toFixed(2)),
+    });
 
-        draw: Number((draw * 100).toFixed(2)),
 
-        awayWin: Number((awayWin * 100).toFixed(2))
+    /* =========================
+       RETURN
+    ========================= */
 
-    },
+    return {
 
-    doubleChance,
+        matrix,
 
-    btts: Number((btts * 100).toFixed(2)),
+        homeDistribution: null,
 
-    over15: Number((over15 * 100).toFixed(2)),
+        awayDistribution: null,
 
-    over25: Number((over25 * 100).toFixed(2)),
+        probabilities: {
 
-    over35: Number((over35 * 100).toFixed(2)),
+            homeWin:
+                Number(
+                    (homeWin * 100).toFixed(2)
+                ),
 
-    under25: Number(((1 - over25) * 100).toFixed(2)),
+            draw:
+                Number(
+                    (draw * 100).toFixed(2)
+                ),
 
-    expectedGoals: Number(expectedGoals.toFixed(2)),
+            awayWin:
+                Number(
+                    (awayWin * 100).toFixed(2)
+                )
 
-   expectedHomeGoals:
-    Number(
-        (homeGoalsExpectation / total).toFixed(2)
-    ),
+        },
 
-expectedAwayGoals:
-    Number(
-        (awayGoalsExpectation / total).toFixed(2)
-    ),
+        doubleChance,
 
-cleanSheetHome:
-    Number(
-        ((cleanSheetHome / total) * 100).toFixed(2)
-    ),
+        btts:
+            Number(
+                (btts * 100).toFixed(2)
+            ),
 
-cleanSheetAway:
-    Number(
-        ((cleanSheetAway / total) * 100).toFixed(2)
-    ),
+        over15:
+            Number(
+                (over15 * 100).toFixed(2)
+            ),
 
-   matchScore:
-Number(matchScore.toFixed(2)),
+        over25:
+            Number(
+                (over25 * 100).toFixed(2)
+            ),
 
-    uncertainty,
+        over35:
+            Number(
+                (over35 * 100).toFixed(2)
+            ),
 
-       dominance,
+        under25:
+            Number(
+                ((1 - over25) * 100).toFixed(2)
+            ),
 
-       risk,
+        expectedGoals:
+            Number(
+                expectedGoals.toFixed(2)
+            ),
 
-    exactScore: {
-        score: exactScore,
+        expectedHomeGoals:
+            Number(
+                homeGoalsExpectation.toFixed(2)
+            ),
 
-        probability: Number(
-            ((bestProbability / total) * 100).toFixed(2)
-         )
+        expectedAwayGoals:
+            Number(
+                awayGoalsExpectation.toFixed(2)
+            ),
 
-      }
+        cleanSheetHome:
+            Number(
+                (cleanSheetHome * 100).toFixed(2)
+            ),
 
-   };
+        cleanSheetAway:
+            Number(
+                (cleanSheetAway * 100).toFixed(2)
+            ),
+
+        matchScore:
+            Number(
+                matchScore.toFixed(2)
+            ),
+
+        uncertainty,
+
+        dominance,
+
+        risk,
+
+        exactScore: {
+
+            score:
+                exactScore,
+
+            probability:
+                Number(
+                    (
+                        (bestProbability / total) *
+                        100
+                    ).toFixed(2)
+                )
+
+        }
+
+    };
 
 }
+
 
 module.exports = {
+
     buildPoissonMatrix
+
 };
