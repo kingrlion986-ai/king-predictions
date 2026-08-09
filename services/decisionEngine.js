@@ -2,9 +2,14 @@
 =========================================
  KING PREDICTIONS AI
  DECISION ENGINE V22
- CALIBRATED
+ CALIBRATED / ANTI-TRAP
 =========================================
 */
+
+function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+}
+
 
 function evaluateDecision({
 
@@ -18,6 +23,7 @@ function evaluateDecision({
 }) {
 
     let score = 0;
+
     let reasons = [];
 
     let trapScore = 0;
@@ -25,32 +31,18 @@ function evaluateDecision({
 
     /*
     =================================
-    SAFE VALUES
+    VARIABLES DE BASE
     =================================
     */
 
-    const safeConfidence =
-        Number(confidence || 0);
-
-    const safePoisson =
-        poisson || {};
-
-    const safeHomeStats =
-        homeStats || {};
-
-    const safeAwayStats =
-        awayStats || {};
-
-
     const homeWin =
-        Number(safePoisson.probabilities?.homeWin || 0);
+        Number(poisson?.probabilities?.homeWin || 0);
 
     const draw =
-        Number(safePoisson.probabilities?.draw || 0);
+        Number(poisson?.probabilities?.draw || 0);
 
     const awayWin =
-        Number(safePoisson.probabilities?.awayWin || 0);
-
+        Number(poisson?.probabilities?.awayWin || 0);
 
     const favoriteProbability =
         Math.max(
@@ -59,91 +51,95 @@ function evaluateDecision({
             awayWin
         );
 
+    const sorted = [
+        homeWin,
+        draw,
+        awayWin
+    ].sort((a, b) => b - a);
 
     const separation =
-        [...[homeWin, draw, awayWin]]
-            .sort((a, b) => b - a)
-            .slice(0, 2)
-            .reduce(
-                (difference, value, index, array) =>
-                    index === 0
-                        ? value
-                        : array[0] - value,
-                0
-            );
+        sorted[0] - sorted[1];
 
 
     const strengthGap =
         Math.abs(
-            Number(safeHomeStats.strength || 50) -
-            Number(safeAwayStats.strength || 50)
+            Number(homeStats?.strength || 50) -
+            Number(awayStats?.strength || 50)
         );
 
 
     const reliability =
         (
-            Number(safeHomeStats.reliability || 0.5) +
-            Number(safeAwayStats.reliability || 0.5)
+            Number(homeStats?.reliability ?? 0.5) +
+            Number(awayStats?.reliability ?? 0.5)
         ) / 2;
 
 
     const poissonDominance =
-        Number(
-            safePoisson.dominance || 0
-        );
-
+        Number(poisson?.dominance || 0);
 
     const poissonUncertainty =
-        Number(
-            safePoisson.uncertainty || 0
-        );
+        Number(poisson?.uncertainty || 0);
 
 
     /*
     =================================
-    BASE SCORE
+    1. PROBABILITÉ
     =================================
     */
 
-    score =
-        safeConfidence * 0.70;
+    if (favoriteProbability >= 75) {
 
+        score += 35;
+        reasons.push("Very strong probability");
 
-    /*
-    =================================
-    FAVORITE
-    =================================
-    */
+    }
+    else if (favoriteProbability >= 70) {
 
-    if (favoriteProbability >= 70) {
-
-        score += 20;
-
-        reasons.push(
-            "Strong probability"
-        );
+        score += 30;
+        reasons.push("Strong probability");
 
     }
     else if (favoriteProbability >= 65) {
 
-        score += 12;
-
-        reasons.push(
-            "Good probability"
-        );
+        score += 22;
 
     }
     else if (favoriteProbability >= 60) {
 
-        score += 6;
+        score += 12;
 
     }
     else {
+
+        score -= 20;
+        reasons.push("Weak favorite");
+
+    }
+
+
+    /*
+    =================================
+    2. SÉPARATION
+    =================================
+    */
+
+    if (separation >= 20) {
+
+        score += 15;
+
+    }
+    else if (separation >= 12) {
+
+        score += 8;
+
+    }
+    else if (separation < 6) {
 
         score -= 15;
 
         reasons.push(
-            "Weak favorite"
+            "Very small probability separation"
         );
 
     }
@@ -151,35 +147,26 @@ function evaluateDecision({
 
     /*
     =================================
-    POISSON
+    3. POISSON
     =================================
     */
 
-    if (poissonDominance >= 35) {
+    if (poissonDominance >= 30) {
 
-        score += 12;
-
-        reasons.push(
-            "Strong Poisson"
-        );
+        score += 15;
 
     }
-    else if (poissonDominance >= 25) {
+    else if (poissonDominance >= 20) {
 
         score += 8;
 
     }
-    else if (poissonDominance >= 15) {
+    else if (poissonDominance < 10) {
 
-        score += 4;
-
-    }
-    else {
-
-        score -= 8;
+        score -= 10;
 
         reasons.push(
-            "Weak Poisson separation"
+            "Weak Poisson dominance"
         );
 
     }
@@ -187,81 +174,44 @@ function evaluateDecision({
 
     /*
     =================================
-    TEAM GAP
+    4. INCERTITUDE
     =================================
     */
 
-    if (strengthGap >= 20) {
+    if (poissonUncertainty >= 55) {
 
-        score += 10;
-
-    }
-    else if (strengthGap >= 10) {
-
-        score += 5;
-
-    }
-    else if (strengthGap <= 4) {
-
-        score -= 8;
+        trapScore += 30;
 
         reasons.push(
-            "Teams very close"
+            "Very high Poisson uncertainty"
         );
+
+    }
+    else if (poissonUncertainty >= 45) {
+
+        trapScore += 20;
+
+    }
+    else if (poissonUncertainty >= 35) {
+
+        trapScore += 10;
 
     }
 
 
     /*
     =================================
-    ELO
-    =================================
-    */
-
-    const elo =
-        typeof eloProbability === "number"
-            ? (
-                eloProbability > 1
-                    ? eloProbability / 100
-                    : eloProbability
-            )
-            : 0.5;
-
-
-    const eloDistance =
-        Math.abs(elo - 0.5);
-
-
-    if (eloDistance >= 0.15) {
-
-        score += 8;
-
-    }
-    else if (eloDistance >= 0.08) {
-
-        score += 4;
-
-    }
-    else if (eloDistance < 0.04) {
-
-        score -= 8;
-
-        reasons.push(
-            "Balanced Elo"
-        );
-
-    }
-
-
-    /*
-    =================================
-    TRAP DETECTOR
+    5. ÉQUIPES PROCHES
     =================================
     */
 
     if (strengthGap <= 4) {
 
-        trapScore += 25;
+        trapScore += 20;
+
+        reasons.push(
+            "Teams almost equal"
+        );
 
     }
     else if (strengthGap <= 8) {
@@ -271,73 +221,52 @@ function evaluateDecision({
     }
 
 
-    if (Math.abs(elo - 0.5) < 0.04) {
+    /*
+    =================================
+    6. ELO
+    =================================
+    */
 
-        trapScore += 25;
-
-        reasons.push(
-            "ELO almost equal"
-        );
-
-    }
-
-
-    if (favoriteProbability < 50) {
-
-        trapScore += 25;
-
-        reasons.push(
-            "No real favorite"
-        );
-
-    }
-    else if (favoriteProbability < 55) {
-
-        trapScore += 15;
-
-    }
-
-
-    if (separation < 8) {
-
-        trapScore += 15;
-
-        reasons.push(
-            "Very small probability gap"
-        );
-
-    }
-    else if (separation < 12) {
-
-        trapScore += 8;
-
-    }
-
-
-    if (poissonUncertainty >= 60) {
+    if (
+        eloProbability >= 0.46 &&
+        eloProbability <= 0.54
+    ) {
 
         trapScore += 20;
 
         reasons.push(
-            "High Poisson uncertainty"
+            "Balanced ELO"
         );
 
     }
-    else if (poissonUncertainty >= 50) {
+    else if (
+        eloProbability >= 0.60 ||
+        eloProbability <= 0.40
+    ) {
 
-        trapScore += 12;
+        score += 8;
+
+        reasons.push(
+            "ELO advantage"
+        );
 
     }
-    else if (poissonUncertainty >= 40) {
 
-        trapScore += 6;
+
+    /*
+    =================================
+    7. FIABILITÉ
+    =================================
+    */
+
+    if (reliability >= 0.75) {
+
+        score += 8;
 
     }
+    else if (reliability < 0.60) {
 
-
-    if (reliability < 0.60) {
-
-        trapScore += 15;
+        trapScore += 20;
 
         reasons.push(
             "Low reliability"
@@ -346,9 +275,30 @@ function evaluateDecision({
     }
 
 
-    if (safeConfidence < 45) {
+    /*
+    =================================
+    8. CONFIDENCE
+    =================================
+    */
 
-        trapScore += 15;
+    if (confidence >= 75) {
+
+        score += 15;
+
+    }
+    else if (confidence >= 65) {
+
+        score += 10;
+
+    }
+    else if (confidence >= 55) {
+
+        score += 5;
+
+    }
+    else {
+
+        score -= 15;
 
         reasons.push(
             "Low confidence"
@@ -359,116 +309,99 @@ function evaluateDecision({
 
     /*
     =================================
-    SCORE PENALTY
+    9. CONFLIT MODÈLES
     =================================
     */
 
-    score -=
-        trapScore * 0.30;
-
-
-    /*
-    =================================
-    FINAL DECISION
-    =================================
-    */
-
-    let decision =
-        "NO BET";
-
-    let risk =
-        "HIGH";
-
-
-    /*
-    ABSOLUTE TRAP
-    */
+    const eloHome =
+        eloProbability * 100;
 
     if (
-        trapScore >= 60 ||
-        favoriteProbability < 50
+        Math.abs(
+            homeWin - eloHome
+        ) >= 15
     ) {
 
-        decision =
-            "TRAP MATCH";
+        trapScore += 15;
 
-        risk =
-            "VERY HIGH";
+        reasons.push(
+            "Model disagreement"
+        );
 
     }
 
+
+    /*
+    =================================
+    10. SCORE FINAL
+    =================================
+    */
+
+    score -= trapScore * 0.35;
+
+    score = clamp(
+        Math.round(score),
+        0,
+        100
+    );
+
+
+    /*
+    =================================
+    11. DECISION
+    =================================
+    */
+
+    let decision = "NO BET";
+    let risk = "HIGH";
+
+
+    /*
+    DANGER ABSOLU
+    */
+
+    if (
+        trapScore >= 45 ||
+        favoriteProbability < 50
+    ) {
+
+        decision = "TRAP MATCH";
+        risk = "VERY HIGH";
+
+    }
 
     /*
     VIP
     */
 
     else if (
-        trapScore < 30 &&
         favoriteProbability >= 70 &&
-        safeConfidence >= 70 &&
-        score >= 70
+        confidence >= 70 &&
+        score >= 70 &&
+        trapScore < 25 &&
+        poissonDominance >= 20
     ) {
 
-        decision =
-            "VIP PICK";
-
-        risk =
-            "LOW";
+        decision = "VIP PICK";
+        risk = "LOW";
 
     }
-
 
     /*
     NORMAL
     */
 
     else if (
-        trapScore < 45 &&
-        favoriteProbability >= 65 &&
-        safeConfidence >= 60 &&
-        score >= 55
+        favoriteProbability >= 62 &&
+        confidence >= 60 &&
+        score >= 55 &&
+        trapScore < 35
     ) {
 
-        decision =
-            "NORMAL";
-
-        risk =
-            "MEDIUM";
+        decision = "NORMAL";
+        risk = "MEDIUM";
 
     }
-
-
-    /*
-    NO BET
-    */
-
-    else {
-
-        decision =
-            "NO BET";
-
-        risk =
-            "HIGH";
-
-    }
-
-
-    /*
-    =================================
-    FINAL SCORE
-    =================================
-    */
-
-    score =
-        Math.round(
-            Math.max(
-                0,
-                Math.min(
-                    100,
-                    score
-                )
-            )
-        );
 
 
     /*
@@ -477,19 +410,14 @@ function evaluateDecision({
     =================================
     */
 
-    console.log(
-        "===== DECISION V22 ====="
-    );
+    console.log("===== DECISION V22 =====");
 
     console.log({
 
-        confidence:
-            safeConfidence,
+        confidence,
 
         homeWin,
-
         draw,
-
         awayWin,
 
         favoriteProbability,
@@ -500,15 +428,13 @@ function evaluateDecision({
 
         reliability,
 
-        trapScore,
-
-        score,
-
         poissonDominance,
 
         poissonUncertainty,
 
-        eloProbability,
+        trapScore,
+
+        score,
 
         decision,
 
@@ -537,7 +463,5 @@ function evaluateDecision({
 
 
 module.exports = {
-
     evaluateDecision
-
 };
