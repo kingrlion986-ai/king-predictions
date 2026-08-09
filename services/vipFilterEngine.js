@@ -1,8 +1,10 @@
-/* =========================================
-   KING PREDICTIONS AI
-   VIP FILTER ENGINE V20
-   MARKET-SPECIFIC FILTER
-========================================= */
+/*
+=========================================
+ KING PREDICTIONS AI
+ VIP FILTER ENGINE V21
+ MARKET SPECIFIC
+=========================================
+*/
 
 
 /* =========================
@@ -19,30 +21,26 @@ function clamp(value, min, max) {
 }
 
 
-/* =========================
-   MAIN CONFIDENCE
-========================= */
+function num(value, fallback = 0) {
 
-function getModelConfidence(predictions) {
+    const n = Number(value);
 
-    return Number(
-        predictions?.winnerConfidence ??
-        predictions?.confidence ??
-        0
-    );
+    return Number.isFinite(n)
+        ? n
+        : fallback;
 
 }
 
 
 /* =========================
-   GENERAL QUALITY
+   MAIN CONFIDENCE
 ========================= */
 
-function getQuality(match) {
+function getModelConfidence(predictions = {}) {
 
-    return Number(
-        match?.qualityScore ??
-        match?.predictions?.aiRating ??
+    return num(
+        predictions.winnerConfidence ??
+        predictions.confidence,
         0
     );
 
@@ -67,9 +65,9 @@ function calculateVIPScore(match) {
     let score = 0;
 
 
-    /*
-    CONFIDENCE
-    */
+    /* =========================
+       CONFIDENCE
+    ========================= */
 
     const confidence =
         getModelConfidence(predictions);
@@ -77,94 +75,102 @@ function calculateVIPScore(match) {
     score += confidence * 0.40;
 
 
-    /*
-    PROBABILITY EDGE
-    */
+    /* =========================
+       PROBABILITIES
+    ========================= */
 
     const probabilities =
-        predictions.probabilities;
+        predictions.probabilities || {};
 
-    let favoriteProbability = 0;
-    let separation = 0;
+    const homeWin =
+        num(probabilities.homeWin);
 
-    if (
-        probabilities &&
-        typeof probabilities.homeWin === "number" &&
-        typeof probabilities.draw === "number" &&
-        typeof probabilities.awayWin === "number"
-    ) {
+    const draw =
+        num(probabilities.draw);
 
-        const values = [
-
-            probabilities.homeWin,
-            probabilities.draw,
-            probabilities.awayWin
-
-        ];
-
-        const sorted =
-            [...values].sort(
-                (a, b) => b - a
-            );
-
-        favoriteProbability =
-            sorted[0];
-
-        separation =
-            sorted[0] - sorted[1];
-
-        score +=
-            favoriteProbability * 0.35;
-
-        score +=
-            clamp(
-                separation * 0.50,
-                0,
-                10
-            );
-
-    }
+    const awayWin =
+        num(probabilities.awayWin);
 
 
-    /*
-    STABILITÉ
-    */
+    const values = [
+        homeWin,
+        draw,
+        awayWin
+    ];
+
+
+    const sorted =
+        [...values].sort(
+            (a, b) => b - a
+        );
+
+
+    const favoriteProbability =
+        sorted[0];
+
+    const secondProbability =
+        sorted[1];
+
+
+    const separation =
+        favoriteProbability -
+        secondProbability;
+
+
+    score +=
+        favoriteProbability * 0.35;
+
+
+    score +=
+        clamp(
+            separation * 0.50,
+            0,
+            10
+        );
+
+
+    /* =========================
+       STABILITY
+    ========================= */
 
     const stability =
 
         (
-            Number(home.stability ?? 50) +
-            Number(away.stability ?? 50)
+            num(home.stability, 50) +
+            num(away.stability, 50)
         ) / 2;
+
 
     score +=
         stability * 0.10;
 
 
-    /*
-    FIABILITÉ
-    */
+    /* =========================
+       RELIABILITY
+    ========================= */
 
     const reliability =
 
         (
-            Number(home.reliability ?? 0.5) +
-            Number(away.reliability ?? 0.5)
+            num(home.reliability, 0.5) +
+            num(away.reliability, 0.5)
         ) / 2;
+
 
     score +=
         reliability * 100 * 0.10;
 
 
-    /*
-    FORCE
-    */
+    /* =========================
+       STRENGTH
+    ========================= */
 
     const strengthGap =
         Math.abs(
-            Number(home.strength ?? 0) -
-            Number(away.strength ?? 0)
+            num(home.strength) -
+            num(away.strength)
         );
+
 
     score +=
         clamp(
@@ -174,13 +180,13 @@ function calculateVIPScore(match) {
         );
 
 
-    /*
-    DONNÉES INSUFFISANTES
-    */
+    /* =========================
+       DATA QUALITY
+    ========================= */
 
     if (
-        Number(home.played ?? 0) < 5 ||
-        Number(away.played ?? 0) < 5
+        num(home.played) < 5 ||
+        num(away.played) < 5
     ) {
 
         score -= 15;
@@ -188,9 +194,9 @@ function calculateVIPScore(match) {
     }
 
 
-    /*
-    MATCH TROP ÉQUILIBRÉ
-    */
+    /* =========================
+       NO CLEAR FAVORITE
+    ========================= */
 
     if (favoriteProbability < 55) {
 
@@ -222,28 +228,36 @@ function calculateOver25Score(match) {
         match?.teamStats?.away || {};
 
 
-    const poisson =
-        Number(
-            predictions.over25Confidence ?? 0
+    const overConfidence =
+        num(
+            predictions.over25Confidence
         );
 
+
     const homeRate =
-        Number(home.over25Rate ?? 0);
+        num(home.over25Rate);
 
     const awayRate =
-        Number(away.over25Rate ?? 0);
+        num(away.over25Rate);
 
-    const reliability =
 
+    const averageOverRate =
         (
-            Number(home.reliability ?? 0.5) +
-            Number(away.reliability ?? 0.5)
+            homeRate +
+            awayRate
         ) / 2;
 
 
-    const xg =
-        Number(
-            match?.model?.expectedGoals ?? 0
+    const reliability =
+        (
+            num(home.reliability, 0.5) +
+            num(away.reliability, 0.5)
+        ) / 2;
+
+
+    const expectedGoals =
+        num(
+            match?.model?.expectedGoals
         );
 
 
@@ -251,40 +265,43 @@ function calculateOver25Score(match) {
 
 
     /*
-    POISSON OVER
-    */
-
-    score += poisson * 0.55;
-
-
-    /*
-    HISTORIQUE OVER
+       Poisson / model
     */
 
     score +=
-        (
-            (homeRate + awayRate) / 2
-        ) * 100 * 0.20;
+        overConfidence * 0.55;
 
 
     /*
-    XG
+       Historical OVER rate
+    */
+
+    score +=
+        averageOverRate *
+        100 *
+        0.20;
+
+
+    /*
+       Expected goals
     */
 
     score +=
         clamp(
-            xg / 3 * 100,
+            expectedGoals / 3 * 100,
             0,
             100
         ) * 0.15;
 
 
     /*
-    FIABILITÉ
+       Reliability
     */
 
     score +=
-        reliability * 100 * 0.10;
+        reliability *
+        100 *
+        0.10;
 
 
     return Math.round(
@@ -310,24 +327,37 @@ function calculateBttsScore(match) {
         match?.teamStats?.away || {};
 
 
-    const poisson =
-        Number(
-            predictions.bttsConfidence ?? 0
+    const bttsConfidence =
+        num(
+            predictions.bttsConfidence
         );
 
 
     const homeRate =
-        Number(home.bttsRate ?? 0);
+        num(home.bttsRate);
 
     const awayRate =
-        Number(away.bttsRate ?? 0);
+        num(away.bttsRate);
+
+
+    const averageBttsRate =
+        (
+            homeRate +
+            awayRate
+        ) / 2;
 
 
     const reliability =
-
         (
-            Number(home.reliability ?? 0.5) +
-            Number(away.reliability ?? 0.5)
+            num(home.reliability, 0.5) +
+            num(away.reliability, 0.5)
+        ) / 2;
+
+
+    const avgScored =
+        (
+            num(home.avgScored) +
+            num(away.avgScored)
         ) / 2;
 
 
@@ -335,42 +365,36 @@ function calculateBttsScore(match) {
 
 
     /*
-    POISSON BTTS
+       Model BTTS
     */
 
     score +=
-        poisson * 0.55;
+        bttsConfidence * 0.55;
 
 
     /*
-    HISTORIQUE BTTS
+       Historical BTTS
     */
 
     score +=
-        (
-            (homeRate + awayRate) / 2
-        ) * 100 * 0.25;
+        averageBttsRate *
+        100 *
+        0.25;
 
 
     /*
-    FIABILITÉ
+       Reliability
     */
 
     score +=
-        reliability * 100 * 0.10;
+        reliability *
+        100 *
+        0.10;
 
 
     /*
-    ATTAQUE DES DEUX ÉQUIPES
+       Attacking strength
     */
-
-    const avgScored =
-
-        (
-            Number(home.avgScored ?? 0) +
-            Number(away.avgScored ?? 0)
-        ) / 2;
-
 
     score +=
         clamp(
@@ -391,7 +415,7 @@ function calculateBttsScore(match) {
    VIP 1X2
 ========================= */
 
-function filterVipMatches(matches) {
+function filterVipMatches(matches = []) {
 
     return matches
 
@@ -406,14 +430,19 @@ function filterVipMatches(matches) {
 
         .filter(match => {
 
+            const predictions =
+                match.predictions || {};
+
+
             const confidence =
                 getModelConfidence(
-                    match.predictions
+                    predictions
                 );
 
 
             const decision =
-                match.predictions?.aiDecision
+                predictions
+                    ?.aiDecision
                     ?.decision;
 
 
@@ -445,7 +474,7 @@ function filterVipMatches(matches) {
    VIP OVER 2.5
 ========================= */
 
-function filterVipOver25(matches) {
+function filterVipOver25(matches = []) {
 
     return matches
 
@@ -460,17 +489,37 @@ function filterVipOver25(matches) {
 
         .filter(match => {
 
+            const predictions =
+                match.predictions || {};
+
+
             const confidence =
-                Number(
-                    match.predictions
-                        ?.over25Confidence ?? 0
+                num(
+                    predictions
+                        .over25Confidence
                 );
+
+
+            const prediction =
+                predictions.over25;
+
+
+            /*
+               On veut uniquement
+               OVER 2.5
+            */
+
+            const isOver =
+                prediction === "OVER 2.5";
+
 
             return (
 
-                match.vipScore >= 65 &&
-                confidence >= 60 &&
-                match.predictions?.over25
+                match.vipScore >= 60 &&
+
+                confidence >= 55 &&
+
+                isOver
 
             );
 
@@ -489,7 +538,7 @@ function filterVipOver25(matches) {
    VIP BTTS
 ========================= */
 
-function filterVipBtts(matches) {
+function filterVipBtts(matches = []) {
 
     return matches
 
@@ -504,17 +553,37 @@ function filterVipBtts(matches) {
 
         .filter(match => {
 
+            const predictions =
+                match.predictions || {};
+
+
             const confidence =
-                Number(
-                    match.predictions
-                        ?.bttsConfidence ?? 0
+                num(
+                    predictions
+                        .bttsConfidence
                 );
+
+
+            const prediction =
+                predictions.btts;
+
+
+            /*
+               On veut uniquement
+               BTTS OUI
+            */
+
+            const isBttsYes =
+                prediction === "OUI";
+
 
             return (
 
-                match.vipScore >= 65 &&
-                confidence >= 60 &&
-                match.predictions?.btts
+                match.vipScore >= 60 &&
+
+                confidence >= 55 &&
+
+                isBttsYes
 
             );
 
