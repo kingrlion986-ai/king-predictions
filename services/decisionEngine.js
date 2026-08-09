@@ -284,13 +284,6 @@ CALIBRATED
 let decision = "NO BET";
 let risk = "HIGH";
 
-const favoriteProbability =
-    Math.max(
-        poisson.probabilities.homeWin,
-        poisson.probabilities.draw,
-        poisson.probabilities.awayWin
-    );
-
 
 /*
 =================================
