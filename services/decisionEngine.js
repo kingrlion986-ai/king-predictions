@@ -274,15 +274,29 @@ score -= trapScore * 0.25;
 
 
 
-    /*
-    ===============================
-    FINAL DECISION
-    ===============================
-    */
+/*
+=================================
+FINAL DECISION V20
+CALIBRATED
+=================================
+*/
 
-
-    let decision = "NO BET";
+let decision = "NO BET";
 let risk = "HIGH";
+
+const favoriteProbability =
+    Math.max(
+        poisson.probabilities.homeWin,
+        poisson.probabilities.draw,
+        poisson.probabilities.awayWin
+    );
+
+
+/*
+=================================
+DANGER ABSOLU
+=================================
+*/
 
 if (trapScore >= 45) {
 
@@ -292,58 +306,135 @@ if (trapScore >= 45) {
 }
 
 
-    if (trapScore < 45 && score >= 72) {
+/*
+=================================
+PROBABILITÉ TROP FAIBLE
+=================================
+*/
 
-        decision = "VIP PICK";
-        risk = "LOW";
+else if (favoriteProbability < 55) {
 
-    }
-
-    else if (trapScore < 45 && score >= 50) {
-
-        decision = "NORMAL";
-        risk = "MEDIUM";
-
-    }
-
-
-  console.log("===== DECISION DEBUG =====");
-
-console.log({
-    confidence,
-    strengthGap,
-    reliability,
-    favoriteProbability,
-    trapScore,
-    score,
-    poissonDominance: poisson.dominance,
-    poissonUncertainty: poisson.uncertainty,
-    eloProbability
-});
-
-
-
-    return {
-
-        decision,
-
-        risk,
-
-        score: Math.max(
-    0,
-    Math.min(100, score)
-),
-
-     trapScore,
-
-        reasons,
-
-        winner
-
-    };
+    decision = "NO BET";
+    risk = "HIGH";
 
 }
 
+
+/*
+=================================
+VIP
+=================================
+*/
+
+else if (
+    favoriteProbability >= 70 &&
+    confidence >= 70 &&
+    score >= 72
+) {
+
+    decision = "VIP PICK";
+    risk = "LOW";
+
+}
+
+
+/*
+=================================
+BON MATCH
+=================================
+*/
+
+else if (
+    favoriteProbability >= 65 &&
+    confidence >= 60 &&
+    score >= 58
+) {
+
+    decision = "NORMAL";
+    risk = "MEDIUM";
+
+}
+
+
+/*
+=================================
+MATCH MOYEN
+=================================
+*/
+
+else if (
+    favoriteProbability >= 60 &&
+    confidence >= 50 &&
+    score >= 50
+) {
+
+    decision = "NORMAL";
+    risk = "MEDIUM";
+
+}
+
+
+/*
+=================================
+TOUT LE RESTE
+=================================
+*/
+
+else {
+
+    decision = "NO BET";
+    risk = "HIGH";
+
+}
+
+
+console.log("===== DECISION V20 =====");
+
+console.log({
+
+    confidence,
+
+    favoriteProbability,
+
+    trapScore,
+
+    score,
+
+    decision,
+
+    risk,
+
+    poissonDominance:
+        poisson.dominance,
+
+    poissonUncertainty:
+        poisson.uncertainty,
+
+    eloProbability
+
+});
+
+
+return {
+
+    decision,
+
+    risk,
+
+    score: Math.round(
+        Math.max(
+            0,
+            Math.min(100, score)
+        )
+    ),
+
+    trapScore,
+
+    reasons,
+
+    winner
+
+};
 
 
 module.exports = {
