@@ -1491,4 +1491,135 @@ app.get(
       running:
         ANALYSIS_RUNNING.size,
 
-      d
+      daily:
+        DAILY_PREDICTIONS
+          ? DAILY_PREDICTIONS.length
+          : 0,
+
+      time:
+        new Date().toISOString()
+
+    });
+
+  }
+);
+
+
+/* =========================
+   PRELOAD
+========================= */
+
+async function preloadPredictions() {
+
+  try {
+
+    console.log(
+      "🔄 PRELOADING PREDICTIONS..."
+    );
+
+
+    await getPreloadedAnalyses();
+
+
+    console.log(
+      "✅ PRELOAD FINISHED"
+    );
+
+  } catch (err) {
+
+    console.error(
+      "❌ PRELOAD ERROR:",
+      err.stack
+    );
+
+  }
+
+}
+
+
+/* =========================
+   START SERVER
+========================= */
+
+app.listen(
+  PORT,
+  "0.0.0.0",
+  () => {
+
+    console.log(
+      "👑 KING PREDICTIONS AI ONLINE"
+    );
+
+    console.log(
+      `🚀 Server started on port ${PORT}`
+    );
+
+
+    (async () => {
+
+      try {
+
+        console.log(
+          "⏳ INITIALISATION..."
+        );
+
+
+        await initializeDatabase();
+
+
+        console.log(
+          "✅ Database prête"
+        );
+
+
+        await preloadPredictions();
+
+
+        console.log(
+          "✅ Préchargement terminé"
+        );
+
+
+        startDailyScheduler(
+          async () => {
+
+            console.log(
+              "♻️ RESET DAILY SYSTEM"
+            );
+
+
+            DAILY_PREDICTIONS =
+              null;
+
+            DAILY_DATE =
+              null;
+
+            PRELOADED_ANALYSES =
+              null;
+
+            PRELOAD_TIME =
+              0;
+
+
+            ANALYSIS_CACHE.clear();
+
+
+            await getDailyPredictions();
+
+          }
+        );
+
+
+      } catch (err) {
+
+        console.error(
+          "STARTUP ERROR:",
+          err.stack
+        );
+
+      }
+
+    })();
+
+  }
+);
