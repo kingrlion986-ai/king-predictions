@@ -1,15 +1,22 @@
 const { analyzeTeam } = require("./teamAnalyzer");
-const { buildPoissonMatrix } = require("./poissonEngine");
+
+const { buildPoissonMatrix } =
+    require("./poissonEngine");
+
 const {
     getTeamElo,
-    calculateEloProbability
+    calculateEloProbability,
+    updateMatchElo
 } = require("./eloEngine");
+
 const {
     calculateExpectedGoals
 } = require("./expectedGoals");
+
 const {
     calculateConfidence
 } = require("./confidenceEngine");
+
 const {
     savePrediction
 } = require("./historyEngine");
@@ -23,25 +30,22 @@ const {
 } = require("./learningEngine");
 
 const {
-    updateMatchElo
-} = require("./eloEngine");
-
-const {
     getWeights
 } = require("./adaptiveWeightEngine");
-const {
-    updateWeights
-} = require("./adaptiveWeightEngine");
+
+
 /* =========================
    CACHE
 ========================= */
 
 const ANALYSIS_CACHE = new Map();
 
-const ANALYSIS_TTL = 24 * 60 * 60 * 1000;
+const ANALYSIS_TTL =
+    24 * 60 * 60 * 1000;
+
 
 /* =========================
-   HELPERS
+   MATCH KEY
 ========================= */
 
 function getMatchKey(match) {
@@ -56,6 +60,7 @@ function getMatchKey(match) {
 
 }
 
+
 /* =========================
    MAIN ANALYZER
 ========================= */
@@ -69,111 +74,221 @@ async function analyzeMatch(match) {
         match.awayTeam.name
     );
 
-    const timer = `${match.homeTeam.name} vs ${match.awayTeam.name}`;
-console.time(timer);
+    const timer =
+        `${match.homeTeam.name} vs ${match.awayTeam.name}`;
 
-    const key = getMatchKey(match);
+    console.time(timer);
 
-    const cached = ANALYSIS_CACHE.get(key);
+
+    /* =========================
+       CACHE
+    ========================= */
+
+    const key =
+        getMatchKey(match);
+
+    const cached =
+        ANALYSIS_CACHE.get(key);
 
     if (
         cached &&
         Date.now() - cached.time < ANALYSIS_TTL
     ) {
+
+        console.log(
+            "♻️ CACHE USED:",
+            match.homeTeam.name,
+            "vs",
+            match.awayTeam.name
+        );
+
         return cached.data;
     }
 
-    const [homeStats, awayStats] = await Promise.all([
-    analyzeTeam(match.homeTeam),
-    analyzeTeam(match.awayTeam)
-]);
+
+    /* =========================
+       TEAM ANALYSIS
+    ========================= */
+
+    const [
+        homeStats,
+        awayStats
+    ] = await Promise.all([
+
+        analyzeTeam(match.homeTeam),
+
+        analyzeTeam(match.awayTeam)
+
+    ]);
+
+
+    /* =========================
+       ELO
+    ========================= */
+
     const homeElo =
         getTeamElo(match.homeTeam.id);
 
     const awayElo =
         getTeamElo(match.awayTeam.id);
 
-    const weights =
-    getWeights();
-
-    console.log("1 - ELO");
 
     const eloProbability =
-    calculateEloProbability(
-        homeElo,
+        calculateEloProbability(
+            homeElo,
+            awayElo
+        );
+
+
+    console.log("===== ELO DEBUG =====");
+
+    console.log(
+        match.homeTeam.name,
+        "ELO:",
+        homeElo
+    );
+
+    console.log(
+        match.awayTeam.name,
+        "ELO:",
         awayElo
     );
 
-console.log("===== ELO DEBUG =====");
-console.log(
-    match.homeTeam.name,
-    "ELO:",
-    homeElo
-);
-console.log(
-    match.awayTeam.name,
-    "ELO:",
-    awayElo
-);
-console.log(
-    "ELO PROBABILITY:",
-    Math.round(eloProbability * 100)
-);
-console.log("=====================");
+    console.log(
+        "ELO PROBABILITY:",
+        Math.round(
+            eloProbability * 100
+        )
+    );
 
-console.log("2 - XG");
+    console.log("=====================");
 
-    console.log("HOME STATS =", {
-    attackPower: homeStats.attackPower,
-    defensePower: homeStats.defensePower,
-    homeAttack: homeStats.homeAttack,
-    homeDefense: homeStats.homeDefense,
-    avgScored: homeStats.avgScored,
-    avgConceded: homeStats.avgConceded,
-    formPoints: homeStats.formPoints,
-    strength: homeStats.strength
-});
 
-console.log("AWAY STATS =", {
-    attackPower: awayStats.attackPower,
-    defensePower: awayStats.defensePower,
-    awayAttack: awayStats.awayAttack,
-    awayDefense: awayStats.awayDefense,
-    avgScored: awayStats.avgScored,
-    avgConceded: awayStats.avgConceded,
-    formPoints: awayStats.formPoints,
-    strength: awayStats.strength
-});
-    
+    /* =========================
+       WEIGHTS
+    ========================= */
+
+    const weights =
+        getWeights();
+
+
+    /* =========================
+       EXPECTED GOALS
+    ========================= */
+
+    console.log("2 - XG");
+
+    console.log(
+        "HOME STATS =",
+        {
+            attackPower:
+                homeStats.attackPower,
+
+            defensePower:
+                homeStats.defensePower,
+
+            homeAttack:
+                homeStats.homeAttack,
+
+            homeDefense:
+                homeStats.homeDefense,
+
+            avgScored:
+                homeStats.avgScored,
+
+            avgConceded:
+                homeStats.avgConceded,
+
+            formPoints:
+                homeStats.formPoints,
+
+            strength:
+                homeStats.strength
+        }
+    );
+
+
+    console.log(
+        "AWAY STATS =",
+        {
+            attackPower:
+                awayStats.attackPower,
+
+            defensePower:
+                awayStats.defensePower,
+
+            awayAttack:
+                awayStats.awayAttack,
+
+            awayDefense:
+                awayStats.awayDefense,
+
+            avgScored:
+                awayStats.avgScored,
+
+            avgConceded:
+                awayStats.avgConceded,
+
+            formPoints:
+                awayStats.formPoints,
+
+            strength:
+                awayStats.strength
+        }
+    );
+
+
     const xg =
         calculateExpectedGoals(
+
             homeStats,
+
             awayStats,
+
             {
                 home: homeElo,
                 away: awayElo
             }
+
         );
 
-    console.log("XG =", xg);
+
+    console.log(
+        "XG =",
+        xg
+    );
+
+
+    /* =========================
+       POISSON
+    ========================= */
 
     console.log("3 - POISSON");
 
+
     const poisson =
         buildPoissonMatrix(
+
             xg.expectedHomeGoals,
+
             xg.expectedAwayGoals
+
         );
 
-            
 
-    
     console.log(
-    "POISSON DEBUG:",
-    poisson.uncertainty,
-    poisson.dominance
-);
+        "POISSON DEBUG:",
+        poisson.uncertainty,
+        poisson.dominance
+    );
+
+
+    /* =========================
+       CONFIDENCE V20
+    ========================= */
+
     console.log("5 - CONFIDENCE");
+
 
     const confidence =
         calculateConfidence({
@@ -185,354 +300,658 @@ console.log("AWAY STATS =", {
 
             awayStats,
 
-            eloProbability
+            eloProbability,
+
+            poisson
 
         });
 
+
+    /*
+    IMPORTANT
+
+    On NE modifie plus confidence.
+
+    Pas de :
+        confidence * learningWeight
+
+    Pas de :
+        + dominance
+
+    Pas de :
+        + strength bonus
+
+    Pas de :
+        + probability bonus
+
+    La confiance reste celle
+    calculée par Confidence Engine.
+    */
+
+
+    const adjustedConfidence =
+        confidence;
+
+
+    /* =========================
+       LEARNING
+    ========================= */
+
     console.log("4 - LEARNING");
+
+
     const learning =
-    buildLearningModel();
+        buildLearningModel();
 
-        let adjustedConfidence =
-    confidence *
-    learning.confidenceWeight;
 
-adjustedConfidence += poisson.dominance * 20;
-adjustedConfidence -= poisson.uncertainty * 0.15;
+    /* =========================
+       PREDICTION QUALITY
+    ========================= */
 
-adjustedConfidence = Math.max(
-    20,
-    Math.min(95, Math.round(adjustedConfidence))
-);
-            // =========================
-// ADAPTIVE CONFIDENCE V17
-// =========================
+    let predictionQuality =
+        "LOW";
 
-const strengthGap =
-    Math.abs(
-        homeStats.strength -
-        awayStats.strength
-    );
 
-// Bonus domination équipe
+    if (adjustedConfidence >= 70) {
 
-if (strengthGap >= 20) {
+        predictionQuality =
+            "HIGH";
 
-    adjustedConfidence += 12;
+    }
 
-}
+    else if (adjustedConfidence >= 55) {
 
-else if (strengthGap >= 10) {
+        predictionQuality =
+            "MEDIUM";
 
-    adjustedConfidence += 6;
+    }
 
-}
+    else {
 
+        predictionQuality =
+            "LOW";
 
-// Bonus fiabilité
+    }
 
-const reliabilityGap =
-    Math.abs(
-        homeStats.reliability -
-        awayStats.reliability
-    );
-
-
-if (reliabilityGap >= 0.20) {
-
-    adjustedConfidence += 5;
-
-}
-
-
-const probabilityGap =
-    Math.abs(
-        poisson.probabilities.homeWin -
-        Math.max(
-            poisson.probabilities.draw,
-            poisson.probabilities.awayWin
-        )
-    );
-
-    adjustedConfidence += probabilityGap * 0.12;
-
-adjustedConfidence =
-    Math.round(
-        adjustedConfidence * 0.75 +
-        probabilityGap * 0.35
-    );
-
-adjustedConfidence = Math.max(
-    40,
-    Math.min(92, adjustedConfidence)
-);
-
-    let predictionQuality = "LOW";
-
-if (adjustedConfidence >= 75) {
-    predictionQuality = "HIGH";
-}
-else if (adjustedConfidence >= 60) {
-    predictionQuality = "MEDIUM";
-}
-else {
-    predictionQuality = "LOW";
-}
-    const homeScore =
-    poisson.probabilities.homeWin * weights.poisson +
-    homeStats.strength * weights.strength +
-    homeStats.formScore * weights.form +
-    homeStats.momentum * weights.momentum +
-    homeStats.reliability * weights.reliability +
-    eloProbability * 100 * weights.elo;
-
-const awayScore =
-    poisson.probabilities.awayWin * weights.poisson +
-    awayStats.strength * weights.strength +
-    awayStats.formScore * weights.form +
-    awayStats.momentum * weights.momentum +
-    awayStats.reliability * weights.reliability +
-    (1 - eloProbability) * 100 * weights.elo;
-    
-const homeProbability =
-(
-    poisson.probabilities.homeWin * 0.45
-) +
-(
-    eloProbability * 100 * 0.25
-) +
-(
-    homeStats.strength * 0.20
-) +
-(
-    homeStats.formScore * 0.10
-);
-
-const awayProbability =
-(
-    poisson.probabilities.awayWin * 0.45
-) +
-(
-    (1 - eloProbability) * 100 * 0.25
-) +
-(
-    awayStats.strength * 0.20
-) +
-(
-    awayStats.formScore * 0.10
-);
-
-const drawProbability =
-(
-    poisson.probabilities.draw * 0.80
-) +
-(
-    Math.max(
-        0,
-        20 - Math.abs(homeStats.strength - awayStats.strength)
-    )
-);
-
-let winner = "DRAW";
-
-    const winnerGap =
-Math.abs(homeProbability - awayProbability);
-
-if (winnerGap < 5 && drawProbability >= 35) {
-
-    winner = "DRAW";
-
-}
-else if (homeProbability > awayProbability) {
-
-    winner = match.homeTeam.name;
-
-}
-else {
-
-    winner = match.awayTeam.name;
-
-}
-
-    // =========================
-// OVER 2.5
-// =========================
-
-let overScore =
-    (poisson.over25 * 0.45) +
-    (((homeStats.over25Rate + awayStats.over25Rate) / 2) * 0.20) +
-    (Math.min(xg.totalExpectedGoals, 4) / 4 * 100 * 0.25) +
-    (((homeStats.reliability + awayStats.reliability) / 2) * 100 * 0.05) +
-    (((homeStats.momentum + awayStats.momentum) / 2) * 10 * 0.05);
-
-overScore = Math.max(5, Math.min(95, overScore));
-
-const over25Prediction =
-    overScore >= 55
-        ? "OVER 2.5"
-        : "UNDER 2.5";
-
-const over25Confidence =
-    Math.round(overScore);
-
-
-// =========================
-// BTTS
-// =========================
-
-let bttsScore =
-    (poisson.btts * 0.45) +
-    (((homeStats.bttsRate + awayStats.bttsRate) / 2) * 0.25) +
-    (((homeStats.avgScored + awayStats.avgScored) / 2) * 15 * 0.15) +
-    (((homeStats.reliability + awayStats.reliability) / 2) * 100 * 0.05) +
-    (Math.min(xg.expectedHomeGoals + xg.expectedAwayGoals, 4) / 4 * 100 * 0.10);
-
-bttsScore = Math.max(5, Math.min(95, bttsScore));
-
-const bttsPrediction =
-    bttsScore >= 55
-        ? "OUI"
-        : "NON";
-
-const bttsConfidence =
-    Math.round(bttsScore);
-
-const goalDiff =
-    Math.abs(homeStats.strength - awayStats.strength);
-
-let correctScore =
-    poisson.exactScore.score;
-
-/*
-    Ajustement intelligent
-*/
-
-if (xg.totalExpectedGoals >= 3.2) {
-
-    if (winner === match.homeTeam.name)
-        correctScore = "2-1";
-
-    else if (winner === match.awayTeam.name)
-        correctScore = "1-2";
-
-    else
-        correctScore = "2-2";
-
-}
-
-else if (goalDiff >= 20) {
-
-    if (winner === match.homeTeam.name)
-        correctScore = "2-0";
-
-    else if (winner === match.awayTeam.name)
-        correctScore = "0-2";
-
-}
-
-else if (xg.totalExpectedGoals <= 2) {
-
-    if (winner === "DRAW")
-        correctScore = "0-0";
-
-    else if (winner === match.homeTeam.name)
-        correctScore = "1-0";
-
-    else
-        correctScore = "0-1";
-
-}
-
-
-console.log("OVER CONF:", over25Confidence);
-console.log("BTTS CONF:", bttsConfidence);
-
-    // =========================
-// FINAL AI SCORE V18
-// =========================
-
-const finalAIScore =
-(
-    adjustedConfidence * 0.40
-)
-+
-(
-    poisson.dominance * 100 * 0.25
-)
-+
-(
-    (homeStats.stability + awayStats.stability) / 2 * 0.20
-)
-+
-(
-    (homeStats.reliability + awayStats.reliability) * 50 * 0.15
-);
-
-
-const aiRating =
-Math.round(
-    Math.min(
-        100,
-        finalAIScore
-    )
-);
-
-    const aiDecision =
-evaluateDecision({
-
-    confidence: adjustedConfidence,
-
-    poisson,
-
-    homeStats,
-
-    awayStats,
-
-    eloProbability,
-
-    winner
-
-});
 
     console.log(
-    "👑 AI DECISION:",
-    aiDecision.decision,
-    "| RISK:",
-    aiDecision.risk,
-    "| SCORE:",
-    aiDecision.score
-);
+        "🎯 CALIBRATED CONFIDENCE:",
+        adjustedConfidence
+    );
+
+
+    /* =========================
+       WINNER PROBABILITIES
+    ========================= */
+
+    const homeProbability =
+
+        (
+            poisson.probabilities.homeWin
+            * 0.50
+        )
+
+        +
+
+        (
+            eloProbability
+            * 100
+            * 0.25
+        )
+
+        +
+
+        (
+            homeStats.strength
+            * 0.15
+        )
+
+        +
+
+        (
+            homeStats.formScore
+            * 0.10
+        );
+
+
+    const awayProbability =
+
+        (
+            poisson.probabilities.awayWin
+            * 0.50
+        )
+
+        +
+
+        (
+            (1 - eloProbability)
+            * 100
+            * 0.25
+        )
+
+        +
+
+        (
+            awayStats.strength
+            * 0.15
+        )
+
+        +
+
+        (
+            awayStats.formScore
+            * 0.10
+        );
+
+
+    /*
+    DRAW :
+
+    Le nul doit rester fortement
+    lié au modèle Poisson.
+
+    On évite de fabriquer
+    artificiellement un gros
+    pourcentage de nul.
+    */
+
+    const drawProbability =
+
+        (
+            poisson.probabilities.draw
+            * 0.85
+        )
+
+        +
+
+        (
+            Math.max(
+                0,
+                15 -
+                Math.abs(
+                    homeStats.strength -
+                    awayStats.strength
+                )
+            )
+            * 0.15
+        );
+
+
+    /* =========================
+       WINNER
+    ========================= */
+
+    let winner =
+        "DRAW";
+
+
+    const winnerGap =
+        Math.abs(
+            homeProbability -
+            awayProbability
+        );
+
+
+    /*
+    Si les probabilités sont
+    très proches, on privilégie
+    le nul seulement si Poisson
+    donne également un nul solide.
+    */
+
+    if (
+        winnerGap < 5 &&
+        drawProbability >=
+            Math.max(
+                homeProbability,
+                awayProbability
+            ) - 3
+    ) {
+
+        winner =
+            "DRAW";
+
+    }
+
+    else if (
+        homeProbability >
+        awayProbability
+    ) {
+
+        winner =
+            match.homeTeam.name;
+
+    }
+
+    else {
+
+        winner =
+            match.awayTeam.name;
+
+    }
+
+
+    /* =========================
+       OVER 2.5
+    ========================= */
+
+    let overScore =
+
+        (
+            poisson.over25
+            * 0.50
+        )
+
+        +
+
+        (
+            (
+                homeStats.over25Rate +
+                awayStats.over25Rate
+            ) / 2
+            * 0.20
+        )
+
+        +
+
+        (
+            Math.min(
+                xg.totalExpectedGoals,
+                4
+            ) / 4
+            * 100
+            * 0.20
+        )
+
+        +
+
+        (
+            (
+                homeStats.reliability +
+                awayStats.reliability
+            ) / 2
+            * 100
+            * 0.10
+        );
+
+
+    overScore =
+        Math.max(
+            5,
+            Math.min(
+                95,
+                overScore
+            )
+        );
+
+
+    const over25Prediction =
+
+        overScore >= 55
+            ? "OVER 2.5"
+            : "UNDER 2.5";
+
+
+    const over25Confidence =
+        Math.round(overScore);
+
+
+    /* =========================
+       BTTS
+    ========================= */
+
+    let bttsScore =
+
+        (
+            poisson.btts
+            * 0.50
+        )
+
+        +
+
+        (
+            (
+                homeStats.bttsRate +
+                awayStats.bttsRate
+            ) / 2
+            * 0.20
+        )
+
+        +
+
+        (
+            (
+                homeStats.avgScored +
+                awayStats.avgScored
+            ) / 2
+            * 15
+            * 0.10
+        )
+
+        +
+
+        (
+            (
+                homeStats.reliability +
+                awayStats.reliability
+            ) / 2
+            * 100
+            * 0.10
+        )
+
+        +
+
+        (
+            Math.min(
+                xg.totalExpectedGoals,
+                4
+            ) / 4
+            * 100
+            * 0.10
+        );
+
+
+    bttsScore =
+        Math.max(
+            5,
+            Math.min(
+                95,
+                bttsScore
+            )
+        );
+
+
+    const bttsPrediction =
+
+        bttsScore >= 55
+            ? "OUI"
+            : "NON";
+
+
+    const bttsConfidence =
+        Math.round(bttsScore);
+
+
+    /* =========================
+       CORRECT SCORE
+    ========================= */
+
+    const goalDiff =
+        Math.abs(
+            homeStats.strength -
+            awayStats.strength
+        );
+
+
+    let correctScore =
+        poisson.exactScore.score;
+
+
+    /*
+    Match très ouvert
+    */
+
+    if (
+        xg.totalExpectedGoals >= 3.2
+    ) {
+
+        if (
+            winner ===
+            match.homeTeam.name
+        ) {
+
+            correctScore =
+                "2-1";
+
+        }
+
+        else if (
+            winner ===
+            match.awayTeam.name
+        ) {
+
+            correctScore =
+                "1-2";
+
+        }
+
+        else {
+
+            correctScore =
+                "2-2";
+
+        }
+
+    }
+
+
+    /*
+    Forte différence
+    */
+
+    else if (
+        goalDiff >= 20
+    ) {
+
+        if (
+            winner ===
+            match.homeTeam.name
+        ) {
+
+            correctScore =
+                "2-0";
+
+        }
+
+        else if (
+            winner ===
+            match.awayTeam.name
+        ) {
+
+            correctScore =
+                "0-2";
+
+        }
+
+    }
+
+
+    /*
+    Match fermé
+    */
+
+    else if (
+        xg.totalExpectedGoals <= 2
+    ) {
+
+        if (
+            winner === "DRAW"
+        ) {
+
+            correctScore =
+                "0-0";
+
+        }
+
+        else if (
+            winner ===
+            match.homeTeam.name
+        ) {
+
+            correctScore =
+                "1-0";
+
+        }
+
+        else {
+
+            correctScore =
+                "0-1";
+
+        }
+
+    }
+
+
+    console.log(
+        "OVER CONF:",
+        over25Confidence
+    );
+
+    console.log(
+        "BTTS CONF:",
+        bttsConfidence
+    );
+
+
+    /* =========================
+       FINAL AI SCORE
+    ========================= */
+
+    /*
+    Le score AI est indépendant
+    de la confidence.
+
+    IMPORTANT :
+    poisson.dominance est déjà
+    exprimée sur une échelle
+    de 0-100.
+
+    On ne fait donc PAS :
+
+        dominance * 100
+
+    */
+
+    const finalAIScore =
+
+        (
+            adjustedConfidence
+            * 0.45
+        )
+
+        +
+
+        (
+            poisson.dominance
+            * 0.20
+        )
+
+        +
+
+        (
+            (
+                homeStats.stability +
+                awayStats.stability
+            ) / 2
+            * 0.15
+        )
+
+        +
+
+        (
+            (
+                homeStats.reliability +
+                awayStats.reliability
+            ) * 50
+            * 0.20
+        );
+
+
+    const aiRating =
+        Math.round(
+            Math.max(
+                0,
+                Math.min(
+                    100,
+                    finalAIScore
+                )
+            )
+        );
+
+
+    /* =========================
+       DECISION ENGINE V22
+    ========================= */
+
+    const aiDecision =
+        evaluateDecision({
+
+            confidence:
+                adjustedConfidence,
+
+            poisson,
+
+            homeStats,
+
+            awayStats,
+
+            eloProbability,
+
+            winner
+
+        });
+
+
+    console.log(
+        "👑 AI DECISION:",
+        aiDecision.decision,
+        "| RISK:",
+        aiDecision.risk,
+        "| SCORE:",
+        aiDecision.score
+    );
+
+
+    /* =========================
+       PREDICTION STRENGTH
+    ========================= */
 
     const predictionStrength =
-    Math.round(
-        (
-            aiRating +
-            adjustedConfidence +
-            poisson.matchScore
-        ) / 3
-    );
-    
+
+        Math.round(
+
+            (
+                aiRating +
+                adjustedConfidence +
+                poisson.matchScore
+            ) / 3
+
+        );
+
+
+    /* =========================
+       FINAL RESULT
+    ========================= */
+
     const result = {
 
         match: {
 
-            id: match.id,
+            id:
+                match.id,
 
-            utcDate: match.utcDate,
+            utcDate:
+                match.utcDate,
 
-            competition: match.competition,
+            competition:
+                match.competition,
 
-            homeTeam: match.homeTeam,
+            homeTeam:
+                match.homeTeam,
 
-            awayTeam: match.awayTeam
+            awayTeam:
+                match.awayTeam
 
         },
 
+
         predictions: {
 
-    winner,
+            winner,
 
-    winnerConfidence: adjustedConfidence,
+            winnerConfidence:
+                adjustedConfidence,
 
             aiDecision,
 
@@ -540,43 +959,54 @@ evaluateDecision({
 
             predictionStrength,
 
-                quality: predictionQuality,
+            quality:
+                predictionQuality,
 
-    probabilities:
-        poisson.probabilities,
 
-    over25:
-        over25Prediction,
+            probabilities:
+                poisson.probabilities,
 
-    over25Confidence,
 
-    btts:
-    bttsPrediction,
+            over25:
+                over25Prediction,
 
-bttsConfidence,
+            over25Confidence,
 
-    correctScore,
 
-    correctScoreProbability:
-        poisson.exactScore.probability
+            btts:
+                bttsPrediction,
 
-},
-        
-        teamStats: {
+            bttsConfidence,
 
-            home: homeStats,
 
-            away: awayStats
+            correctScore,
+
+            correctScoreProbability:
+                poisson.exactScore.probability
 
         },
+
+
+        teamStats: {
+
+            home:
+                homeStats,
+
+            away:
+                awayStats
+
+        },
+
 
         model: {
 
             elo: {
 
-                home: homeElo,
+                home:
+                    homeElo,
 
-                away: awayElo,
+                away:
+                    awayElo,
 
                 homeProbability:
                     Math.round(
@@ -585,7 +1015,9 @@ bttsConfidence,
 
             },
 
+
             learning,
+
 
             expectedGoals:
                 xg.totalExpectedGoals,
@@ -596,6 +1028,7 @@ bttsConfidence,
             expectedAwayGoals:
                 xg.expectedAwayGoals,
 
+
             poissonMatrix:
                 poisson.matrix
 
@@ -603,26 +1036,66 @@ bttsConfidence,
 
     };
 
-    // savePrediction(result);
 
-    if (match.status === "FINISHED") {
+    /* =========================
+       SAVE HISTORY
+    ========================= */
 
-    updateMatchElo(
-        match.homeTeam.id,
-        match.awayTeam.id,
-        match.score.fullTime.home,
-        match.score.fullTime.away
-    );
+    /*
+    Désactivé actuellement.
+
+    Si tu veux réactiver :
+
+        savePrediction(result);
+
+    */
+
+
+    /* =========================
+       UPDATE ELO
+    ========================= */
+
+    if (
+        match.status === "FINISHED" &&
+        match.score &&
+        match.score.fullTime
+    ) {
+
+        updateMatchElo(
+
+            match.homeTeam.id,
+
+            match.awayTeam.id,
+
+            match.score.fullTime.home,
+
+            match.score.fullTime.away
+
+        );
 
     }
 
+
+    /* =========================
+       CACHE RESULT
+    ========================= */
+
     ANALYSIS_CACHE.set(
+
         key,
+
         {
-            time: Date.now(),
-            data: result
+
+            time:
+                Date.now(),
+
+            data:
+                result
+
         }
+
     );
+
 
     console.log(
         "MATCH ANALYZED:",
@@ -631,11 +1104,1144 @@ bttsConfidence,
         match.awayTeam.name
     );
 
+
     console.timeEnd(timer);
 
+
     return result;
+
 }
 
+
+/* =========================
+   EXPORT
+========================= */
+
 module.exports = {
+
     analyzeMatch
+
+};const { analyzeTeam } = require("./teamAnalyzer");
+
+const { buildPoissonMatrix } =
+    require("./poissonEngine");
+
+const {
+    getTeamElo,
+    calculateEloProbability,
+    updateMatchElo
+} = require("./eloEngine");
+
+const {
+    calculateExpectedGoals
+} = require("./expectedGoals");
+
+const {
+    calculateConfidence
+} = require("./confidenceEngine");
+
+const {
+    savePrediction
+} = require("./historyEngine");
+
+const {
+    evaluateDecision
+} = require("./decisionEngine");
+
+const {
+    buildLearningModel
+} = require("./learningEngine");
+
+const {
+    getWeights
+} = require("./adaptiveWeightEngine");
+
+
+/* =========================
+   CACHE
+========================= */
+
+const ANALYSIS_CACHE = new Map();
+
+const ANALYSIS_TTL =
+    24 * 60 * 60 * 1000;
+
+
+/* =========================
+   MATCH KEY
+========================= */
+
+function getMatchKey(match) {
+
+    return (
+        match.homeTeam.id +
+        "_" +
+        match.awayTeam.id +
+        "_" +
+        match.utcDate
+    );
+
+}
+
+
+/* =========================
+   MAIN ANALYZER
+========================= */
+
+async function analyzeMatch(match) {
+
+    console.log(
+        "START ANALYSIS:",
+        match.homeTeam.name,
+        "vs",
+        match.awayTeam.name
+    );
+
+    const timer =
+        `${match.homeTeam.name} vs ${match.awayTeam.name}`;
+
+    console.time(timer);
+
+
+    /* =========================
+       CACHE
+    ========================= */
+
+    const key =
+        getMatchKey(match);
+
+    const cached =
+        ANALYSIS_CACHE.get(key);
+
+    if (
+        cached &&
+        Date.now() - cached.time < ANALYSIS_TTL
+    ) {
+
+        console.log(
+            "♻️ CACHE USED:",
+            match.homeTeam.name,
+            "vs",
+            match.awayTeam.name
+        );
+
+        return cached.data;
+    }
+
+
+    /* =========================
+       TEAM ANALYSIS
+    ========================= */
+
+    const [
+        homeStats,
+        awayStats
+    ] = await Promise.all([
+
+        analyzeTeam(match.homeTeam),
+
+        analyzeTeam(match.awayTeam)
+
+    ]);
+
+
+    /* =========================
+       ELO
+    ========================= */
+
+    const homeElo =
+        getTeamElo(match.homeTeam.id);
+
+    const awayElo =
+        getTeamElo(match.awayTeam.id);
+
+
+    const eloProbability =
+        calculateEloProbability(
+            homeElo,
+            awayElo
+        );
+
+
+    console.log("===== ELO DEBUG =====");
+
+    console.log(
+        match.homeTeam.name,
+        "ELO:",
+        homeElo
+    );
+
+    console.log(
+        match.awayTeam.name,
+        "ELO:",
+        awayElo
+    );
+
+    console.log(
+        "ELO PROBABILITY:",
+        Math.round(
+            eloProbability * 100
+        )
+    );
+
+    console.log("=====================");
+
+
+    /* =========================
+       WEIGHTS
+    ========================= */
+
+    const weights =
+        getWeights();
+
+
+    /* =========================
+       EXPECTED GOALS
+    ========================= */
+
+    console.log("2 - XG");
+
+    console.log(
+        "HOME STATS =",
+        {
+            attackPower:
+                homeStats.attackPower,
+
+            defensePower:
+                homeStats.defensePower,
+
+            homeAttack:
+                homeStats.homeAttack,
+
+            homeDefense:
+                homeStats.homeDefense,
+
+            avgScored:
+                homeStats.avgScored,
+
+            avgConceded:
+                homeStats.avgConceded,
+
+            formPoints:
+                homeStats.formPoints,
+
+            strength:
+                homeStats.strength
+        }
+    );
+
+
+    console.log(
+        "AWAY STATS =",
+        {
+            attackPower:
+                awayStats.attackPower,
+
+            defensePower:
+                awayStats.defensePower,
+
+            awayAttack:
+                awayStats.awayAttack,
+
+            awayDefense:
+                awayStats.awayDefense,
+
+            avgScored:
+                awayStats.avgScored,
+
+            avgConceded:
+                awayStats.avgConceded,
+
+            formPoints:
+                awayStats.formPoints,
+
+            strength:
+                awayStats.strength
+        }
+    );
+
+
+    const xg =
+        calculateExpectedGoals(
+
+            homeStats,
+
+            awayStats,
+
+            {
+                home: homeElo,
+                away: awayElo
+            }
+
+        );
+
+
+    console.log(
+        "XG =",
+        xg
+    );
+
+
+    /* =========================
+       POISSON
+    ========================= */
+
+    console.log("3 - POISSON");
+
+
+    const poisson =
+        buildPoissonMatrix(
+
+            xg.expectedHomeGoals,
+
+            xg.expectedAwayGoals
+
+        );
+
+
+    console.log(
+        "POISSON DEBUG:",
+        poisson.uncertainty,
+        poisson.dominance
+    );
+
+
+    /* =========================
+       CONFIDENCE V20
+    ========================= */
+
+    console.log("5 - CONFIDENCE");
+
+
+    const confidence =
+        calculateConfidence({
+
+            probabilities:
+                poisson.probabilities,
+
+            homeStats,
+
+            awayStats,
+
+            eloProbability,
+
+            poisson
+
+        });
+
+
+    /*
+    IMPORTANT
+
+    On NE modifie plus confidence.
+
+    Pas de :
+        confidence * learningWeight
+
+    Pas de :
+        + dominance
+
+    Pas de :
+        + strength bonus
+
+    Pas de :
+        + probability bonus
+
+    La confiance reste celle
+    calculée par Confidence Engine.
+    */
+
+
+    const adjustedConfidence =
+        confidence;
+
+
+    /* =========================
+       LEARNING
+    ========================= */
+
+    console.log("4 - LEARNING");
+
+
+    const learning =
+        buildLearningModel();
+
+
+    /* =========================
+       PREDICTION QUALITY
+    ========================= */
+
+    let predictionQuality =
+        "LOW";
+
+
+    if (adjustedConfidence >= 70) {
+
+        predictionQuality =
+            "HIGH";
+
+    }
+
+    else if (adjustedConfidence >= 55) {
+
+        predictionQuality =
+            "MEDIUM";
+
+    }
+
+    else {
+
+        predictionQuality =
+            "LOW";
+
+    }
+
+
+    console.log(
+        "🎯 CALIBRATED CONFIDENCE:",
+        adjustedConfidence
+    );
+
+
+    /* =========================
+       WINNER PROBABILITIES
+    ========================= */
+
+    const homeProbability =
+
+        (
+            poisson.probabilities.homeWin
+            * 0.50
+        )
+
+        +
+
+        (
+            eloProbability
+            * 100
+            * 0.25
+        )
+
+        +
+
+        (
+            homeStats.strength
+            * 0.15
+        )
+
+        +
+
+        (
+            homeStats.formScore
+            * 0.10
+        );
+
+
+    const awayProbability =
+
+        (
+            poisson.probabilities.awayWin
+            * 0.50
+        )
+
+        +
+
+        (
+            (1 - eloProbability)
+            * 100
+            * 0.25
+        )
+
+        +
+
+        (
+            awayStats.strength
+            * 0.15
+        )
+
+        +
+
+        (
+            awayStats.formScore
+            * 0.10
+        );
+
+
+    /*
+    DRAW :
+
+    Le nul doit rester fortement
+    lié au modèle Poisson.
+
+    On évite de fabriquer
+    artificiellement un gros
+    pourcentage de nul.
+    */
+
+    const drawProbability =
+
+        (
+            poisson.probabilities.draw
+            * 0.85
+        )
+
+        +
+
+        (
+            Math.max(
+                0,
+                15 -
+                Math.abs(
+                    homeStats.strength -
+                    awayStats.strength
+                )
+            )
+            * 0.15
+        );
+
+
+    /* =========================
+       WINNER
+    ========================= */
+
+    let winner =
+        "DRAW";
+
+
+    const winnerGap =
+        Math.abs(
+            homeProbability -
+            awayProbability
+        );
+
+
+    /*
+    Si les probabilités sont
+    très proches, on privilégie
+    le nul seulement si Poisson
+    donne également un nul solide.
+    */
+
+    if (
+        winnerGap < 5 &&
+        drawProbability >=
+            Math.max(
+                homeProbability,
+                awayProbability
+            ) - 3
+    ) {
+
+        winner =
+            "DRAW";
+
+    }
+
+    else if (
+        homeProbability >
+        awayProbability
+    ) {
+
+        winner =
+            match.homeTeam.name;
+
+    }
+
+    else {
+
+        winner =
+            match.awayTeam.name;
+
+    }
+
+
+    /* =========================
+       OVER 2.5
+    ========================= */
+
+    let overScore =
+
+        (
+            poisson.over25
+            * 0.50
+        )
+
+        +
+
+        (
+            (
+                homeStats.over25Rate +
+                awayStats.over25Rate
+            ) / 2
+            * 0.20
+        )
+
+        +
+
+        (
+            Math.min(
+                xg.totalExpectedGoals,
+                4
+            ) / 4
+            * 100
+            * 0.20
+        )
+
+        +
+
+        (
+            (
+                homeStats.reliability +
+                awayStats.reliability
+            ) / 2
+            * 100
+            * 0.10
+        );
+
+
+    overScore =
+        Math.max(
+            5,
+            Math.min(
+                95,
+                overScore
+            )
+        );
+
+
+    const over25Prediction =
+
+        overScore >= 55
+            ? "OVER 2.5"
+            : "UNDER 2.5";
+
+
+    const over25Confidence =
+        Math.round(overScore);
+
+
+    /* =========================
+       BTTS
+    ========================= */
+
+    let bttsScore =
+
+        (
+            poisson.btts
+            * 0.50
+        )
+
+        +
+
+        (
+            (
+                homeStats.bttsRate +
+                awayStats.bttsRate
+            ) / 2
+            * 0.20
+        )
+
+        +
+
+        (
+            (
+                homeStats.avgScored +
+                awayStats.avgScored
+            ) / 2
+            * 15
+            * 0.10
+        )
+
+        +
+
+        (
+            (
+                homeStats.reliability +
+                awayStats.reliability
+            ) / 2
+            * 100
+            * 0.10
+        )
+
+        +
+
+        (
+            Math.min(
+                xg.totalExpectedGoals,
+                4
+            ) / 4
+            * 100
+            * 0.10
+        );
+
+
+    bttsScore =
+        Math.max(
+            5,
+            Math.min(
+                95,
+                bttsScore
+            )
+        );
+
+
+    const bttsPrediction =
+
+        bttsScore >= 55
+            ? "OUI"
+            : "NON";
+
+
+    const bttsConfidence =
+        Math.round(bttsScore);
+
+
+    /* =========================
+       CORRECT SCORE
+    ========================= */
+
+    const goalDiff =
+        Math.abs(
+            homeStats.strength -
+            awayStats.strength
+        );
+
+
+    let correctScore =
+        poisson.exactScore.score;
+
+
+    /*
+    Match très ouvert
+    */
+
+    if (
+        xg.totalExpectedGoals >= 3.2
+    ) {
+
+        if (
+            winner ===
+            match.homeTeam.name
+        ) {
+
+            correctScore =
+                "2-1";
+
+        }
+
+        else if (
+            winner ===
+            match.awayTeam.name
+        ) {
+
+            correctScore =
+                "1-2";
+
+        }
+
+        else {
+
+            correctScore =
+                "2-2";
+
+        }
+
+    }
+
+
+    /*
+    Forte différence
+    */
+
+    else if (
+        goalDiff >= 20
+    ) {
+
+        if (
+            winner ===
+            match.homeTeam.name
+        ) {
+
+            correctScore =
+                "2-0";
+
+        }
+
+        else if (
+            winner ===
+            match.awayTeam.name
+        ) {
+
+            correctScore =
+                "0-2";
+
+        }
+
+    }
+
+
+    /*
+    Match fermé
+    */
+
+    else if (
+        xg.totalExpectedGoals <= 2
+    ) {
+
+        if (
+            winner === "DRAW"
+        ) {
+
+            correctScore =
+                "0-0";
+
+        }
+
+        else if (
+            winner ===
+            match.homeTeam.name
+        ) {
+
+            correctScore =
+                "1-0";
+
+        }
+
+        else {
+
+            correctScore =
+                "0-1";
+
+        }
+
+    }
+
+
+    console.log(
+        "OVER CONF:",
+        over25Confidence
+    );
+
+    console.log(
+        "BTTS CONF:",
+        bttsConfidence
+    );
+
+
+    /* =========================
+       FINAL AI SCORE
+    ========================= */
+
+    /*
+    Le score AI est indépendant
+    de la confidence.
+
+    IMPORTANT :
+    poisson.dominance est déjà
+    exprimée sur une échelle
+    de 0-100.
+
+    On ne fait donc PAS :
+
+        dominance * 100
+
+    */
+
+    const finalAIScore =
+
+        (
+            adjustedConfidence
+            * 0.45
+        )
+
+        +
+
+        (
+            poisson.dominance
+            * 0.20
+        )
+
+        +
+
+        (
+            (
+                homeStats.stability +
+                awayStats.stability
+            ) / 2
+            * 0.15
+        )
+
+        +
+
+        (
+            (
+                homeStats.reliability +
+                awayStats.reliability
+            ) * 50
+            * 0.20
+        );
+
+
+    const aiRating =
+        Math.round(
+            Math.max(
+                0,
+                Math.min(
+                    100,
+                    finalAIScore
+                )
+            )
+        );
+
+
+    /* =========================
+       DECISION ENGINE V22
+    ========================= */
+
+    const aiDecision =
+        evaluateDecision({
+
+            confidence:
+                adjustedConfidence,
+
+            poisson,
+
+            homeStats,
+
+            awayStats,
+
+            eloProbability,
+
+            winner
+
+        });
+
+
+    console.log(
+        "👑 AI DECISION:",
+        aiDecision.decision,
+        "| RISK:",
+        aiDecision.risk,
+        "| SCORE:",
+        aiDecision.score
+    );
+
+
+    /* =========================
+       PREDICTION STRENGTH
+    ========================= */
+
+    const predictionStrength =
+
+        Math.round(
+
+            (
+                aiRating +
+                adjustedConfidence +
+                poisson.matchScore
+            ) / 3
+
+        );
+
+
+    /* =========================
+       FINAL RESULT
+    ========================= */
+
+    const result = {
+
+        match: {
+
+            id:
+                match.id,
+
+            utcDate:
+                match.utcDate,
+
+            competition:
+                match.competition,
+
+            homeTeam:
+                match.homeTeam,
+
+            awayTeam:
+                match.awayTeam
+
+        },
+
+
+        predictions: {
+
+            winner,
+
+            winnerConfidence:
+                adjustedConfidence,
+
+            aiDecision,
+
+            aiRating,
+
+            predictionStrength,
+
+            quality:
+                predictionQuality,
+
+
+            probabilities:
+                poisson.probabilities,
+
+
+            over25:
+                over25Prediction,
+
+            over25Confidence,
+
+
+            btts:
+                bttsPrediction,
+
+            bttsConfidence,
+
+
+            correctScore,
+
+            correctScoreProbability:
+                poisson.exactScore.probability
+
+        },
+
+
+        teamStats: {
+
+            home:
+                homeStats,
+
+            away:
+                awayStats
+
+        },
+
+
+        model: {
+
+            elo: {
+
+                home:
+                    homeElo,
+
+                away:
+                    awayElo,
+
+                homeProbability:
+                    Math.round(
+                        eloProbability * 100
+                    )
+
+            },
+
+
+            learning,
+
+
+            expectedGoals:
+                xg.totalExpectedGoals,
+
+            expectedHomeGoals:
+                xg.expectedHomeGoals,
+
+            expectedAwayGoals:
+                xg.expectedAwayGoals,
+
+
+            poissonMatrix:
+                poisson.matrix
+
+        }
+
+    };
+
+
+    /* =========================
+       SAVE HISTORY
+    ========================= */
+
+    /*
+    Désactivé actuellement.
+
+    Si tu veux réactiver :
+
+        savePrediction(result);
+
+    */
+
+
+    /* =========================
+       UPDATE ELO
+    ========================= */
+
+    if (
+        match.status === "FINISHED" &&
+        match.score &&
+        match.score.fullTime
+    ) {
+
+        updateMatchElo(
+
+            match.homeTeam.id,
+
+            match.awayTeam.id,
+
+            match.score.fullTime.home,
+
+            match.score.fullTime.away
+
+        );
+
+    }
+
+
+    /* =========================
+       CACHE RESULT
+    ========================= */
+
+    ANALYSIS_CACHE.set(
+
+        key,
+
+        {
+
+            time:
+                Date.now(),
+
+            data:
+                result
+
+        }
+
+    );
+
+
+    console.log(
+        "MATCH ANALYZED:",
+        match.homeTeam.name,
+        "vs",
+        match.awayTeam.name
+    );
+
+
+    console.timeEnd(timer);
+
+
+    return result;
+
+}
+
+
+/* =========================
+   EXPORT
+========================= */
+
+module.exports = {
+
+    analyzeMatch
+
 };
