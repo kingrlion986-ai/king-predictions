@@ -1,302 +1,550 @@
+/* =========================================
+   KING PREDICTIONS AI
+   VIP FILTER ENGINE V20
+   MARKET-SPECIFIC FILTER
+========================================= */
+
+
 /* =========================
-VIP FILTER ENGINE V19
+   HELPERS
 ========================= */
 
 function clamp(value, min, max) {
 
-return Math.max(
-    min,
-    Math.min(
-        max,
-        value
-    )
-);
+    return Math.max(
+        min,
+        Math.min(max, value)
+    );
 
 }
 
-/*
-Récupère la confiance principale
-de manière compatible avec le modèle
-*/
+
+/* =========================
+   MAIN CONFIDENCE
+========================= */
 
 function getModelConfidence(predictions) {
 
-return (
-
-    predictions.winnerConfidence ??
-
-    predictions.confidence ??
-
-    0
-
-);
+    return Number(
+        predictions?.winnerConfidence ??
+        predictions?.confidence ??
+        0
+    );
 
 }
 
-/*
-Vérifie si un match possède
-un avantage statistique réel
-*/
+
+/* =========================
+   GENERAL QUALITY
+========================= */
+
+function getQuality(match) {
+
+    return Number(
+        match?.qualityScore ??
+        match?.predictions?.aiRating ??
+        0
+    );
+
+}
+
+
+/* =========================
+   1X2 VIP SCORE
+========================= */
 
 function calculateVIPScore(match) {
 
-let score = 0;
+    const predictions =
+        match?.predictions || {};
+
+    const home =
+        match?.teamStats?.home || {};
+
+    const away =
+        match?.teamStats?.away || {};
+
+    let score = 0;
 
 
-const predictions =
-    match.predictions;
+    /*
+    CONFIDENCE
+    */
+
+    const confidence =
+        getModelConfidence(predictions);
+
+    score += confidence * 0.40;
 
 
-const home =
-    match.teamStats.home;
+    /*
+    PROBABILITY EDGE
+    */
+
+    const probabilities =
+        predictions.probabilities;
+
+    let favoriteProbability = 0;
+    let separation = 0;
+
+    if (
+        probabilities &&
+        typeof probabilities.homeWin === "number" &&
+        typeof probabilities.draw === "number" &&
+        typeof probabilities.awayWin === "number"
+    ) {
+
+        const values = [
+
+            probabilities.homeWin,
+            probabilities.draw,
+            probabilities.awayWin
+
+        ];
+
+        const sorted =
+            [...values].sort(
+                (a, b) => b - a
+            );
+
+        favoriteProbability =
+            sorted[0];
+
+        separation =
+            sorted[0] - sorted[1];
+
+        score +=
+            favoriteProbability * 0.35;
+
+        score +=
+            clamp(
+                separation * 0.50,
+                0,
+                10
+            );
+
+    }
 
 
-const away =
-    match.teamStats.away;
+    /*
+    STABILITÉ
+    */
+
+    const stability =
+
+        (
+            Number(home.stability ?? 50) +
+            Number(away.stability ?? 50)
+        ) / 2;
+
+    score +=
+        stability * 0.10;
 
 
-/*
-   =========================
-   QUALITÉ GLOBALE
-   =========================
-*/
+    /*
+    FIABILITÉ
+    */
 
-score +=
-    (
-        match.qualityScore || 0
-    )
-    *
-    0.35;
+    const reliability =
 
+        (
+            Number(home.reliability ?? 0.5) +
+            Number(away.reliability ?? 0.5)
+        ) / 2;
 
-/*
-   =========================
-   CONFIANCE MODÈLE
-   =========================
-*/
-
-const confidence =
-    getModelConfidence(
-        predictions
-    );
+    score +=
+        reliability * 100 * 0.10;
 
 
-score +=
-    confidence
-    *
-    0.30;
+    /*
+    FORCE
+    */
 
+    const strengthGap =
+        Math.abs(
+            Number(home.strength ?? 0) -
+            Number(away.strength ?? 0)
+        );
 
-/*
-   =========================
-   ÉCART PROBABILITÉS
-   =========================
-*/
-
-const probabilities =
-    predictions.probabilities;
-
-
-if (
-    probabilities &&
-    typeof probabilities.homeWin === "number" &&
-    typeof probabilities.draw === "number" &&
-    typeof probabilities.awayWin === "number"
-) {
-
-
-    const values = [
-
-        probabilities.homeWin,
-
-        probabilities.draw,
-
-        probabilities.awayWin
-
-    ];
-
-
-    const sorted =
-        [...values].sort(
-            (a, b) => b - a
+    score +=
+        clamp(
+            strengthGap * 0.25,
+            0,
+            5
         );
 
 
-    const edge =
-        sorted[0] -
-        sorted[1];
+    /*
+    DONNÉES INSUFFISANTES
+    */
+
+    if (
+        Number(home.played ?? 0) < 5 ||
+        Number(away.played ?? 0) < 5
+    ) {
+
+        score -= 15;
+
+    }
+
+
+    /*
+    MATCH TROP ÉQUILIBRÉ
+    */
+
+    if (favoriteProbability < 55) {
+
+        score -= 20;
+
+    }
+
+
+    return Math.round(
+        clamp(score, 0, 100)
+    );
+
+}
+
+
+/* =========================
+   OVER 2.5 SCORE
+========================= */
+
+function calculateOver25Score(match) {
+
+    const predictions =
+        match?.predictions || {};
+
+    const home =
+        match?.teamStats?.home || {};
+
+    const away =
+        match?.teamStats?.away || {};
+
+
+    const poisson =
+        Number(
+            predictions.over25Confidence ?? 0
+        );
+
+    const homeRate =
+        Number(home.over25Rate ?? 0);
+
+    const awayRate =
+        Number(away.over25Rate ?? 0);
+
+    const reliability =
+
+        (
+            Number(home.reliability ?? 0.5) +
+            Number(away.reliability ?? 0.5)
+        ) / 2;
+
+
+    const xg =
+        Number(
+            match?.model?.expectedGoals ?? 0
+        );
+
+
+    let score = 0;
+
+
+    /*
+    POISSON OVER
+    */
+
+    score += poisson * 0.55;
+
+
+    /*
+    HISTORIQUE OVER
+    */
+
+    score +=
+        (
+            (homeRate + awayRate) / 2
+        ) * 100 * 0.20;
+
+
+    /*
+    XG
+    */
+
+    score +=
+        clamp(
+            xg / 3 * 100,
+            0,
+            100
+        ) * 0.15;
+
+
+    /*
+    FIABILITÉ
+    */
+
+    score +=
+        reliability * 100 * 0.10;
+
+
+    return Math.round(
+        clamp(score, 0, 100)
+    );
+
+}
+
+
+/* =========================
+   BTTS SCORE
+========================= */
+
+function calculateBttsScore(match) {
+
+    const predictions =
+        match?.predictions || {};
+
+    const home =
+        match?.teamStats?.home || {};
+
+    const away =
+        match?.teamStats?.away || {};
+
+
+    const poisson =
+        Number(
+            predictions.bttsConfidence ?? 0
+        );
+
+
+    const homeRate =
+        Number(home.bttsRate ?? 0);
+
+    const awayRate =
+        Number(away.bttsRate ?? 0);
+
+
+    const reliability =
+
+        (
+            Number(home.reliability ?? 0.5) +
+            Number(away.reliability ?? 0.5)
+        ) / 2;
+
+
+    let score = 0;
+
+
+    /*
+    POISSON BTTS
+    */
+
+    score +=
+        poisson * 0.55;
+
+
+    /*
+    HISTORIQUE BTTS
+    */
+
+    score +=
+        (
+            (homeRate + awayRate) / 2
+        ) * 100 * 0.25;
+
+
+    /*
+    FIABILITÉ
+    */
+
+    score +=
+        reliability * 100 * 0.10;
+
+
+    /*
+    ATTAQUE DES DEUX ÉQUIPES
+    */
+
+    const avgScored =
+
+        (
+            Number(home.avgScored ?? 0) +
+            Number(away.avgScored ?? 0)
+        ) / 2;
 
 
     score +=
-        edge
-        *
-        0.20;
+        clamp(
+            avgScored * 20,
+            0,
+            10
+        );
+
+
+    return Math.round(
+        clamp(score, 0, 100)
+    );
 
 }
 
 
-/*
-   =========================
-   STABILITÉ
-   =========================
-*/
-
-const homeStability =
-    home.stability ?? 50;
-
-
-const awayStability =
-    away.stability ?? 50;
-
-
-score +=
-
-    (
-        homeStability +
-        awayStability
-    )
-    /
-    2
-    *
-    0.10;
-
-
-/*
-   =========================
-   QUALITÉ DES DONNÉES
-   =========================
-*/
-
-if (
-
-    home.played < 5 ||
-    away.played < 5
-
-) {
-
-    score -= 15;
-
-}
-
-
-/*
-   =========================
-   FORME RÉCENTE
-   =========================
-*/
-
-const homeForm =
-    home.formPoints ?? 0;
-
-
-const awayForm =
-    away.formPoints ?? 0;
-
-
-const formGap =
-    Math.abs(
-        homeForm -
-        awayForm
-    );
-
-
-score +=
-    clamp(
-        formGap * 1.5,
-        0,
-        10
-    );
-
-
-/*
-   =========================
-   FORCE DES ÉQUIPES
-   =========================
-*/
-
-const strengthGap =
-    Math.abs(
-        (home.strength ?? 0) -
-        (away.strength ?? 0)
-    );
-
-
-score +=
-    clamp(
-        strengthGap * 0.25,
-        0,
-        10
-    );
-
-
-/*
-   =========================
-   SCORE FINAL
-   =========================
-*/
-
-return Math.round(
-    clamp(
-        score,
-        0,
-        100
-    )
-);
-
-}
-
-/*
-Filtre VIP strict
-*/
+/* =========================
+   VIP 1X2
+========================= */
 
 function filterVipMatches(matches) {
 
-return matches
+    return matches
 
-    .map(match => ({
+        .map(match => ({
 
-        ...match,
+            ...match,
 
-        vipScore:
-            calculateVIPScore(match)
+            vipScore:
+                calculateVIPScore(match)
 
-    }))
+        }))
+
+        .filter(match => {
+
+            const confidence =
+                getModelConfidence(
+                    match.predictions
+                );
 
 
-    .filter(match => {
+            const decision =
+                match.predictions?.aiDecision
+                    ?.decision;
 
 
-        const confidence =
-            getModelConfidence(
-                match.predictions
+            return (
+
+                match.vipScore >= 70 &&
+
+                confidence >= 65 &&
+
+                (
+                    decision === "VIP PICK" ||
+                    confidence >= 75
+                )
+
             );
 
+        })
 
-        return (
-
-            match.vipScore >= 75
-
-            &&
-
-            confidence >= 65
-
+        .sort(
+            (a, b) =>
+                b.vipScore -
+                a.vipScore
         );
-
-    })
-
-
-    .sort(
-        (a, b) =>
-            b.vipScore -
-            a.vipScore
-    );
 
 }
 
+
+/* =========================
+   VIP OVER 2.5
+========================= */
+
+function filterVipOver25(matches) {
+
+    return matches
+
+        .map(match => ({
+
+            ...match,
+
+            vipScore:
+                calculateOver25Score(match)
+
+        }))
+
+        .filter(match => {
+
+            const confidence =
+                Number(
+                    match.predictions
+                        ?.over25Confidence ?? 0
+                );
+
+            return (
+
+                match.vipScore >= 65 &&
+                confidence >= 60 &&
+                match.predictions?.over25
+
+            );
+
+        })
+
+        .sort(
+            (a, b) =>
+                b.vipScore -
+                a.vipScore
+        );
+
+}
+
+
+/* =========================
+   VIP BTTS
+========================= */
+
+function filterVipBtts(matches) {
+
+    return matches
+
+        .map(match => ({
+
+            ...match,
+
+            vipScore:
+                calculateBttsScore(match)
+
+        }))
+
+        .filter(match => {
+
+            const confidence =
+                Number(
+                    match.predictions
+                        ?.bttsConfidence ?? 0
+                );
+
+            return (
+
+                match.vipScore >= 65 &&
+                confidence >= 60 &&
+                match.predictions?.btts
+
+            );
+
+        })
+
+        .sort(
+            (a, b) =>
+                b.vipScore -
+                a.vipScore
+        );
+
+}
+
+
+/* =========================
+   EXPORTS
+========================= */
+
 module.exports = {
 
-filterVipMatches,
+    filterVipMatches,
 
-calculateVIPScore
+    filterVipOver25,
+
+    filterVipBtts,
+
+    calculateVIPScore,
+
+    calculateOver25Score,
+
+    calculateBttsScore
 
 };
