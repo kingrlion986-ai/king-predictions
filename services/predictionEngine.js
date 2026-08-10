@@ -245,6 +245,35 @@ async function analyzeMatch(match) {
 
             awayStats,
 
+            if (
+    !homeStats ||
+    !awayStats ||
+    homeStats.played < 5 ||
+    awayStats.played < 5 ||
+    homeStats.dataAvailable === false ||
+    awayStats.dataAvailable === false
+) {
+    console.log(
+        "🚫 MATCH REJECTED - INSUFFICIENT TEAM DATA"
+    );
+
+    console.log(
+        "HOME:",
+        homeStats?.teamName,
+        "MATCHES:",
+        homeStats?.played ?? 0
+    );
+
+    console.log(
+        "AWAY:",
+        awayStats?.teamName,
+        "MATCHES:",
+        awayStats?.played ?? 0
+    );
+
+    return null;
+    }
+
             {
                 home: homeElo,
                 away: awayElo
