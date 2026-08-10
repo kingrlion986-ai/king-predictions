@@ -658,72 +658,74 @@ async function analyzeTeam(team) {
             }
 
             /*
-             * FALLBACK
-             */
-            if (
-                !matches ||
-                matches.length < 5
-            ) {
+ * DONNÉES INSUFFISANTES
+ *
+ * IMPORTANT :
+ * Ne jamais fabriquer des statistiques.
+ * Ne jamais mettre un fallback dans le cache.
+ */
 
-                const fallback = {
+if (!matches || matches.length < 5) {
 
-                    teamName: team.name,
-                    teamId: team.id,
+    console.error(
+        "🚨 INSUFFICIENT TEAM DATA:",
+        team.name,
+        "| TEAM ID:",
+        team.id,
+        "| MATCHES:",
+        matches?.length ?? 0
+    );
 
-                    played: 0,
+    return {
+        teamName: team.name,
+        teamId: team.id,
 
-                    strength: 50,
-                    rawStrength: 50,
+        played: 0,
 
-                    reliability: 0.30,
-                    stability: 30,
+        strength: null,
+        rawStrength: null,
 
-                    avgScored: 1,
-                    avgConceded: 1,
+        reliability: 0,
+        stability: 0,
 
-                    goalBalance: 0,
+        avgScored: null,
+        avgConceded: null,
 
-                    attackPower: 1,
-                    defensePower: 1,
+        goalBalance: null,
 
-                    homeAttack: 1,
-                    awayAttack: 1,
+        attackPower: null,
+        defensePower: null,
 
-                    homeDefense: 1,
-                    awayDefense: 1,
+        homeAttack: null,
+        awayAttack: null,
 
-                    wins: 0,
-                    draws: 0,
-                    losses: 0,
+        homeDefense: null,
+        awayDefense: null,
 
-                    winStreak: 0,
-                    drawStreak: 0,
-                    loseStreak: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
 
-                    cleanSheets: 0,
-                    failedToScore: 0,
+        winStreak: 0,
+        drawStreak: 0,
+        loseStreak: 0,
 
-                    over25Rate: 50,
-                    bttsRate: 50,
+        cleanSheets: 0,
+        failedToScore: 0,
 
-                    formPoints: 0.5,
-                    momentum: 0,
+        over25Rate: null,
+        bttsRate: null,
 
-                    averageOpponentStrength: 50,
+        formPoints: 0,
+        momentum: 0,
 
-                    formScore: 50
-                };
+        averageOpponentStrength: null,
 
-                CACHE.set(
-                    team.id,
-                    {
-                        time: Date.now(),
-                        data: fallback
-                    }
-                );
+        formScore: 0,
 
-                return fallback;
-            }
+        dataAvailable: false
+    };
+}
 
             /*
              * 8 derniers matchs.
