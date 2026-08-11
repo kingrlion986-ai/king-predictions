@@ -1,51 +1,225 @@
 const { analyzeTeam } = require("./teamAnalyzer");
-const { buildPoissonMatrix } = require("./poissonEngine");
+
+const {
+    buildPoissonMatrix
+} = require("./poissonEngine");
+
 const {
     getTeamElo,
-    calculateEloProbability,
-    updateMatchElo
+    calculateEloProbability
 } = require("./eloEngine");
-const { calculateExpectedGoals } = require("./expectedGoals");
-const { calculateConfidence } = require("./confidenceEngine");
-const { evaluateDecision } = require("./decisionEngine");
-const { buildLearningModel } = require("./learningEngine");
 
-const ANALYSIS_CACHE = new Map();
-const ANALYSIS_TTL = 24 * 60 * 60 * 1000;
+const {
+    calculateExpectedGoals
+} = require("./expectedGoals");
+
+const {
+    calculateConfidence
+} = require("./confidenceEngine");
+
+const {
+    evaluateDecision
+} = require("./decisionEngine");
+
+const {
+    buildLearningModel
+} = require("./learningEngine");
+
+
+/* =========================
+   ANALYSIS CACHE
+========================= */
+
+const ANALYSIS_CACHE =
+    new Map();
+
+const ANALYSIS_TTL =
+    24 * 60 * 60 * 1000;
+
+
+/* =========================
+   MATCH KEY
+========================= */
 
 function getMatchKey(match) {
-    return `${match.homeTeam.id}_${match.awayTeam.id}_${match.utcDate}`;
+
+    return (
+        `${match.homeTeam.id}_` +
+        `${match.awayTeam.id}_` +
+        `${match.utcDate}`
+    );
+
 }
+
+
+/* =========================
+   WINNER FROM POISSON
+========================= */
+
+function getWinnerFromPoisson(
+    match,
+    probabilities
+) {
+
+    const home =
+        Number(
+            probabilities?.homeWin || 0
+        );
+
+    const draw =
+        Number(
+            probabilities?.draw || 0
+        );
+
+    const away =
+        Number(
+            probabilities?.awayWin || 0
+        );
+
+
+    if (
+        home >= draw &&
+        home >= away
+    ) {
+
+        return match.homeTeam.name;
+
+    }
+
+
+    if (
+        away >= home &&
+        away >= draw
+    ) {
+
+        return match.awayTeam.name;
+
+    }
+
+
+    return "DRAW";
+}
+
+
+/* =========================
+   PREDICTION QUALITY
+========================= */
+
+function getPredictionQuality(
+    confidence
+) {
+
+    if (confidence >= 70) {
+        return "HIGH";
+    }
+
+    if (confidence >= 55) {
+        return "MEDIUM";
+    }
+
+    return "LOW";
+}
+
+
+/* =========================
+   ANALYZE MATCH
+========================= */
 
 async function analyzeMatch(match) {
 
-    const name = `${match.homeTeam.name} vs ${match.awayTeam.name}`;
-    const key = getMatchKey(match);
+    const name =
+        `${match.homeTeam.name} vs ${match.awayTeam.name}`;
 
-    console.log("START ANALYSIS:", name);
+    const key =
+        getMatchKey(match);
+
+
+    console.log(
+        "START ANALYSIS:",
+        name
+    );
+
     console.time(name);
 
-    // CACHE
-    const cached = ANALYSIS_CACHE.get(key);
 
-    if (cached && Date.now() - cached.time < ANALYSIS_TTL) {
-        console.log("♻️ CACHE USED:", name);
+    /* =========================
+       IMPORTANT :
+       ONLY UPCOMING MATCHES
+    ========================= */
+
+    if (
+        match.status !== "SCHEDULED" &&
+        match.status !== "TIMED"
+    ) {
+
+        console.log(
+            "🚫 MATCH NOT PREDICTED:",
+            name,
+            "| STATUS:",
+            match.status
+        );
+
+        console.timeEnd(name);
+
+        return null;
+    }
+
+
+    /* =========================
+       CACHE
+    ========================= */
+
+    const cached =
+        ANALYSIS_CACHE.get(key);
+
+    if (
+        cached &&
+        Date.now() - cached.time <
+        ANALYSIS_TTL
+    ) {
+
+        console.log(
+            "♻️ CACHE USED:",
+            name
+        );
+
+        console.timeEnd(name);
+
         return cached.data;
     }
 
-    // TEAM ANALYSIS
-    const [homeStats, awayStats] = await Promise.all([
-        analyzeTeam(match.homeTeam),
-        analyzeTeam(match.awayTeam)
+
+    /* =========================
+       TEAM ANALYSIS
+    ========================= */
+
+    const [
+        homeStats,
+        awayStats
+    ] = await Promise.all([
+
+        analyzeTeam(
+            match.homeTeam
+        ),
+
+        analyzeTeam(
+            match.awayTeam
+        )
+
     ]);
 
-    // DATA VALIDATION
+
+    /* =========================
+       DATA VALIDATION
+    ========================= */
+
     if (
         !homeStats ||
         !awayStats ||
         Number(homeStats.played || 0) < 5 ||
         Number(awayStats.played || 0) < 5
     ) {
+
         console.log(
             "🚫 MATCH REJECTED:",
             name,
@@ -56,42 +230,74 @@ async function analyzeMatch(match) {
         );
 
         console.timeEnd(name);
+
         return null;
     }
 
-    // ELO
-    const homeElo = getTeamElo(match.homeTeam.id);
-    const awayElo = getTeamElo(match.awayTeam.id);
 
-    const eloProbability = calculateEloProbability(
-        homeElo,
-        awayElo
-    );
+    /* =========================
+       ELO
+    ========================= */
+
+    const homeElo =
+        getTeamElo(
+            match.homeTeam.id
+        );
+
+    const awayElo =
+        getTeamElo(
+            match.awayTeam.id
+        );
+
+
+    const eloProbability =
+        calculateEloProbability(
+            homeElo,
+            awayElo
+        );
+
 
     console.log(
         "===== ELO =====",
         homeElo,
         awayElo,
-        Math.round(eloProbability * 100)
+        Math.round(
+            eloProbability * 100
+        )
     );
 
-    // EXPECTED GOALS
-    const xg = calculateExpectedGoals(
-        homeStats,
-        awayStats,
-        {
-            home: homeElo,
-            away: awayElo
-        }
+
+    /* =========================
+       EXPECTED GOALS
+    ========================= */
+
+    const xg =
+        calculateExpectedGoals(
+            homeStats,
+            awayStats,
+            {
+                home: homeElo,
+                away: awayElo
+            }
+        );
+
+
+    console.log(
+        "XG:",
+        xg
     );
 
-    console.log("XG:", xg);
 
-    // POISSON
-    const poisson = buildPoissonMatrix(
-        xg.expectedHomeGoals,
-        xg.expectedAwayGoals
-    );
+    /* =========================
+       POISSON
+    ========================= */
+
+    const poisson =
+        buildPoissonMatrix(
+            xg.expectedHomeGoals,
+            xg.expectedAwayGoals
+        );
+
 
     console.log(
         "POISSON:",
@@ -100,144 +306,231 @@ async function analyzeMatch(match) {
         poisson.risk
     );
 
-    // CONFIDENCE
-    const confidence = calculateConfidence({
-        probabilities: poisson.probabilities,
-        homeStats,
-        awayStats,
-        eloProbability,
-        poisson
-    });
 
-    const adjustedConfidence = confidence;
+    /* =========================
+       CONFIDENCE
+    ========================= */
 
-    // LEARNING
-    const learning = buildLearningModel();
+    const confidence =
+        calculateConfidence({
+
+            probabilities:
+                poisson.probabilities,
+
+            homeStats,
+
+            awayStats,
+
+            eloProbability,
+
+            poisson
+
+        });
+
+
+    /*
+     * IMPORTANT :
+     *
+     * Il n'y a plus de
+     * adjustedConfidence =
+     * confidence.
+     *
+     * Une seule confidence.
+     */
 
     const predictionQuality =
-        adjustedConfidence >= 70
-            ? "HIGH"
-            : adjustedConfidence >= 55
-                ? "MEDIUM"
-                : "LOW";
+        getPredictionQuality(
+            confidence
+        );
 
-    // WINNER PROBABILITIES
-    const homeProbability =
-        poisson.probabilities.homeWin * 0.50 +
-        eloProbability * 100 * 0.25 +
-        homeStats.strength * 0.15 +
-        homeStats.formScore * 0.10;
 
-    const awayProbability =
-        poisson.probabilities.awayWin * 0.50 +
-        (1 - eloProbability) * 100 * 0.25 +
-        awayStats.strength * 0.15 +
-        awayStats.formScore * 0.10;
+    /* =========================
+       LEARNING
+    ========================= */
 
-    const drawProbability =
-        poisson.probabilities.draw * 0.85 +
-        Math.max(
-            0,
-            15 - Math.abs(
-                homeStats.strength - awayStats.strength
-            )
-        ) * 0.15;
+    const learning =
+        buildLearningModel();
 
-    const winnerGap = Math.abs(
-        homeProbability - awayProbability
-    );
 
-    let winner;
+    /* =========================
+       WINNER
+       
+       SOURCE PRINCIPALE :
+       POISSON
+    ========================= */
 
-    if (
-        winnerGap < 5 &&
-        drawProbability >=
-        Math.max(homeProbability, awayProbability) - 3
-    ) {
-        winner = "DRAW";
-    } else if (homeProbability > awayProbability) {
-        winner = match.homeTeam.name;
-    } else {
-        winner = match.awayTeam.name;
-    }
+    const winner =
+        getWinnerFromPoisson(
+            match,
+            poisson.probabilities
+        );
 
-    // OVER 2.5
+
+    /* =========================
+       OVER 2.5
+    ========================= */
+
     let overScore =
-        poisson.over25 * 0.50 +
-        ((homeStats.over25Rate + awayStats.over25Rate) / 2) * 0.20 +
-        (Math.min(xg.totalExpectedGoals, 4) / 4) * 100 * 0.20 +
-        ((homeStats.reliability + awayStats.reliability) / 2) * 100 * 0.10;
 
-    overScore = Math.max(5, Math.min(95, overScore));
+        poisson.over25 * 0.70 +
 
-    const over25Confidence = Math.round(overScore);
+        (
+            (
+                Number(homeStats.over25Rate || 0) +
+                Number(awayStats.over25Rate || 0)
+            ) / 2
+        ) * 0.20 +
+
+        (
+            Math.min(
+                xg.totalExpectedGoals,
+                4
+            ) / 4
+        ) * 100 * 0.10;
+
+
+    overScore =
+        Math.max(
+            5,
+            Math.min(
+                95,
+                overScore
+            )
+        );
+
+
+    const over25Confidence =
+        Math.round(
+            overScore
+        );
+
+
     const over25Prediction =
-        overScore >= 55 ? "OVER 2.5" : "UNDER 2.5";
+        overScore >= 55
+            ? "OVER 2.5"
+            : "UNDER 2.5";
 
-    // BTTS
+
+    /* =========================
+       BTTS
+    ========================= */
+
     let bttsScore =
-        poisson.btts * 0.50 +
-        ((homeStats.bttsRate + awayStats.bttsRate) / 2) * 0.20 +
-        ((homeStats.avgScored + awayStats.avgScored) / 2) * 15 * 0.10 +
-        ((homeStats.reliability + awayStats.reliability) / 2) * 100 * 0.10 +
-        (Math.min(xg.totalExpectedGoals, 4) / 4) * 100 * 0.10;
 
-    bttsScore = Math.max(5, Math.min(95, bttsScore));
+        poisson.btts * 0.70 +
 
-    const bttsConfidence = Math.round(bttsScore);
+        (
+            (
+                Number(homeStats.bttsRate || 0) +
+                Number(awayStats.bttsRate || 0)
+            ) / 2
+        ) * 0.20 +
+
+        (
+            Math.min(
+                xg.totalExpectedGoals,
+                4
+            ) / 4
+        ) * 100 * 0.10;
+
+
+    bttsScore =
+        Math.max(
+            5,
+            Math.min(
+                95,
+                bttsScore
+            )
+        );
+
+
+    const bttsConfidence =
+        Math.round(
+            bttsScore
+        );
+
+
     const bttsPrediction =
-        bttsScore >= 55 ? "OUI" : "NON";
+        bttsScore >= 55
+            ? "OUI"
+            : "NON";
 
-    // CORRECT SCORE
-    const goalDiff = Math.abs(
-        homeStats.strength - awayStats.strength
-    );
 
-    let correctScore = poisson.exactScore.score;
+    /* =========================
+       CORRECT SCORE
+       
+       IMPORTANT :
+       On ne remplace plus le score
+       Poisson par des règles arbitraires.
+    ========================= */
 
-    if (xg.totalExpectedGoals >= 3.2) {
-        correctScore =
-            winner === match.homeTeam.name
-                ? "2-1"
-                : winner === match.awayTeam.name
-                    ? "1-2"
-                    : "2-2";
-    } else if (goalDiff >= 20) {
-        correctScore =
-            winner === match.homeTeam.name
-                ? "2-0"
-                : winner === match.awayTeam.name
-                    ? "0-2"
-                    : correctScore;
-    } else if (xg.totalExpectedGoals <= 2) {
-        correctScore =
-            winner === "DRAW"
-                ? "0-0"
-                : winner === match.homeTeam.name
-                    ? "1-0"
-                    : "0-1";
-    }
+    const correctScore =
+        poisson.exactScore.score;
 
-    // AI RATING
-    const finalAIScore =
-        adjustedConfidence * 0.45 +
-        poisson.dominance * 0.20 +
-        ((homeStats.stability + awayStats.stability) / 2) * 0.15 +
-        ((homeStats.reliability + awayStats.reliability) * 50) * 0.20;
 
-    const aiRating = Math.round(
-        Math.max(0, Math.min(100, finalAIScore))
-    );
+    const correctScoreProbability =
+        poisson.exactScore.probability;
 
-    // DECISION ENGINE
-    const aiDecision = evaluateDecision({
-        confidence: adjustedConfidence,
-        poisson,
-        homeStats,
-        awayStats,
-        eloProbability,
-        winner
-    });
+
+    /* =========================
+       AI RATING
+    ========================= */
+
+    const averageStability =
+        (
+            Number(homeStats.stability || 50) +
+            Number(awayStats.stability || 50)
+        ) / 2;
+
+
+    const averageReliability =
+        (
+            Number(homeStats.reliability || 0.5) +
+            Number(awayStats.reliability || 0.5)
+        ) / 2;
+
+
+    const aiRating =
+        Math.round(
+            Math.max(
+                0,
+                Math.min(
+                    100,
+
+                    confidence * 0.55 +
+
+                    poisson.dominance * 0.20 +
+
+                    averageStability * 0.10 +
+
+                    averageReliability * 100 * 0.15
+
+                )
+            )
+        );
+
+
+    /* =========================
+       DECISION ENGINE
+    ========================= */
+
+    const aiDecision =
+        evaluateDecision({
+
+            confidence,
+
+            poisson,
+
+            homeStats,
+
+            awayStats,
+
+            eloProbability,
+
+            winner
+
+        });
+
 
     console.log(
         "👑 AI:",
@@ -248,59 +541,136 @@ async function analyzeMatch(match) {
         aiDecision.score
     );
 
-    // PREDICTION STRENGTH
-    const predictionStrength = Math.round(
-        (
-            aiRating +
-            adjustedConfidence +
-            poisson.matchScore
-        ) / 3
-    );
 
-    // FINAL RESULT
+    /* =========================
+       PREDICTION STRENGTH
+    ========================= */
+
+    const predictionStrength =
+        Math.round(
+
+            (
+                aiRating +
+                confidence +
+                poisson.matchScore
+
+            ) / 3
+
+        );
+
+
+    /* =========================
+       FINAL RESULT
+    ========================= */
+
     const result = {
+
         match: {
-            id: match.id,
-            utcDate: match.utcDate,
-            competition: match.competition,
-            homeTeam: match.homeTeam,
-            awayTeam: match.awayTeam
+
+            id:
+                match.id,
+
+            utcDate:
+                match.utcDate,
+
+            competition:
+                match.competition,
+
+            homeTeam:
+                match.homeTeam,
+
+            awayTeam:
+                match.awayTeam
+
         },
+
 
         predictions: {
-            winner,
-            winnerConfidence: adjustedConfidence,
-            aiDecision,
-            aiRating,
-            predictionStrength,
-            quality: predictionQuality,
-            probabilities: poisson.probabilities,
 
-            over25: over25Prediction,
+            /*
+             * 1X2
+             */
+
+            winner,
+
+            winnerConfidence:
+                confidence,
+
+            aiDecision,
+
+            aiRating,
+
+            predictionStrength,
+
+            quality:
+                predictionQuality,
+
+            probabilities:
+                poisson.probabilities,
+
+
+            /*
+             * OVER 2.5
+             */
+
+            over25:
+                over25Prediction,
+
             over25Confidence,
 
-            btts: bttsPrediction,
+
+            /*
+             * BTTS
+             */
+
+            btts:
+                bttsPrediction,
+
             bttsConfidence,
 
+
+            /*
+             * SCORE EXACT
+             */
+
             correctScore,
-            correctScoreProbability:
-                poisson.exactScore.probability
+
+            correctScoreProbability
+
         },
+
 
         teamStats: {
-            home: homeStats,
-            away: awayStats
+
+            home:
+                homeStats,
+
+            away:
+                awayStats
+
         },
 
+
         model: {
+
             elo: {
-                home: homeElo,
-                away: awayElo,
+
+                home:
+                    homeElo,
+
+                away:
+                    awayElo,
+
                 homeProbability:
-                    Math.round(eloProbability * 100)
+                    Math.round(
+                        eloProbability * 100
+                    )
+
             },
 
+
             learning,
+
 
             expectedGoals:
                 xg.totalExpectedGoals,
@@ -311,35 +681,61 @@ async function analyzeMatch(match) {
             expectedAwayGoals:
                 xg.expectedAwayGoals,
 
+
             poissonMatrix:
                 poisson.matrix
+
         }
+
     };
 
-    // UPDATE ELO UNIQUEMENT POUR UN MATCH TERMINÉ
-    if (
-        match.status === "FINISHED" &&
-        match.score?.fullTime
-    ) {
-        updateMatchElo(
-            match.homeTeam.id,
-            match.awayTeam.id,
-            match.score.fullTime.home,
-            match.score.fullTime.away
-        );
-    }
 
-    // CACHE
-    ANALYSIS_CACHE.set(key, {
-        time: Date.now(),
-        data: result
-    });
+    /*
+    =================================
+    IMPORTANT
+    =================================
 
-    console.log("✅ MATCH ANALYZED:", name);
+    AUCUNE MISE À JOUR ELO ICI.
+
+    L'ELO est construit séparément
+    à partir de l'historique.
+
+    analyzeMatch() = prédiction seulement.
+    =================================
+    */
+
+
+    /* =========================
+       CACHE
+    ========================= */
+
+    ANALYSIS_CACHE.set(
+        key,
+        {
+            time:
+                Date.now(),
+
+            data:
+                result
+        }
+    );
+
+
+    console.log(
+        "✅ MATCH ANALYZED:",
+        name
+    );
+
     console.timeEnd(name);
+
 
     return result;
 }
+
+
+/* =========================
+   EXPORT
+========================= */
 
 module.exports = {
     analyzeMatch
