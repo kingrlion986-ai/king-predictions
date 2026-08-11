@@ -237,21 +237,15 @@ async function analyzeMatch(match) {
         }
     );
 
+    /* =========================
+   DATA VALIDATION
+========================= */
 
-    const xg =
-        calculateExpectedGoals(
-
-            homeStats,
-
-            awayStats,
-
-            if (
+if (
     !homeStats ||
     !awayStats ||
-    homeStats.played < 5 ||
-    awayStats.played < 5 ||
-    homeStats.dataAvailable === false ||
-    awayStats.dataAvailable === false
+    Number(homeStats.played || 0) < 5 ||
+    Number(awayStats.played || 0) < 5
 ) {
     console.log(
         "🚫 MATCH REJECTED - INSUFFICIENT TEAM DATA"
@@ -259,34 +253,69 @@ async function analyzeMatch(match) {
 
     console.log(
         "HOME:",
-        homeStats?.teamName,
-        "MATCHES:",
+        match.homeTeam.name,
+        "| MATCHES:",
         homeStats?.played ?? 0
     );
 
     console.log(
         "AWAY:",
-        awayStats?.teamName,
-        "MATCHES:",
+        match.awayTeam.name,
+        "| MATCHES:",
         awayStats?.played ?? 0
     );
 
+    console.timeEnd(timer);
+
     return null;
-    }
-
-            {
-                home: homeElo,
-                away: awayElo
-            }
-
-        );
+}
 
 
-    console.log(
-        "XG =",
-        xg
+/* =========================
+   ELO
+========================= */
+
+const homeElo =
+    getTeamElo(match.homeTeam.id);
+
+const awayElo =
+    getTeamElo(match.awayTeam.id);
+
+const eloProbability =
+    calculateEloProbability(
+        homeElo,
+        awayElo
     );
 
+
+/* =========================
+   WEIGHTS
+========================= */
+
+const weights =
+    getWeights();
+
+
+/* =========================
+   EXPECTED GOALS
+========================= */
+
+console.log("2 - XG");
+
+const xg =
+    calculateExpectedGoals(
+        homeStats,
+        awayStats,
+        {
+            home: homeElo,
+            away: awayElo
+        }
+    );
+
+console.log(
+    "XG =",
+    xg
+);
 
     /* =========================
        POISSON
