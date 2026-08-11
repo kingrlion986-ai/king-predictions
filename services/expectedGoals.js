@@ -1,38 +1,184 @@
-/* =========================
-   EXPECTED GOALS ENGINE V18
-========================= */
+/*
+=========================================
+ KING PREDICTIONS AI
+ EXPECTED GOALS ENGINE
+ STABLE / CALIBRATED
+=========================================
+*/
 
 function clamp(value, min, max) {
-
     return Math.max(
         min,
-        Math.min(
-            max,
-            value
-        )
+        Math.min(max, value)
     );
-
 }
 
-
 function round(value) {
-
     return Number(
         value.toFixed(2)
     );
+}
 
+function safe(value, fallback = 0) {
+    const n = Number(value);
+
+    return Number.isFinite(n)
+        ? n
+        : fallback;
+}
+
+/*
+=========================================
+ BASELINES
+
+ Valeurs neutres utilisées uniquement
+ lorsque les données sont insuffisantes.
+=========================================
+*/
+
+const LEAGUE_HOME_GOALS = 1.45;
+const LEAGUE_AWAY_GOALS = 1.15;
+
+/*
+=========================================
+ NORMALISATION
+
+ On compare les équipes à une base
+ neutre plutôt que de soustraire
+ directement defensePower.
+
+ C'est important :
+
+ defensePower = 3 - buts encaissés
+
+ Donc une bonne défense donne un
+ chiffre élevé.
+
+ Il ne faut PAS faire :
+
+ attaque - defensePower
+
+ car cela écrase artificiellement le xG.
+=========================================
+*/
+
+function calculateAttackStrength(
+    avgScored,
+    venueAttack,
+    leagueBaseline
+) {
+
+    const generalAttack =
+        safe(avgScored, leagueBaseline);
+
+    const specificAttack =
+        safe(
+            venueAttack,
+            generalAttack
+        );
+
+    /*
+     * 60% attaque générale
+     * 40% attaque spécifique
+     */
+
+    const blendedAttack =
+        generalAttack * 0.60 +
+        specificAttack * 0.40;
+
+    return clamp(
+        blendedAttack /
+        leagueBaseline,
+        0.55,
+        1.80
+    );
+}
+
+
+function calculateDefenseStrength(
+    avgConceded,
+    venueDefense,
+    leagueBaseline
+) {
+
+    const generalDefense =
+        safe(avgConceded, leagueBaseline);
+
+    const specificDefense =
+        safe(
+            venueDefense,
+            generalDefense
+        );
+
+    /*
+     * 60% défense générale
+     * 40% défense spécifique
+     */
+
+    const blendedDefense =
+        generalDefense * 0.60 +
+        specificDefense * 0.40;
+
+    /*
+     * Plus une équipe encaisse,
+     * plus le multiplicateur devient élevé.
+     *
+     * Exemple :
+     *
+     * 1.0 encaissé
+     * → facteur défensif faible
+     *
+     * 2.0 encaissés
+     * → facteur défensif élevé
+     */
+
+    return clamp(
+        blendedDefense /
+        leagueBaseline,
+        0.55,
+        1.80
+    );
 }
 
 
 /*
-    Calcul xG
+=========================================
+ ELO ADJUSTMENT
 
-    Utilise :
-    - attaque équipe
-    - défense adverse
-    - forme
-    - Elo
-    - avantage domicile
+ Influence volontairement faible.
+
+ ELO ne doit pas remplacer les buts
+ réellement observés.
+=========================================
+*/
+
+function calculateEloAdjustment(
+    eloHome,
+    eloAway
+) {
+
+    if (
+        !Number.isFinite(eloHome) ||
+        !Number.isFinite(eloAway)
+    ) {
+        return 0;
+    }
+
+    const difference =
+        eloHome - eloAway;
+
+    return clamp(
+        difference / 1000,
+        -0.10,
+        0.10
+    );
+}
+
+
+/*
+=========================================
+ MAIN XG
+=========================================
 */
 
 function calculateExpectedGoals(
@@ -41,401 +187,345 @@ function calculateExpectedGoals(
     elo = null
 ) {
 
-
     /*
-       Force offensive domicile
+    =================================
+    DONNÉES DE BASE
+    =================================
     */
 
-    const homeAttack =
-(
-    home.attackPower * 0.45
-)
-+
-(
-    home.homeAttack * 0.35
-)
-+
-(
-    home.avgScored * 0.20
-);
+    const homeAvgScored =
+        safe(
+            home?.avgScored,
+            LEAGUE_HOME_GOALS
+        );
 
+    const awayAvgScored =
+        safe(
+            away?.avgScored,
+            LEAGUE_AWAY_GOALS
+        );
+
+    const homeAvgConceded =
+        safe(
+            home?.avgConceded,
+            LEAGUE_HOME_GOALS
+        );
+
+    const awayAvgConceded =
+        safe(
+            away?.avgConceded,
+            LEAGUE_AWAY_GOALS
+        );
 
 
     /*
-       Force offensive extérieur
+    =================================
+    ATTAQUE
+    =================================
     */
 
-    const awayAttack =
-(
-    away.attackPower * 0.45
-)
-+
-(
-    away.awayAttack * 0.35
-)
-+
-(
-    away.avgScored * 0.20
-);
+    const homeAttackStrength =
+        calculateAttackStrength(
+            homeAvgScored,
+            home?.homeAttack,
+            LEAGUE_HOME_GOALS
+        );
 
-   const homeReliability =
-    home.reliability ?? 0.7;
-
-const awayReliability =
-    away.reliability ?? 0.7;
-
-   const homeStability =
-    (home.stability ?? 50) / 100;
-
-const awayStability =
-    (away.stability ?? 50) / 100;
-
-   const homeMomentum =
-    home.momentum ?? 0;
-
-const awayMomentum =
-    away.momentum ?? 0;
-
-const homeOpponent =
-    home.averageOpponentStrength ?? 50;
-
-const awayOpponent =
-    away.averageOpponentStrength ?? 50;
-
+    const awayAttackStrength =
+        calculateAttackStrength(
+            awayAvgScored,
+            away?.awayAttack,
+            LEAGUE_AWAY_GOALS
+        );
 
 
     /*
-       Défenses adverses
+    =================================
+    DÉFENSE
+    =================================
     */
 
-    const awayDefense =
-(
-    away.defensePower * 0.40
-)
-+
-(
-    away.awayDefense * 0.30
-)
-+
-(
-    away.avgConceded * 0.30
-);
+    const homeDefenseStrength =
+        calculateDefenseStrength(
+            homeAvgConceded,
+            home?.homeDefense,
+            LEAGUE_HOME_GOALS
+        );
 
-
-
-    const homeDefense =
-(
-    home.defensePower * 0.40
-)
-+
-(
-    home.homeDefense * 0.30
-)
-+
-(
-    home.avgConceded * 0.30
-);
-
+    const awayDefenseStrength =
+        calculateDefenseStrength(
+            awayAvgConceded,
+            away?.awayDefense,
+            LEAGUE_AWAY_GOALS
+        );
 
 
     /*
-       Base xG
+    =================================
+    BASE XG
+
+    Formule simple :
+
+    attaque équipe
+    ×
+    défense adverse
+
+    Cela évite les soustractions
+    artificielles.
+    =================================
     */
 
     let homeXG =
-(
-    homeAttack * 0.72
-)
--
-(
-    awayDefense * 0.18
-);
+        LEAGUE_HOME_GOALS *
+        homeAttackStrength *
+        awayDefenseStrength;
 
-let awayXG =
-(
-    awayAttack * 0.72
-)
--
-(
-    homeDefense * 0.18
-);
-
-homeXG *=
-    (0.80 +
-    homeReliability * 0.10 +
-    homeStability * 0.10);
-
-awayXG *=
-    (0.80 +
-    awayReliability * 0.10 +
-    awayStability * 0.10);
+    let awayXG =
+        LEAGUE_AWAY_GOALS *
+        awayAttackStrength *
+        homeDefenseStrength;
 
 
     /*
-       Avantage domicile
+    =================================
+    AVANTAGE DOMICILE
+
+    Petit bonus fixe.
+
+    Pas de +0.25 énorme après
+    plusieurs autres bonus.
+    =================================
     */
 
-    homeXG += 0.25;
-
-   /*
-   Bonus domicile / extérieur
-*/
-
-homeXG +=
-    (home.homeAttack - away.awayDefense) * 0.08;
-
-awayXG +=
-    (away.awayAttack - home.homeDefense) * 0.08;
+    homeXG += 0.12;
 
 
-   /*
-       Influence Elo
-       Influence modérée pour éviter
-       que l'Elo écrase complètement le xG
+    /*
+    =================================
+    ELO
+
+    Influence très modérée.
+    =================================
     */
 
-    if (elo) {
+    if (
+        elo &&
+        Number.isFinite(Number(elo.home)) &&
+        Number.isFinite(Number(elo.away))
+    ) {
 
-        const difference =
-            elo.home -
-            elo.away;
-
-        const factor =
-            clamp(
-                difference / 1600,
-                -0.10,
-                0.10
+        const eloAdjustment =
+            calculateEloAdjustment(
+                Number(elo.home),
+                Number(elo.away)
             );
 
-        homeXG += factor;
-        awayXG -= factor;
-
+        homeXG += eloAdjustment;
+        awayXG -= eloAdjustment * 0.70;
     }
 
 
     /*
-       Influence de la force globale
+    =================================
+    FORME
+
+    Influence légère uniquement.
+
+    On ne réutilise PAS ici :
+    strength + formScore + momentum
+    tous ensemble.
+
+    Sinon les mêmes informations
+    sont comptées plusieurs fois.
+    =================================
     */
 
-    const strengthDifference =
-        home.strength -
-        away.strength;
+    const homeMomentum =
+        safe(home?.momentum, 0);
 
-    const formDifference =
-        home.formPoints -
-        away.formPoints;
+    const awayMomentum =
+        safe(away?.momentum, 0);
 
-    homeXG +=
+    const momentumDifference =
+        homeMomentum - awayMomentum;
+
+    const momentumAdjustment =
         clamp(
-            formDifference * 0.06,
-            -0.15,
-            0.15
-        );
-
-    awayXG +=
-        clamp(
-            -formDifference * 0.06,
-            -0.15,
-            0.15
-        );
-
-    const strengthFactor =
-        clamp(
-            strengthDifference / 250,
-            -0.15,
-            0.15
-        );
-
-    homeXG += strengthFactor;
-    awayXG -= strengthFactor;
-
-
-    /*
-       Momentum récent
-    */
-
-    homeXG +=
-        clamp(
-            (homeMomentum - awayMomentum) * 0.04,
-            -0.12,
-            0.12
-        );
-
-    awayXG +=
-        clamp(
-            (awayMomentum - homeMomentum) * 0.03,
-            -0.10,
-            0.10
-        );
-
-
-    /*
-       Niveau des adversaires affrontés
-    */
-
-    homeXG +=
-        clamp(
-            (homeOpponent - awayOpponent) / 250,
+            momentumDifference * 0.025,
             -0.08,
             0.08
         );
 
-    awayXG +=
+    homeXG += momentumAdjustment;
+    awayXG -= momentumAdjustment * 0.70;
+
+
+    /*
+    =================================
+    DIFFICULTÉ À MARQUER
+
+    Petit ajustement seulement.
+    =================================
+    */
+
+    const homeFailedRate =
+        safe(home?.failedToScore, 0) /
+        Math.max(
+            safe(home?.played, 1),
+            1
+        );
+
+    const awayFailedRate =
+        safe(away?.failedToScore, 0) /
+        Math.max(
+            safe(away?.played, 1),
+            1
+        );
+
+    homeXG -=
         clamp(
-            (awayOpponent - homeOpponent) / 250,
-            -0.08,
+            homeFailedRate * 0.08,
+            0,
+            0.08
+        );
+
+    awayXG -=
+        clamp(
+            awayFailedRate * 0.08,
+            0,
             0.08
         );
 
 
     /*
-       Difficulté à marquer
+    =================================
+    CLEAN SHEETS
+
+    Influence faible.
+
+    Une clean sheet ne doit pas
+    réduire brutalement le xG adverse.
+    =================================
     */
+
+    const awayCleanSheetRate =
+        safe(away?.cleanSheets, 0) /
+        Math.max(
+            safe(away?.played, 1),
+            1
+        );
+
+    const homeCleanSheetRate =
+        safe(home?.cleanSheets, 0) /
+        Math.max(
+            safe(home?.played, 1),
+            1
+        );
 
     homeXG -=
-        (
-            home.failedToScore /
-            Math.max(home.played, 1)
-        ) * 0.15;
+        clamp(
+            awayCleanSheetRate * 0.06,
+            0,
+            0.06
+        );
 
     awayXG -=
-        (
-            away.failedToScore /
-            Math.max(away.played, 1)
-        ) * 0.15;
+        clamp(
+            homeCleanSheetRate * 0.06,
+            0,
+            0.06
+        );
 
 
     /*
-       Solidité défensive
+    =================================
+    STABILITÉ / FIABILITÉ
+
+    Seulement une correction minime.
+
+    Elles servent principalement à la
+    confidence, pas à fabriquer des buts.
+    =================================
     */
 
-    homeXG -=
-        (
-            away.cleanSheets /
-            Math.max(away.played, 1)
-        ) * 0.10;
-
-    awayXG -=
-        (
-            home.cleanSheets /
-            Math.max(home.played, 1)
-        ) * 0.10;
-
 
     /*
-       Bonus offensifs
-    */
+    =================================
+    LIMITES
 
-    homeXG +=
-        (home.over25Rate / 100) * 0.04;
-
-    awayXG +=
-        (away.over25Rate / 100) * 0.04;
-
-    homeXG +=
-        (home.bttsRate / 100) * 0.03;
-
-    awayXG +=
-        (away.bttsRate / 100) * 0.03;
-
-
-    /*
-       Limites réalistes
+    Un match réel peut avoir beaucoup
+    de buts, mais on évite les valeurs
+    extrêmes dans le modèle.
+    =================================
     */
 
     homeXG =
         clamp(
             homeXG,
-            0.25,
-            2.80
+            0.35,
+            3.20
         );
 
     awayXG =
         clamp(
             awayXG,
             0.25,
-            2.80
+            3.00
         );
 
-/*
-      Ajustement domination
-      Bonus limité pour éviter
-      les xG artificiellement élevés
-   */
 
-    const dominance =
-        Math.abs(
-            home.strength -
-            away.strength
-        );
+    const totalExpectedGoals =
+        homeXG + awayXG;
 
-    if (dominance >= 30) {
 
-        if (home.strength > away.strength) {
+    /*
+    =================================
+    DEBUG
+    =================================
+    */
 
-            homeXG += 0.08;
-            awayXG -= 0.03;
+    console.log(
+        "===== EXPECTED GOALS ====="
+    );
 
-        } else {
+    console.log({
+        homeAttackStrength:
+            round(homeAttackStrength),
 
-            awayXG += 0.08;
-            homeXG -= 0.03;
+        awayAttackStrength:
+            round(awayAttackStrength),
 
-        }
+        homeDefenseStrength:
+            round(homeDefenseStrength),
 
-    }
-    else if (dominance >= 18) {
+        awayDefenseStrength:
+            round(awayDefenseStrength),
 
-        if (home.strength > away.strength) {
+        expectedHomeGoals:
+            round(homeXG),
 
-            homeXG += 0.04;
-            awayXG -= 0.02;
+        expectedAwayGoals:
+            round(awayXG),
 
-        } else {
+        totalExpectedGoals:
+            round(totalExpectedGoals)
+    });
 
-            awayXG += 0.04;
-            homeXG -= 0.02;
 
-        }
-
-    }
-
-    homeXG =
-        clamp(
-            homeXG,
-            0.30,
-            2.80
-        );
-
-    awayXG =
-        clamp(
-            awayXG,
-            0.30,
-            2.80
-        );
     return {
 
         expectedHomeGoals:
             round(homeXG),
 
-
         expectedAwayGoals:
             round(awayXG),
 
-
         totalExpectedGoals:
-            round(
-                homeXG +
-                awayXG
-            )
-
+            round(totalExpectedGoals)
     };
-
 }
 
 
 module.exports = {
-
     calculateExpectedGoals
-
 };
