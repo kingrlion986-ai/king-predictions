@@ -1,141 +1,255 @@
 /*
-=========================================
+========================================================
  KING PREDICTIONS AI
- VIP FILTER ENGINE V21
- MARKET SPECIFIC
-=========================================
+ VIP FILTER ENGINE V30
+ MARKET-SPECIFIC INTELLIGENT FILTER
+========================================================
+
+OBJECTIF :
+
+- Sélectionner uniquement les matchs réellement solides
+- Éviter les TRAP MATCH
+- Vérifier l'accord entre plusieurs modèles
+- Séparer 1X2 / OVER 2.5 / BTTS
+- Utiliser ELO + Poisson + XG + forme + stabilité
+- Ne jamais transformer un mauvais match en VIP
+========================================================
 */
 
 
-/* =========================
+/* ======================================================
    HELPERS
-========================= */
+====================================================== */
 
 function clamp(value, min, max) {
-
-    return Math.max(
-        min,
-        Math.min(max, value)
-    );
-
+    return Math.max(min, Math.min(max, value));
 }
 
 
 function num(value, fallback = 0) {
-
     const n = Number(value);
-
-    return Number.isFinite(n)
-        ? n
-        : fallback;
-
+    return Number.isFinite(n) ? n : fallback;
 }
 
 
-/* =========================
-   MAIN CONFIDENCE
-========================= */
+function avg(a, b) {
+    return (num(a) + num(b)) / 2;
+}
 
-function getModelConfidence(predictions = {}) {
+
+function getPredictions(match) {
+    return match?.predictions || {};
+}
+
+
+function getHome(match) {
+    return match?.teamStats?.home || {};
+}
+
+
+function getAway(match) {
+    return match?.teamStats?.away || {};
+}
+
+
+function getModelConfidence(match) {
+
+    const p = getPredictions(match);
 
     return num(
-        predictions.winnerConfidence ??
-        predictions.confidence,
+        p.winnerConfidence ??
+        p.confidence,
         0
     );
-
 }
 
 
-/* =========================
-   1X2 VIP SCORE
-========================= */
-function calculateVIPScore(match) {
+/* ======================================================
+   RISK
+====================================================== */
 
-    const predictions =
-        match?.predictions || {};
+function getRiskPenalty(match) {
 
-    const home =
-        match?.teamStats?.home || {};
+    const p = getPredictions(match);
 
-    const away =
-        match?.teamStats?.away || {};
+    const decision =
+        p?.aiDecision?.decision;
 
-    const model =
-        match?.model || {};
+    const risk =
+        p?.aiDecision?.risk ||
+        p?.risk;
 
-    let score = 0;
+    let penalty = 0;
 
-    /* =========================
-       MODEL CONFIDENCE
-    ========================= */
 
-    const confidence =
-        getModelConfidence(predictions);
+    if (decision === "TRAP MATCH")
+        penalty += 30;
 
-    score += confidence * 0.30;
+    if (risk === "VERY HIGH")
+        penalty += 25;
 
-    /* =========================
-       AI RATING
-    ========================= */
+    else if (risk === "HIGH")
+        penalty += 15;
 
-    const aiRating =
-        num(predictions.aiRating);
+    else if (risk === "MEDIUM")
+        penalty += 5;
 
-    score += aiRating * 0.15;
 
-    /* =========================
-       PREDICTION STRENGTH
-    ========================= */
+    return penalty;
+}
 
-    const predictionStrength =
-        num(predictions.predictionStrength);
 
-    score += predictionStrength * 0.10;
+/* ======================================================
+   DATA QUALITY
+====================================================== */
 
-    /* =========================
-       PROBABILITIES
-    ========================= */
+function getDataQuality(match) {
+
+    const home = getHome(match);
+    const away = getAway(match);
+
+    const minPlayed =
+        Math.min(
+            num(home.played),
+            num(away.played)
+        );
+
+
+    if (minPlayed >= 10)
+        return 100;
+
+    if (minPlayed >= 8)
+        return 90;
+
+    if (minPlayed >= 6)
+        return 75;
+
+    if (minPlayed >= 5)
+        return 60;
+
+    return 25;
+}
+
+
+/* ======================================================
+   MODEL AGREEMENT
+====================================================== */
+
+function getModelAgreement(match) {
+
+    const p = getPredictions(match);
 
     const probabilities =
-        predictions.probabilities || {};
+        p.probabilities || {};
+
+    const homeWin =
+        num(probabilities.homeWin);
+
+    const draw =
+        num(probabilities.draw);
+
+    const awayWin =
+        num(probabilities.awayWin);
+
 
     const values = [
-
-        num(probabilities.homeWin),
-
-        num(probabilities.draw),
-
-        num(probabilities.awayWin)
-
+        homeWin,
+        draw,
+        awayWin
     ];
+
+
+    const favorite =
+        Math.max(...values);
+
+
+    const second =
+        [...values]
+            .sort((a, b) => b - a)[1];
+
+
+    const separation =
+        favorite - second;
+
+
+    /*
+       Plus la séparation est importante,
+       plus le modèle est clair.
+    */
+
+    return clamp(
+        50 + separation * 2,
+        0,
+        100
+    );
+}
+
+
+/* ======================================================
+   1X2 VIP SCORE
+====================================================== */
+
+function calculateVIPScore(match) {
+
+    const p = getPredictions(match);
+    const home = getHome(match);
+    const away = getAway(match);
+
+
+    const probabilities =
+        p.probabilities || {};
+
+
+    const homeWin =
+        num(probabilities.homeWin);
+
+    const draw =
+        num(probabilities.draw);
+
+    const awayWin =
+        num(probabilities.awayWin);
+
+
+    const values = [
+        homeWin,
+        draw,
+        awayWin
+    ];
+
 
     const sorted =
         [...values].sort(
             (a, b) => b - a
         );
 
-    const favoriteProbability =
+
+    const favorite =
         sorted[0];
 
-    const secondProbability =
+    const second =
         sorted[1];
 
     const separation =
-        favoriteProbability -
-        secondProbability;
+        favorite - second;
 
-    score += favoriteProbability * 0.20;
 
-    score += clamp(
-        separation * 0.70,
-        0,
-        15
-    );
+    const confidence =
+        getModelConfidence(match);
 
-    /* =========================
-       STRENGTH GAP
-    ========================= */
+
+    const stability =
+        avg(
+            home.stability,
+            away.stability
+        );
+
+
+    const reliability =
+        avg(
+            home.reliability,
+            away.reliability
+        ) * 100;
+
 
     const strengthGap =
         Math.abs(
@@ -143,179 +257,133 @@ function calculateVIPScore(match) {
             num(away.strength)
         );
 
-    score += clamp(
-        strengthGap * 0.40,
-        0,
-        10
-    );
 
-    /* =========================
-       STABILITY
-    ========================= */
+    const modelAgreement =
+        getModelAgreement(match);
 
-    const stability =
-        (
-            num(home.stability, 50) +
-            num(away.stability, 50)
-        ) / 2;
 
-    score += stability * 0.08;
+    const dataQuality =
+        getDataQuality(match);
 
-    /* =========================
-       RELIABILITY
-    ========================= */
 
-    const reliability =
-        (
-            num(home.reliability, 0.5) +
-            num(away.reliability, 0.5)
-        ) / 2;
+    const riskPenalty =
+        getRiskPenalty(match);
 
-    score += reliability * 100 * 0.08;
 
-    /* =========================
-       EXPECTED GOALS
-    ========================= */
+    /*
+       SCORE PRINCIPAL
+    */
 
-    const xg =
-        num(model.expectedGoals);
+    let score = 0;
 
-    score += clamp(
-        xg * 5,
-        0,
-        10
-    );
 
-    /* =========================
-       POISSON DOMINANCE
-    ========================= */
+    score +=
+        confidence * 0.30;
 
-    const dominance =
-        num(
-            predictions?.aiDecision?.score
+
+    score +=
+        favorite * 0.25;
+
+
+    score +=
+        clamp(
+            separation * 1.5,
+            0,
+            20
         );
 
-    score += dominance * 0.05;
 
-    /* =========================
-       DATA QUALITY
-    ========================= */
+    score +=
+        stability * 0.10;
 
-    if (
-        num(home.played) < 5 ||
-        num(away.played) < 5
-    ) {
-        score -= 25;
-    }
 
-    /* =========================
-       FAVORITE TOO LOW
-    ========================= */
+    score +=
+        reliability * 0.10;
 
-    if (favoriteProbability < 55) {
+
+    score +=
+        modelAgreement * 0.10;
+
+
+    score +=
+        dataQuality * 0.05;
+
+
+    /*
+       FORCE GAP
+    */
+
+    score +=
+        clamp(
+            strengthGap * 0.30,
+            0,
+            6
+        );
+
+
+    /*
+       RISQUE
+    */
+
+    score -= riskPenalty;
+
+
+    /*
+       PAS DE FAVORI CLAIR
+    */
+
+    if (favorite < 55)
+        score -= 15;
+
+
+    if (favorite < 50)
         score -= 20;
-    }
 
-    if (favoriteProbability < 50) {
-        score -= 35;
-    }
-
-    /* =========================
-       LOW CONFIDENCE
-    ========================= */
-
-    if (confidence < 60) {
-        score -= 20;
-    }
-
-    if (confidence < 50) {
-        score -= 30;
-    }
-
-    /* =========================
-       AI RISK
-    ========================= */
-
-    const risk =
-        predictions?.aiDecision?.risk;
-
-    if (risk === "HIGH") {
-        score -= 20;
-    }
-
-    if (risk === "VERY HIGH") {
-        score -= 40;
-    }
-
-    /* =========================
-       TRAP MATCH
-    ========================= */
-
-    const decision =
-        predictions?.aiDecision?.decision;
-
-    if (decision === "TRAP MATCH") {
-        score -= 50;
-    }
-
-    /* =========================
-       BONUS ELITE PICK
-    ========================= */
-
-    if (
-        confidence >= 80 &&
-        favoriteProbability >= 65 &&
-        separation >= 20
-    ) {
-        score += 10;
-    }
 
     return Math.round(
         clamp(score, 0, 100)
     );
 }
 
-/* =========================
-   OVER 2.5 SCORE
-========================= */
+
+/* ======================================================
+   OVER 2.5
+====================================================== */
 
 function calculateOver25Score(match) {
 
-    const predictions =
-        match?.predictions || {};
-
-    const home =
-        match?.teamStats?.home || {};
-
-    const away =
-        match?.teamStats?.away || {};
+    const p = getPredictions(match);
+    const home = getHome(match);
+    const away = getAway(match);
 
 
-    const overConfidence =
-        num(
-            predictions.over25Confidence
-        );
+    const confidence =
+        num(p.over25Confidence);
 
 
-    const homeRate =
-        num(home.over25Rate);
-
-    const awayRate =
-        num(away.over25Rate);
+    const overPrediction =
+        p.over25;
 
 
-    const averageOverRate =
-        (
-            homeRate +
-            awayRate
-        ) / 2;
+    const overRate =
+        avg(
+            home.over25Rate,
+            away.over25Rate
+        ) * 100;
+
+
+    const bttsRate =
+        avg(
+            home.bttsRate,
+            away.bttsRate
+        ) * 100;
 
 
     const reliability =
-        (
-            num(home.reliability, 0.5) +
-            num(away.reliability, 0.5)
-        ) / 2;
+        avg(
+            home.reliability,
+            away.reliability
+        ) * 100;
 
 
     const expectedGoals =
@@ -324,159 +392,162 @@ function calculateOver25Score(match) {
         );
 
 
+    const xgScore =
+        clamp(
+            (expectedGoals - 1.5)
+            / 2 * 100,
+            0,
+            100
+        );
+
+
+    const attackScore =
+        clamp(
+            (
+                num(home.avgScored) +
+                num(away.avgScored)
+            ) / 4 * 100,
+            0,
+            100
+        );
+
+
     let score = 0;
 
 
-    /*
-       Poisson / model
-    */
+    score += confidence * 0.35;
 
-    score +=
-        overConfidence * 0.55;
+    score += overRate * 0.20;
 
+    score += xgScore * 0.25;
 
-    /*
-       Historical OVER rate
-    */
+    score += bttsRate * 0.05;
 
-    score +=
-        averageOverRate *
-        100 *
-        0.20;
+    score += reliability * 0.10;
+
+    score += attackScore * 0.05;
 
 
     /*
-       Expected goals
+       Sécurité supplémentaire
     */
 
-    score +=
-        clamp(
-            expectedGoals / 3 * 100,
-            0,
-            100
-        ) * 0.15;
+    if (overPrediction !== "OVER 2.5")
+        score -= 30;
 
 
-    /*
-       Reliability
-    */
+    if (expectedGoals < 2.0)
+        score -= 20;
 
-    score +=
-        reliability *
-        100 *
-        0.10;
+
+    if (expectedGoals < 1.6)
+        score -= 25;
 
 
     return Math.round(
         clamp(score, 0, 100)
     );
-
 }
 
 
-/* =========================
-   BTTS SCORE
-========================= */
+/* ======================================================
+   BTTS
+====================================================== */
 
 function calculateBttsScore(match) {
 
-    const predictions =
-        match?.predictions || {};
-
-    const home =
-        match?.teamStats?.home || {};
-
-    const away =
-        match?.teamStats?.away || {};
+    const p = getPredictions(match);
+    const home = getHome(match);
+    const away = getAway(match);
 
 
-    const bttsConfidence =
-        num(
-            predictions.bttsConfidence
-        );
+    const confidence =
+        num(p.bttsConfidence);
 
 
-    const homeRate =
-        num(home.bttsRate);
-
-    const awayRate =
-        num(away.bttsRate);
+    const prediction =
+        p.btts;
 
 
-    const averageBttsRate =
-        (
-            homeRate +
-            awayRate
-        ) / 2;
+    const bttsRate =
+        avg(
+            home.bttsRate,
+            away.bttsRate
+        ) * 100;
 
 
     const reliability =
-        (
-            num(home.reliability, 0.5) +
-            num(away.reliability, 0.5)
-        ) / 2;
+        avg(
+            home.reliability,
+            away.reliability
+        ) * 100;
+
+
+    const expectedGoals =
+        num(
+            match?.model?.expectedGoals
+        );
 
 
     const avgScored =
-        (
-            num(home.avgScored) +
-            num(away.avgScored)
-        ) / 2;
+        avg(
+            home.avgScored,
+            away.avgScored
+        );
+
+
+    const xgScore =
+        clamp(
+            (expectedGoals - 1.5)
+            / 2 * 100,
+            0,
+            100
+        );
+
+
+    const attackScore =
+        clamp(
+            avgScored * 30,
+            0,
+            100
+        );
 
 
     let score = 0;
 
 
-    /*
-       Model BTTS
-    */
+    score += confidence * 0.35;
 
-    score +=
-        bttsConfidence * 0.55;
+    score += bttsRate * 0.25;
 
+    score += reliability * 0.10;
 
-    /*
-       Historical BTTS
-    */
+    score += xgScore * 0.20;
 
-    score +=
-        averageBttsRate *
-        100 *
-        0.25;
+    score += attackScore * 0.10;
 
 
-    /*
-       Reliability
-    */
-
-    score +=
-        reliability *
-        100 *
-        0.10;
+    if (prediction !== "OUI")
+        score -= 30;
 
 
-    /*
-       Attacking strength
-    */
+    if (expectedGoals < 1.8)
+        score -= 20;
 
-    score +=
-        clamp(
-            avgScored * 20,
-            0,
-            10
-        );
+
+    if (expectedGoals < 1.5)
+        score -= 20;
 
 
     return Math.round(
         clamp(score, 0, 100)
     );
-
 }
 
 
-/* =========================
-   VIP 1X2
-========================= */
+/* ======================================================
+   VIP 1X2 FILTER
+====================================================== */
 
 function filterVipMatches(matches = []) {
 
@@ -484,37 +555,58 @@ function filterVipMatches(matches = []) {
 
         .map(match => ({
             ...match,
+
             vipScore:
                 calculateVIPScore(match)
         }))
 
         .filter(match => {
 
-            const predictions =
-                match.predictions || {};
+            const p =
+                getPredictions(match);
+
 
             const confidence =
-                getModelConfidence(
-                    predictions
-                );
+                getModelConfidence(match);
+
 
             const decision =
-                predictions?.aiDecision?.decision;
+                p?.aiDecision?.decision;
+
 
             const risk =
-                predictions?.aiDecision?.risk;
+                p?.aiDecision?.risk;
+
+
+            /*
+               BLOQUER LES TRAPS
+            */
+
+            if (
+                decision === "TRAP MATCH"
+            )
+                return false;
+
+
+            if (
+                risk === "VERY HIGH"
+            )
+                return false;
+
+
+            /*
+               CONDITIONS VIP
+            */
 
             return (
 
-                match.vipScore >= 75 &&
+                match.vipScore >= 70 &&
 
                 confidence >= 65 &&
 
-                risk !== "HIGH" &&
+                getDataQuality(match) >= 75 &&
 
-                risk !== "VERY HIGH" &&
-
-                decision !== "TRAP MATCH"
+                getModelAgreement(match) >= 60
 
             );
 
@@ -524,14 +616,13 @@ function filterVipMatches(matches = []) {
             (a, b) =>
                 b.vipScore -
                 a.vipScore
-        )
-
-        .slice(0, 5);
+        );
 }
 
-/* =========================
-   VIP OVER 2.5
-========================= */
+
+/* ======================================================
+   VIP OVER 2.5 FILTER
+====================================================== */
 
 function filterVipOver25(matches = []) {
 
@@ -548,37 +639,32 @@ function filterVipOver25(matches = []) {
 
         .filter(match => {
 
-            const predictions =
-                match.predictions || {};
+            const p =
+                getPredictions(match);
 
 
             const confidence =
+                num(p.over25Confidence);
+
+
+            const xg =
                 num(
-                    predictions
-                        .over25Confidence
+                    match?.model?.expectedGoals
                 );
-
-
-            const prediction =
-                predictions.over25;
-
-
-            /*
-               On veut uniquement
-               OVER 2.5
-            */
-
-            const isOver =
-                prediction === "OVER 2.5";
 
 
             return (
 
-                match.vipScore >= 60 &&
+                p.over25 ===
+                    "OVER 2.5" &&
 
-                confidence >= 55 &&
+                confidence >= 60 &&
 
-                isOver
+                xg >= 2.0 &&
+
+                match.vipScore >= 65 &&
+
+                getDataQuality(match) >= 75
 
             );
 
@@ -589,13 +675,12 @@ function filterVipOver25(matches = []) {
                 b.vipScore -
                 a.vipScore
         );
-
 }
 
 
-/* =========================
-   VIP BTTS
-========================= */
+/* ======================================================
+   VIP BTTS FILTER
+====================================================== */
 
 function filterVipBtts(matches = []) {
 
@@ -612,37 +697,31 @@ function filterVipBtts(matches = []) {
 
         .filter(match => {
 
-            const predictions =
-                match.predictions || {};
+            const p =
+                getPredictions(match);
 
 
             const confidence =
+                num(p.bttsConfidence);
+
+
+            const xg =
                 num(
-                    predictions
-                        .bttsConfidence
+                    match?.model?.expectedGoals
                 );
-
-
-            const prediction =
-                predictions.btts;
-
-
-            /*
-               On veut uniquement
-               BTTS OUI
-            */
-
-            const isBttsYes =
-                prediction === "OUI";
 
 
             return (
 
-                match.vipScore >= 60 &&
+                p.btts === "OUI" &&
 
-                confidence >= 55 &&
+                confidence >= 60 &&
 
-                isBttsYes
+                xg >= 1.8 &&
+
+                match.vipScore >= 65 &&
+
+                getDataQuality(match) >= 75
 
             );
 
@@ -653,13 +732,94 @@ function filterVipBtts(matches = []) {
                 b.vipScore -
                 a.vipScore
         );
-
 }
 
 
-/* =========================
+/* ======================================================
+   VIP MASTER FILTER
+====================================================== */
+
+function getBestVipMatches(matches = []) {
+
+    const all = [];
+
+
+    for (const match of matches) {
+
+        const oneX2 =
+            calculateVIPScore(match);
+
+        const over =
+            calculateOver25Score(match);
+
+        const btts =
+            calculateBttsScore(match);
+
+
+        const p =
+            getPredictions(match);
+
+
+        /*
+           On conserve uniquement
+           les matchs suffisamment solides.
+        */
+
+        if (
+            oneX2 >= 70 &&
+            getModelConfidence(match) >= 65
+        ) {
+
+            all.push({
+                ...match,
+                vipMarket: "1X2",
+                vipScore: oneX2
+            });
+
+        }
+
+
+        if (
+            over >= 65 &&
+            p.over25 === "OVER 2.5"
+        ) {
+
+            all.push({
+                ...match,
+                vipMarket: "OVER 2.5",
+                vipScore: over
+            });
+
+        }
+
+
+        if (
+            btts >= 65 &&
+            p.btts === "OUI"
+        ) {
+
+            all.push({
+                ...match,
+                vipMarket: "BTTS",
+                vipScore: btts
+            });
+
+        }
+
+    }
+
+
+    return all.sort(
+        (a, b) =>
+            b.vipScore -
+            a.vipScore
+    );
+}
+
+
+/* ======================================================
    EXPORTS
-========================= */
+====================================================== */
 
 module.exports = {
 
@@ -669,10 +829,16 @@ module.exports = {
 
     filterVipBtts,
 
+    getBestVipMatches,
+
     calculateVIPScore,
 
     calculateOver25Score,
 
-    calculateBttsScore
+    calculateBttsScore,
+
+    getDataQuality,
+
+    getModelAgreement
 
 };
