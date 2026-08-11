@@ -3,9 +3,9 @@ const fs = require("fs");
 const path = require("path");
 
 /* =====================================================
-   KING PREDICTIONS V16
+   KING PREDICTIONS
    FOOTBALL API ENGINE
-   HISTORICAL DATABASE SYSTEM
+   STABLE HISTORICAL DATABASE
 ===================================================== */
 
 
@@ -13,10 +13,7 @@ const path = require("path");
    DATABASES
 ========================= */
 
-// Matchs à venir pour les prédictions
 const UPCOMING_MATCH_DATABASE = [];
-
-// Matchs terminés pour analyser les équipes
 const HISTORY_MATCH_DATABASE = [];
 
 let DATABASE_INITIALIZING = null;
@@ -32,10 +29,20 @@ const BASE_URL =
     "https://api.football-data.org/v4";
 
 
+/*
+ * Saison actuelle et précédente.
+ *
+ * 2026 = saison 2026/27
+ * 2025 = saison 2025/26
+ */
+const CURRENT_SEASON = 2026;
+const PREVIOUS_SEASON = 2025;
+
 
 /* =========================
    COMPETITIONS
 ========================= */
+
 const PRIMARY_COMPETITIONS = [
     "PL",
     "PD",
@@ -56,22 +63,19 @@ const SECONDARY_COMPETITIONS = [
     "ELC"
 ];
 
+
 /* =========================
    COMPETITION WEIGHTS
 ========================= */
 
 const COMPETITION_WEIGHTS = {
 
-
-    // TOP 5
     PL: 1.20,
     PD: 1.20,
     SA: 1.15,
     BL1: 1.15,
     FL1: 1.10,
 
-
-    // EUROPE
     CL: 1.10,
 
     DED: 0.90,
@@ -79,104 +83,72 @@ const COMPETITION_WEIGHTS = {
     BSA: 0.95,
     ELC: 0.85
 
-
 };
 
 
 /* =========================
-   MEMORY CACHE
+   CACHE
 ========================= */
-
 
 const CACHE = {
 
-
-    upcoming:{
-
-        data:null,
-
-        expiresAt:0
-
+    upcoming: {
+        data: null,
+        expiresAt: 0
     },
 
-
-    history:{
-
-        data:null,
-
-        expiresAt:0
-
+    history: {
+        data: null,
+        expiresAt: 0
     },
 
-
-    teamMatches:new Map()
-
+    teamMatches: new Map()
 
 };
-
 
 
 const MATCH_CACHE_TTL =
     30 * 60 * 1000;
 
-
 const HISTORY_CACHE_TTL =
     24 * 60 * 60 * 1000;
 
-
 const TEAM_CACHE_TTL =
-    7 *
-    24 *
-    60 *
-    60 *
-    1000;
-
+    6 * 60 * 60 * 1000;
 
 
 /* =========================
    API QUEUE
 ========================= */
 
-
 const MAX_CONCURRENT_REQUESTS = 1;
 
-
 let activeRequests = 0;
-
 
 const REQUEST_QUEUE = [];
 
 
-
-function sleep(ms){
+function sleep(ms) {
 
     return new Promise(
-        resolve=>setTimeout(resolve,ms)
+        resolve => setTimeout(resolve, ms)
     );
 
 }
 
 
-
-function enqueue(task){
+function enqueue(task) {
 
     return new Promise(
-        (resolve,reject)=>{
-
+        (resolve, reject) => {
 
             REQUEST_QUEUE.push({
-
                 task,
-
                 resolve,
-
                 reject
-
             });
 
-
             processQueue();
-
 
         }
     );
@@ -184,60 +156,46 @@ function enqueue(task){
 }
 
 
+async function processQueue() {
 
-
-async function processQueue(){
-
-
-    if(
+    if (
         activeRequests >=
         MAX_CONCURRENT_REQUESTS
         ||
-        REQUEST_QUEUE.length===0
-    ){
+        REQUEST_QUEUE.length === 0
+    ) {
 
         return;
 
     }
 
-
-
     const job =
         REQUEST_QUEUE.shift();
 
-
-
     activeRequests++;
 
-
-
-    try{
+    try {
 
         const result =
             await job.task();
 
-
         job.resolve(result);
 
-
-
-    }catch(error){
+    }
+    catch (error) {
 
         job.reject(error);
 
     }
 
-
-
     activeRequests--;
-
 
     setImmediate(
         processQueue
     );
 
-
 }
+
 
 /* =========================
    API REQUEST
@@ -245,32 +203,43 @@ async function processQueue(){
 
 const MAX_RETRIES = 3;
 
+
 async function apiGet(endpoint) {
 
     return enqueue(async () => {
 
-        for (let retry = 0; retry <= MAX_RETRIES; retry++) {
+        for (
+            let retry = 0;
+            retry <= MAX_RETRIES;
+            retry++
+        ) {
 
             try {
 
-                console.log("➡️ API:", endpoint);
-
-                const controller = new AbortController();
-
-                const timeout = setTimeout(
-                    () => controller.abort(),
-                    10000
+                console.log(
+                    "➡️ API:",
+                    endpoint
                 );
 
-                const response = await fetch(
-                    `${BASE_URL}${endpoint}`,
-                    {
-                        headers: {
-                            "X-Auth-Token": API_KEY
-                        },
-                        signal: controller.signal
-                    }
-                );
+                const controller =
+                    new AbortController();
+
+                const timeout =
+                    setTimeout(
+                        () => controller.abort(),
+                        10000
+                    );
+
+                const response =
+                    await fetch(
+                        `${BASE_URL}${endpoint}`,
+                        {
+                            headers: {
+                                "X-Auth-Token": API_KEY
+                            },
+                            signal: controller.signal
+                        }
+                    );
 
                 clearTimeout(timeout);
 
@@ -279,16 +248,22 @@ async function apiGet(endpoint) {
                     response.status
                 );
 
-                /*
+
+                /* =========================
                    RATE LIMIT
-                */
+                ========================= */
 
-                if (response.status === 429) {
+                if (
+                    response.status === 429
+                ) {
 
-                    if (retry < MAX_RETRIES) {
+                    if (
+                        retry < MAX_RETRIES
+                    ) {
 
                         const delay =
-                            5000 * (retry + 1);
+                            5000 *
+                            (retry + 1);
 
                         console.log(
                             "⚠️ RATE LIMIT 429 - RETRY:",
@@ -298,6 +273,7 @@ async function apiGet(endpoint) {
                         await sleep(delay);
 
                         continue;
+
                     }
 
                     console.log(
@@ -306,92 +282,102 @@ async function apiGet(endpoint) {
                     );
 
                     return null;
+
                 }
 
-                /*
-                   AUTRE ERREUR
-                */
+
+                /* =========================
+                   OTHER ERROR
+                ========================= */
 
                 if (!response.ok) {
 
                     console.log(
                         "❌ API ERROR STATUS:",
-                        response.status
+                        response.status,
+                        "| ENDPOINT:",
+                        endpoint
                     );
 
                     return null;
+
                 }
 
-                /*
-                   SUCCÈS
-                */
+
+                /* =========================
+                   SUCCESS
+                ========================= */
 
                 return await response.json();
 
-            } catch (error) {
+            }
+            catch (error) {
 
                 console.log(
                     "API ERROR:",
                     error.message
                 );
 
+                if (
+                    retry < MAX_RETRIES
+                ) {
+
+                    await sleep(
+                        2000 *
+                        (retry + 1)
+                    );
+
+                    continue;
+
+                }
+
                 return null;
+
             }
+
         }
 
         return null;
+
     });
+
 }
-
-
 
 
 /* =========================
    FORMAT MATCH
 ========================= */
 
+function formatMatch(match) {
 
-function formatMatch(match){
-
-
-    if(
+    if (
         !match ||
         !match.homeTeam ||
         !match.awayTeam
-    ){
+    ) {
 
         return null;
 
     }
 
-
-
     return {
-
 
         id:
             match.id,
 
-
         utcDate:
             match.utcDate,
-
 
         status:
             match.status,
 
-
-
-        competition:{
-
+        competition: {
 
             code:
                 match.competition?.code,
 
-
             name:
                 match.competition?.name,
-
 
             weight:
                 COMPETITION_WEIGHTS[
@@ -400,137 +386,244 @@ function formatMatch(match){
                 ||
                 0.70
 
-
         },
 
-
-
-        homeTeam:{
-
+        homeTeam: {
 
             id:
                 match.homeTeam.id,
 
-
             name:
                 match.homeTeam.name
 
-
         },
 
-
-
-        awayTeam:{
-
+        awayTeam: {
 
             id:
                 match.awayTeam.id,
 
-
             name:
                 match.awayTeam.name
 
-
         },
-
-
 
         score:
             match.score
 
-
     };
 
+}
 
-           }
+
 /* =========================
-   LOAD HISTORY DATABASE
+   VALID FINISHED MATCH
 ========================= */
+
+function isValidFinishedMatch(match) {
+
+    return !!(
+        match &&
+        match.status === "FINISHED" &&
+        match.homeTeam &&
+        match.awayTeam &&
+        match.score &&
+        match.score.fullTime &&
+        Number.isFinite(
+            Number(
+                match.score.fullTime.home
+            )
+        ) &&
+        Number.isFinite(
+            Number(
+                match.score.fullTime.away
+            )
+        )
+    );
+
+}
+
+
+/* =========================
+   UNIQUE MATCHES
+========================= */
+
+function uniqueMatches(matches) {
+
+    const seen =
+        new Set();
+
+    const result = [];
+
+    for (
+        const match
+        of matches
+    ) {
+
+        if (
+            !match ||
+            !match.id
+        ) {
+
+            continue;
+
+        }
+
+        if (
+            seen.has(match.id)
+        ) {
+
+            continue;
+
+        }
+
+        seen.add(match.id);
+
+        result.push(match);
+
+    }
+
+    return result;
+
+}
+
+
+/* =========================
+   SORT RECENT
+========================= */
+
+function sortRecent(matches) {
+
+    return [...matches]
+        .sort(
+            (a, b) =>
+                new Date(b.utcDate) -
+                new Date(a.utcDate)
+        );
+
+}
+
+
+/* =====================================================
+   LOAD HISTORY DATABASE
+===================================================== */
 
 async function loadHistoryDatabase() {
 
-    if (HISTORY_MATCH_DATABASE.length > 0) {
+    if (
+        HISTORY_MATCH_DATABASE.length > 0
+    ) {
+
         return HISTORY_MATCH_DATABASE;
+
     }
+
 
     if (
         CACHE.history.data &&
-        Date.now() < CACHE.history.expiresAt
+        Date.now() <
+        CACHE.history.expiresAt
     ) {
+
         HISTORY_MATCH_DATABASE.length = 0;
 
         HISTORY_MATCH_DATABASE.push(
             ...CACHE.history.data
         );
 
+        console.log(
+            "📚 HISTORY CACHE USED:",
+            HISTORY_MATCH_DATABASE.length
+        );
+
         return HISTORY_MATCH_DATABASE;
+
     }
 
-    console.log("📚 LOADING HISTORY DATABASE");
+
+    console.log(
+        "📚 LOADING HISTORY DATABASE"
+    );
+
 
     HISTORY_MATCH_DATABASE.length = 0;
 
+
     const history = [];
 
-    for (const competition of PRIMARY_COMPETITIONS) {
 
-        const seasons = [2025];
+    /*
+     * Pour la base globale, on garde
+     * principalement la saison précédente.
+     *
+     * Les matchs de la saison actuelle
+     * sont récupérés directement par
+     * getTeamMatches() lorsque nécessaire.
+     *
+     * Cela évite de faire exploser
+     * les appels API au démarrage.
+     */
 
-        for (const season of seasons) {
+    for (
+        const competition
+        of PRIMARY_COMPETITIONS
+    ) {
 
-            const data = await apiGet(
+        const season =
+            PREVIOUS_SEASON;
+
+        const data =
+            await apiGet(
                 `/competitions/${competition}/matches?season=${season}`
             );
 
-            if (
-                !data ||
-                !Array.isArray(data.matches)
-            ) {
-                console.log(
-                    `⚠️ NO DATA: ${competition} ${season}`
-                );
 
-                continue;
-            }
+        if (
+            !data ||
+            !Array.isArray(data.matches)
+        ) {
 
             console.log(
-                competition,
-                "SEASON",
-                season,
-                "RAW:",
-                data.matches.length
+                `⚠️ NO DATA: ${competition} ${season}`
             );
 
-            const formatted = data.matches
+            continue;
+
+        }
+
+
+        console.log(
+            competition,
+            "SEASON",
+            season,
+            "RAW:",
+            data.matches.length
+        );
+
+
+        const formatted =
+            data.matches
                 .filter(
-                    match =>
-                        match.status === "FINISHED"
+                    isValidFinishedMatch
                 )
                 .map(formatMatch)
                 .filter(Boolean);
 
-            history.push(
-                ...formatted
-            );
-        }
+
+        history.push(
+            ...formatted
+        );
+
     }
 
-    /* =========================
-       SUPPRESSION DOUBLONS
-    ========================= */
 
-    const unique = [];
-    const seen = new Set();
+    /*
+     * DOUBLONS
+     */
 
-    for (const match of history) {
+    const unique =
+        uniqueMatches(history);
 
-        if (!seen.has(match.id)) {
-
-            seen.add(match.id);
-
-            unique.push(match);
-        }
-    }
 
     HISTORY_MATCH_DATABASE.length = 0;
 
@@ -538,9 +631,10 @@ async function loadHistoryDatabase() {
         ...unique
     );
 
-    /* =========================
-       HISTORICAL ELO
-    ========================= */
+
+    /*
+     * HISTORICAL ELO
+     */
 
     try {
 
@@ -556,17 +650,20 @@ async function loadHistoryDatabase() {
             "✅ HISTORICAL ELO BUILT"
         );
 
-    } catch (error) {
+    }
+    catch (error) {
 
         console.log(
             "⚠️ ELO ERROR:",
             error.message
         );
+
     }
 
-    /* =========================
-       CACHE HISTORY
-    ========================= */
+
+    /*
+     * CACHE
+     */
 
     CACHE.history = {
 
@@ -577,58 +674,68 @@ async function loadHistoryDatabase() {
         expiresAt:
             Date.now() +
             HISTORY_CACHE_TTL
+
     };
+
 
     console.log(
         "📚 TOTAL HISTORY:",
         HISTORY_MATCH_DATABASE.length
     );
 
+
     return HISTORY_MATCH_DATABASE;
-               }
+
+}
 
 
-/* =========================
+/* =====================================================
    LOAD UPCOMING DATABASE
-========================= */
+===================================================== */
 
+async function loadUpcomingDatabase() {
 
-async function loadUpcomingDatabase(){
+    if (
+        UPCOMING_MATCH_DATABASE.length > 0
+    ) {
 
-   if (UPCOMING_MATCH_DATABASE.length > 0) {
-    return UPCOMING_MATCH_DATABASE;
-   }
+        return UPCOMING_MATCH_DATABASE;
 
-    if(
-    CACHE.upcoming.data &&
-    CACHE.upcoming.data.length > 0 &&
-    Date.now() < CACHE.upcoming.expiresAt
-){
-
-    UPCOMING_MATCH_DATABASE.length = 0;
-
-    UPCOMING_MATCH_DATABASE.push(
-        ...CACHE.upcoming.data
-    );
-
-
-    console.log(
-        "🔮 CACHE UPCOMING USED:",
-        UPCOMING_MATCH_DATABASE.length
-    );
-
-
-    return UPCOMING_MATCH_DATABASE;
     }
+
+
+    if (
+        CACHE.upcoming.data &&
+        CACHE.upcoming.data.length > 0 &&
+        Date.now() <
+        CACHE.upcoming.expiresAt
+    ) {
+
+        UPCOMING_MATCH_DATABASE.length = 0;
+
+        UPCOMING_MATCH_DATABASE.push(
+            ...CACHE.upcoming.data
+        );
+
+        console.log(
+            "🔮 CACHE UPCOMING USED:",
+            UPCOMING_MATCH_DATABASE.length
+        );
+
+        return UPCOMING_MATCH_DATABASE;
+
+    }
+
 
     console.log(
         "🔮 LOADING UPCOMING MATCHES"
     );
 
-   UPCOMING_MATCH_DATABASE.length = 0;
+
+    UPCOMING_MATCH_DATABASE.length = 0;
 
 
-    const upcoming=[];
+    const upcoming = [];
 
 
     const today =
@@ -640,22 +747,26 @@ async function loadUpcomingDatabase(){
 
 
     future.setDate(
-    future.getDate()+14
-);
+        future.getDate() + 14
+    );
 
 
     const from =
-        today.toISOString()
-        .split("T")[0];
+        today
+            .toISOString()
+            .split("T")[0];
 
 
     const to =
-        future.toISOString()
-        .split("T")[0];
+        future
+            .toISOString()
+            .split("T")[0];
 
 
-
-    for(const competition of PRIMARY_COMPETITIONS){
+    for (
+        const competition
+        of PRIMARY_COMPETITIONS
+    ) {
 
         const data =
             await apiGet(
@@ -663,18 +774,20 @@ async function loadUpcomingDatabase(){
             );
 
 
-        if(
+        if (
             !data ||
             !Array.isArray(data.matches)
-        ){
+        ) {
+
             continue;
+
         }
 
 
         const formatted =
             data.matches
-            .map(formatMatch)
-            .filter(Boolean);
+                .map(formatMatch)
+                .filter(Boolean);
 
 
         upcoming.push(
@@ -688,46 +801,35 @@ async function loadUpcomingDatabase(){
             formatted.length
         );
 
-
     }
 
 
+    /*
+     * DOUBLONS
+     */
 
-    const unique=[];
-
-    const seen=new Set();
-
-
-    for(const match of upcoming){
-
-        if(!seen.has(match.id)){
-
-            seen.add(match.id);
-
-            unique.push(match);
-
-        }
-
-    }
+    const unique =
+        uniqueMatches(upcoming);
 
 
-
-    UPCOMING_MATCH_DATABASE.length=0;
+    UPCOMING_MATCH_DATABASE.length = 0;
 
     UPCOMING_MATCH_DATABASE.push(
         ...unique
     );
 
 
-
     CACHE.upcoming = {
 
-    data: [...UPCOMING_MATCH_DATABASE],
+        data: [
+            ...UPCOMING_MATCH_DATABASE
+        ],
 
-    expiresAt:
-        Date.now()+MATCH_CACHE_TTL
+        expiresAt:
+            Date.now() +
+            MATCH_CACHE_TTL
 
-};
+    };
 
 
     console.log(
@@ -741,26 +843,50 @@ async function loadUpcomingDatabase(){
 }
 
 
-/* =========================
+/* =====================================================
    GET UPCOMING MATCHES
-========================= */
+===================================================== */
 
 async function getMatches() {
 
-    if (UPCOMING_MATCH_DATABASE.length === 0) {
+    if (
+        UPCOMING_MATCH_DATABASE.length === 0
+    ) {
+
         await initializeDatabase();
+
     }
 
-    let matches = [...UPCOMING_MATCH_DATABASE];
 
-    const now = new Date();
+    let matches =
+        [...UPCOMING_MATCH_DATABASE];
 
-    matches = matches.filter(match => {
-        const hours =
-            (new Date(match.utcDate) - now) / 3600000;
 
-        return hours >= 0 && hours <= 24 * 14;
-    });
+    const now =
+        new Date();
+
+
+    matches =
+        matches.filter(
+            match => {
+
+                const hours =
+                    (
+                        new Date(
+                            match.utcDate
+                        ) -
+                        now
+                    ) /
+                    3600000;
+
+                return (
+                    hours >= 0 &&
+                    hours <= 24 * 14
+                );
+
+            }
+        );
+
 
     matches.sort(
         (a, b) =>
@@ -768,200 +894,427 @@ async function getMatches() {
             new Date(b.utcDate)
     );
 
-    console.log("🔥 MATCHES READY:", matches.length);
 
-    return matches;
-}
-/* =========================
-   GET TEAM HISTORY
-========================= */
-async function getTeamMatches(teamId) {
-
-    if (HISTORY_MATCH_DATABASE.length === 0) {
-        await loadHistoryDatabase();
-    }
-
-    console.log("SEARCH TEAM:", teamId);
-    console.log("HISTORY SIZE:", HISTORY_MATCH_DATABASE.length);
-    console.log("SEARCH TEAM ID:", teamId);
-
-    const matches = HISTORY_MATCH_DATABASE.filter(
-        match =>
-            match.status === "FINISHED" &&
-            (
-                match.homeTeam.id === teamId ||
-                match.awayTeam.id === teamId
-            )
+    console.log(
+        "🔥 MATCHES READY:",
+        matches.length
     );
 
-    console.log("FOUND MATCHES:", matches.length);
-    console.log("FOUND BY ID:", matches.length);
 
-    if (matches.length === 0) {
-        HISTORY_MATCH_DATABASE
-            .filter(
-                m =>
-                    m.homeTeam.name.toLowerCase().includes("parana") ||
-                    m.awayTeam.name.toLowerCase().includes("parana")
-            )
-            .forEach(m => {
-                console.log(
-                    "PARANA:",
-                    m.homeTeam.id,
-                    m.homeTeam.name,
-                    "vs",
-                    m.awayTeam.id,
-                    m.awayTeam.name
-                );
-            });
-    }
+    return matches;
 
-   console.log("SEARCHING TEAM:", teamId);
+}
 
-HISTORY_MATCH_DATABASE.forEach(match => {
+
+/* =====================================================
+   GET TEAM HISTORY
+===================================================== */
+
+async function getTeamMatches(teamId) {
+
+    /*
+     * CACHE ÉQUIPE
+     */
+
+    const cached =
+        CACHE.teamMatches.get(teamId);
+
+
     if (
-        match.homeTeam.id === teamId ||
-        match.awayTeam.id === teamId
+        cached &&
+        Date.now() <
+        cached.expiresAt
     ) {
+
         console.log(
-            "FOUND:",
-            match.homeTeam.name,
-            "vs",
-            match.awayTeam.name,
-            "ID:",
-            match.homeTeam.id,
-            match.awayTeam.id,
-            "COMP:",
-            match.competition.code
+            "⚡ TEAM CACHE:",
+            teamId,
+            cached.data.length
         );
+
+        return [
+            ...cached.data
+        ];
+
     }
-});
 
-    const recent = matches
-        .sort((a, b) => new Date(b.utcDate) - new Date(a.utcDate))
-        .slice(0, 8);
 
-    if (recent.length < 5) {
+    /*
+     * S'assurer que la base historique
+     * précédente existe.
+     */
+
+    if (
+        HISTORY_MATCH_DATABASE.length === 0
+    ) {
+
+        await loadHistoryDatabase();
+
+    }
+
+
+    console.log(
+        "================================="
+    );
+
+    console.log(
+        "🔎 TEAM HISTORY SEARCH:",
+        teamId
+    );
+
+
+    /*
+     * 1. HISTORIQUE SAISON PRÉCÉDENTE
+     */
+
+    let previousSeasonMatches =
+        HISTORY_MATCH_DATABASE.filter(
+            match =>
+                isValidFinishedMatch(match) &&
+                (
+                    match.homeTeam.id === teamId ||
+                    match.awayTeam.id === teamId
+                )
+        );
+
+
+    console.log(
+        "📚 PREVIOUS SEASON MATCHES:",
+        previousSeasonMatches.length
+    );
+
+
+    /*
+     * 2. SAISON ACTUELLE
+     *
+     * IMPORTANT :
+     * On demande explicitement 2026.
+     * On ne dépend plus du comportement
+     * ambigu de /teams/:id/matches.
+     */
+
+    let currentSeasonMatches = [];
+
+
+    const currentData =
+        await apiGet(
+            `/teams/${teamId}/matches?status=FINISHED&season=${CURRENT_SEASON}`
+        );
+
+
+    if (
+        currentData &&
+        Array.isArray(
+            currentData.matches
+        )
+    ) {
+
+        currentSeasonMatches =
+            currentData.matches
+                .filter(
+                    isValidFinishedMatch
+                )
+                .map(formatMatch)
+                .filter(Boolean);
+
+    }
+
+
+    console.log(
+        "🆕 CURRENT SEASON MATCHES:",
+        currentSeasonMatches.length
+    );
+
+
+    /*
+     * 3. SI L'API ÉQUIPE NE DONNE RIEN
+     *
+     * On essaie une seconde fois
+     * avec l'ancien endpoint précis.
+     */
+
+    if (
+        currentSeasonMatches.length === 0
+    ) {
+
         console.log(
-            "⚠ HISTORIQUE INSUFFISANT :",
+            "⚠️ CURRENT SEASON EMPTY - FALLBACK"
+        );
+
+
+        const fallbackData =
+            await apiGet(
+                `/teams/${teamId}/matches?status=FINISHED`
+            );
+
+
+        if (
+            fallbackData &&
+            Array.isArray(
+                fallbackData.matches
+            )
+        ) {
+
+            const fallbackMatches =
+                fallbackData.matches
+                    .filter(
+                        isValidFinishedMatch
+                    )
+                    .map(formatMatch)
+                    .filter(Boolean);
+
+
+            /*
+             * On garde uniquement
+             * les matchs récents.
+             */
+
+            currentSeasonMatches =
+                fallbackMatches
+                    .filter(
+                        match =>
+                            new Date(
+                                match.utcDate
+                            ).getFullYear() >=
+                            CURRENT_SEASON
+                    );
+
+        }
+
+    }
+
+
+    /*
+     * 4. COMBINAISON
+     *
+     * Saison actuelle d'abord,
+     * puis saison précédente.
+     */
+
+    const combined =
+        uniqueMatches(
+            [
+                ...currentSeasonMatches,
+                ...previousSeasonMatches
+            ]
+        );
+
+
+    /*
+     * 5. TRI
+     */
+
+    const recent =
+        sortRecent(
+            combined
+        ).slice(0, 8);
+
+
+    console.log(
+        "================================="
+    );
+
+    console.log(
+        "📊 TEAM:",
+        teamId
+    );
+
+    console.log(
+        "CURRENT:",
+        currentSeasonMatches.length
+    );
+
+    console.log(
+        "PREVIOUS:",
+        previousSeasonMatches.length
+    );
+
+    console.log(
+        "COMBINED:",
+        combined.length
+    );
+
+    console.log(
+        "FINAL RECENT:",
+        recent.length
+    );
+
+
+    /*
+     * DEBUG DES 8 MATCHS
+     */
+
+    recent.forEach(
+        (match, index) => {
+
+            console.log(
+                `📌 ${index + 1}.`,
+                match.utcDate,
+                "|",
+                match.homeTeam.name,
+                "vs",
+                match.awayTeam.name,
+                "|",
+                match.score?.fullTime?.home,
+                "-",
+                match.score?.fullTime?.away,
+                "|",
+                match.competition?.code
+            );
+
+        }
+    );
+
+
+    /*
+     * 6. MINIMUM DE DONNÉES
+     *
+     * On ne fabrique rien.
+     */
+
+    if (
+        recent.length < 5
+    ) {
+
+        console.log(
+            "⚠️ HISTORIQUE INSUFFISANT:",
             teamId,
             recent.length,
             "match(s)"
         );
+
     }
 
-       if (matches.length > 0) {
-    return recent;
-}
 
-console.log("⚠ TEAM NOT FOUND IN DATABASE:", teamId);
+    /*
+     * 7. CACHE
+     */
 
-const apiData = await apiGet(
-    `/teams/${teamId}/matches?status=FINISHED`
-);
-
-console.log(
-    "API RAW:",
-    JSON.stringify(apiData, null, 2)
-);
-
-if (
-    apiData &&
-    Array.isArray(apiData.matches)
-) {
-
-    const recentMatches = apiData.matches
-        .map(formatMatch)
-        .filter(Boolean)
-        .slice(0, 8);
-
-    console.log(
-        "✅ API FALLBACK:",
+    CACHE.teamMatches.set(
         teamId,
-        recentMatches.length
+        {
+            data: [
+                ...recent
+            ],
+
+            expiresAt:
+                Date.now() +
+                TEAM_CACHE_TTL
+        }
     );
 
-    return recentMatches;
+
+    console.log(
+        "================================="
+    );
+
+
+    return recent;
+
 }
-
-return [];
-
-           }
 
 /* =========================
    SAFE TEAM STATS
 ========================= */
 
-function getSafeMatches(matches){
+function getSafeMatches(matches) {
 
-    if(
+    if (
         !Array.isArray(matches)
-    ){
+    ) {
+
         return [];
+
     }
 
 
-    return matches.filter(match=>
+    return matches.filter(
+        match =>
 
-        match &&
-        match.score &&
-        match.score.fullTime &&
-        typeof match.score.fullTime.home==="number" &&
-        typeof match.score.fullTime.away==="number"
+            isValidFinishedMatch(
+                match
+            )
 
     );
 
 }
 
-/* =========================
+
+/* =====================================================
    INITIALIZATION
-========================= */
+===================================================== */
 
 async function initializeDatabase() {
 
-    if (DATABASE_INITIALIZING) {
+    if (
+        DATABASE_INITIALIZING
+    ) {
+
         return DATABASE_INITIALIZING;
+
     }
 
-    DATABASE_INITIALIZING = (async () => {
 
-        console.log(
-            "🚀 INITIALIZING DATABASE..."
-        );
+    DATABASE_INITIALIZING =
+        (async () => {
 
-        await loadHistoryDatabase();
+            console.log(
+                "🚀 INITIALIZING DATABASE..."
+            );
 
-        await loadUpcomingDatabase();
 
-        console.log("======================");
-        console.log("✅ DATABASE READY");
-        console.log(
-            "📚 HISTORY:",
-            HISTORY_MATCH_DATABASE.length
-        );
-        console.log(
-            "🔮 UPCOMING:",
-            UPCOMING_MATCH_DATABASE.length
-        );
-        console.log("======================");
+            await loadHistoryDatabase();
 
-    })();
+
+            await loadUpcomingDatabase();
+
+
+            console.log(
+                "======================"
+            );
+
+
+            console.log(
+                "✅ DATABASE READY"
+            );
+
+
+            console.log(
+                "📚 HISTORY:",
+                HISTORY_MATCH_DATABASE.length
+            );
+
+
+            console.log(
+                "🔮 UPCOMING:",
+                UPCOMING_MATCH_DATABASE.length
+            );
+
+
+            console.log(
+                "======================"
+            );
+
+        })();
+
 
     try {
 
         await DATABASE_INITIALIZING;
 
-    } finally {
+    }
+    finally {
 
         DATABASE_INITIALIZING = null;
 
     }
+
 }
 
 
-/* =========================
+/* =====================================================
    EXPORTS
-========================= */
+===================================================== */
 
 module.exports = {
 
