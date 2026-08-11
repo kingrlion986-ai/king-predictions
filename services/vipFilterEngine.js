@@ -50,7 +50,6 @@ function getModelConfidence(predictions = {}) {
 /* =========================
    1X2 VIP SCORE
 ========================= */
-
 function calculateVIPScore(match) {
 
     const predictions =
@@ -62,18 +61,37 @@ function calculateVIPScore(match) {
     const away =
         match?.teamStats?.away || {};
 
+    const model =
+        match?.model || {};
+
     let score = 0;
 
-
     /* =========================
-       CONFIDENCE
+       MODEL CONFIDENCE
     ========================= */
 
     const confidence =
         getModelConfidence(predictions);
 
-    score += confidence * 0.40;
+    score += confidence * 0.30;
 
+    /* =========================
+       AI RATING
+    ========================= */
+
+    const aiRating =
+        num(predictions.aiRating);
+
+    score += aiRating * 0.15;
+
+    /* =========================
+       PREDICTION STRENGTH
+    ========================= */
+
+    const predictionStrength =
+        num(predictions.predictionStrength);
+
+    score += predictionStrength * 0.10;
 
     /* =========================
        PROBABILITIES
@@ -82,28 +100,20 @@ function calculateVIPScore(match) {
     const probabilities =
         predictions.probabilities || {};
 
-    const homeWin =
-        num(probabilities.homeWin);
-
-    const draw =
-        num(probabilities.draw);
-
-    const awayWin =
-        num(probabilities.awayWin);
-
-
     const values = [
-        homeWin,
-        draw,
-        awayWin
-    ];
 
+        num(probabilities.homeWin),
+
+        num(probabilities.draw),
+
+        num(probabilities.awayWin)
+
+    ];
 
     const sorted =
         [...values].sort(
             (a, b) => b - a
         );
-
 
     const favoriteProbability =
         sorted[0];
@@ -111,58 +121,20 @@ function calculateVIPScore(match) {
     const secondProbability =
         sorted[1];
 
-
     const separation =
         favoriteProbability -
         secondProbability;
 
+    score += favoriteProbability * 0.20;
 
-    score +=
-        favoriteProbability * 0.35;
-
-
-    score +=
-        clamp(
-            separation * 0.50,
-            0,
-            10
-        );
-
+    score += clamp(
+        separation * 0.70,
+        0,
+        15
+    );
 
     /* =========================
-       STABILITY
-    ========================= */
-
-    const stability =
-
-        (
-            num(home.stability, 50) +
-            num(away.stability, 50)
-        ) / 2;
-
-
-    score +=
-        stability * 0.10;
-
-
-    /* =========================
-       RELIABILITY
-    ========================= */
-
-    const reliability =
-
-        (
-            num(home.reliability, 0.5) +
-            num(away.reliability, 0.5)
-        ) / 2;
-
-
-    score +=
-        reliability * 100 * 0.10;
-
-
-    /* =========================
-       STRENGTH
+       STRENGTH GAP
     ========================= */
 
     const strengthGap =
@@ -171,14 +143,59 @@ function calculateVIPScore(match) {
             num(away.strength)
         );
 
+    score += clamp(
+        strengthGap * 0.40,
+        0,
+        10
+    );
 
-    score +=
-        clamp(
-            strengthGap * 0.25,
-            0,
-            5
+    /* =========================
+       STABILITY
+    ========================= */
+
+    const stability =
+        (
+            num(home.stability, 50) +
+            num(away.stability, 50)
+        ) / 2;
+
+    score += stability * 0.08;
+
+    /* =========================
+       RELIABILITY
+    ========================= */
+
+    const reliability =
+        (
+            num(home.reliability, 0.5) +
+            num(away.reliability, 0.5)
+        ) / 2;
+
+    score += reliability * 100 * 0.08;
+
+    /* =========================
+       EXPECTED GOALS
+    ========================= */
+
+    const xg =
+        num(model.expectedGoals);
+
+    score += clamp(
+        xg * 5,
+        0,
+        10
+    );
+
+    /* =========================
+       POISSON DOMINANCE
+    ========================= */
+
+    const dominance =
+        num(
+            predictions?.aiDecision?.score
         );
 
+    score += dominance * 0.05;
 
     /* =========================
        DATA QUALITY
@@ -188,29 +205,75 @@ function calculateVIPScore(match) {
         num(home.played) < 5 ||
         num(away.played) < 5
     ) {
-
-        score -= 15;
-
+        score -= 25;
     }
 
-
     /* =========================
-       NO CLEAR FAVORITE
+       FAVORITE TOO LOW
     ========================= */
 
     if (favoriteProbability < 55) {
-
         score -= 20;
-
     }
 
+    if (favoriteProbability < 50) {
+        score -= 35;
+    }
+
+    /* =========================
+       LOW CONFIDENCE
+    ========================= */
+
+    if (confidence < 60) {
+        score -= 20;
+    }
+
+    if (confidence < 50) {
+        score -= 30;
+    }
+
+    /* =========================
+       AI RISK
+    ========================= */
+
+    const risk =
+        predictions?.aiDecision?.risk;
+
+    if (risk === "HIGH") {
+        score -= 20;
+    }
+
+    if (risk === "VERY HIGH") {
+        score -= 40;
+    }
+
+    /* =========================
+       TRAP MATCH
+    ========================= */
+
+    const decision =
+        predictions?.aiDecision?.decision;
+
+    if (decision === "TRAP MATCH") {
+        score -= 50;
+    }
+
+    /* =========================
+       BONUS ELITE PICK
+    ========================= */
+
+    if (
+        confidence >= 80 &&
+        favoriteProbability >= 65 &&
+        separation >= 20
+    ) {
+        score += 10;
+    }
 
     return Math.round(
         clamp(score, 0, 100)
     );
-
 }
-
 
 /* =========================
    OVER 2.5 SCORE
@@ -420,12 +483,9 @@ function filterVipMatches(matches = []) {
     return matches
 
         .map(match => ({
-
             ...match,
-
             vipScore:
                 calculateVIPScore(match)
-
         }))
 
         .filter(match => {
@@ -433,29 +493,28 @@ function filterVipMatches(matches = []) {
             const predictions =
                 match.predictions || {};
 
-
             const confidence =
                 getModelConfidence(
                     predictions
                 );
 
-
             const decision =
-                predictions
-                    ?.aiDecision
-                    ?.decision;
+                predictions?.aiDecision?.decision;
 
+            const risk =
+                predictions?.aiDecision?.risk;
 
             return (
 
-                match.vipScore >= 70 &&
+                match.vipScore >= 75 &&
 
                 confidence >= 65 &&
 
-                (
-                    decision === "VIP PICK" ||
-                    confidence >= 75
-                )
+                risk !== "HIGH" &&
+
+                risk !== "VERY HIGH" &&
+
+                decision !== "TRAP MATCH"
 
             );
 
@@ -465,10 +524,10 @@ function filterVipMatches(matches = []) {
             (a, b) =>
                 b.vipScore -
                 a.vipScore
-        );
+        )
 
+        .slice(0, 5);
 }
-
 
 /* =========================
    VIP OVER 2.5
