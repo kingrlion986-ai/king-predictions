@@ -270,31 +270,193 @@ if (
     return null;
 }
 
+        /* =========================
+       TEAM DATA VALIDATION
+    ========================= */
 
-/* =========================
-   ELO
-========================= */
+    if (
+        !homeStats ||
+        !awayStats ||
+        Number(homeStats.played || 0) < 5 ||
+        Number(awayStats.played || 0) < 5
+    ) {
 
-const homeElo =
-    getTeamElo(match.homeTeam.id);
+        console.log(
+            "🚫 MATCH REJECTED - INSUFFICIENT TEAM DATA"
+        );
 
-const awayElo =
-    getTeamElo(match.awayTeam.id);
+        console.log(
+            "HOME:",
+            match.homeTeam.name,
+            "| MATCHES:",
+            homeStats?.played ?? 0
+        );
 
-const eloProbability =
-    calculateEloProbability(
-        homeElo,
+        console.log(
+            "AWAY:",
+            match.awayTeam.name,
+            "| MATCHES:",
+            awayStats?.played ?? 0
+        );
+
+        console.timeEnd(timer);
+
+        return null;
+    }
+
+
+    /* =========================
+       ELO
+    ========================= */
+
+    const homeElo =
+        getTeamElo(match.homeTeam.id);
+
+    const awayElo =
+        getTeamElo(match.awayTeam.id);
+
+    const eloProbability =
+        calculateEloProbability(
+            homeElo,
+            awayElo
+        );
+
+
+    console.log("===== ELO DEBUG =====");
+
+    console.log(
+        match.homeTeam.name,
+        "ELO:",
+        homeElo
+    );
+
+    console.log(
+        match.awayTeam.name,
+        "ELO:",
         awayElo
     );
 
+    console.log(
+        "ELO PROBABILITY:",
+        Math.round(
+            eloProbability * 100
+        )
+    );
 
-/* =========================
-   WEIGHTS
-========================= */
+    console.log("=====================");
 
-const weights =
-    getWeights();
 
+    /* =========================
+       WEIGHTS
+    ========================= */
+
+    const weights =
+        getWeights();
+
+
+    /* =========================
+       EXPECTED GOALS
+    ========================= */
+
+    console.log("2 - XG");
+
+    console.log(
+        "HOME STATS =",
+        {
+            attackPower:
+                homeStats.attackPower,
+
+            defensePower:
+                homeStats.defensePower,
+
+            homeAttack:
+                homeStats.homeAttack,
+
+            homeDefense:
+                homeStats.homeDefense,
+
+            avgScored:
+                homeStats.avgScored,
+
+            avgConceded:
+                homeStats.avgConceded,
+
+            formPoints:
+                homeStats.formPoints,
+
+            strength:
+                homeStats.strength
+        }
+    );
+
+
+    console.log(
+        "AWAY STATS =",
+        {
+            attackPower:
+                awayStats.attackPower,
+
+            defensePower:
+                awayStats.defensePower,
+
+            awayAttack:
+                awayStats.awayAttack,
+
+            awayDefense:
+                awayStats.awayDefense,
+
+            avgScored:
+                awayStats.avgScored,
+
+            avgConceded:
+                awayStats.avgConceded,
+
+            formPoints:
+                awayStats.formPoints,
+
+            strength:
+                awayStats.strength
+        }
+    );
+
+
+    const xg =
+        calculateExpectedGoals(
+            homeStats,
+            awayStats,
+            {
+                home: homeElo,
+                away: awayElo
+            }
+        );
+
+
+    console.log(
+        "XG =",
+        xg
+    );
+
+
+    /* =========================
+       POISSON
+    ========================= */
+
+    console.log("3 - POISSON");
+
+    const poisson =
+        buildPoissonMatrix(
+
+            xg.expectedHomeGoals,
+
+            xg.expectedAwayGoals
+
+        );
+
+    console.log(
+        "POISSON DEBUG:",
+        poisson.uncertainty,
+        poisson.dominance
+    );
 
 /* =========================
    EXPECTED GOALS
