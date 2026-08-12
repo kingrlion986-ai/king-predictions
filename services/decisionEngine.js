@@ -208,15 +208,15 @@ function evaluateDecision({
     ================================= */
 
     if (
-        favorite >= 70 &&
-        separation >= 15 &&
-        confidence >= 70 &&
-        dominance >= 20 &&
-        uncertainty < 45 &&
-        reliability >= 0.65 &&
-        trapScore < 25 &&
-        score >= 70
-    ) {
+    favorite >= 72 &&
+    separation >= 15 &&
+    confidence >= 72 &&
+    dominance >= 25 &&
+    uncertainty < 45 &&
+    reliability >= 0.65 &&
+    trapScore < 20 &&
+    score >= 70
+) {
 
         return {
             decision: "VIP PICK",
