@@ -1015,9 +1015,9 @@ app.get(
             a.predictions.correctScore,
 
           confidence:
-            Math.round(
-              a.model.expectedGoals * 22
-            ),
+  Math.round(
+    a.predictions.correctScoreProbability
+  ),
 
           expectedHomeGoals:
             a.model?.expectedHomeGoals ?? 0,
