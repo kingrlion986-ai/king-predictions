@@ -216,93 +216,55 @@ async function analyzeMatch(match) {
         );
 
 
-/* =========================
-   OVER 2.5 — CALIBRATED
+        /* =========================
+   MARKETS
 ========================= */
 
-const poissonOver25 =
-    Number(poisson.over25 || 0);
-
-const homeOver25Rate =
-    Number(homeStats.over25Rate || 0);
-
-const awayOver25Rate =
-    Number(awayStats.over25Rate || 0);
-
-const averageOver25Rate =
-    (
-        homeOver25Rate +
-        awayOver25Rate
-    ) / 2;
-
-const xgOver25 =
-    Math.max(
-        0,
-        Math.min(
-            100,
-            ((xg.totalExpectedGoals - 1.5) / 2.5) * 100
-        )
+const overRate =
+    avg(
+        homeStats.over25Rate,
+        awayStats.over25Rate
     );
 
-const over25Confidence =
-    Math.min(
-        85,
-        Math.round(
-            poissonOver25 * 0.65 +
-            averageOver25Rate * 0.20 +
-            xgOver25 * 0.15
-        )
+const bttsRate =
+    avg(
+        homeStats.bttsRate,
+        awayStats.bttsRate
+    );
+
+const overScore =
+    Math.round(
+        marketScore({
+            poisson,
+            confidence,
+            rate: overRate,
+            xg: xg.totalExpectedGoals,
+            threshold: 2,
+            type: "OVER"
+        })
+    );
+
+const bttsScore =
+    Math.round(
+        marketScore({
+            poisson,
+            confidence,
+            rate: bttsRate,
+            xg: xg.totalExpectedGoals,
+            threshold: 1.8,
+            type: "BTTS"
+        })
     );
 
 const over25 =
-    over25Confidence >= 55
+    overScore >= 60
         ? "OVER 2.5"
         : "UNDER 2.5";
 
-
-/* =========================
-   BTTS — CALIBRATED
-========================= */
-
-const poissonBtts =
-    Number(poisson.btts || 0);
-
-const homeBttsRate =
-    Number(homeStats.bttsRate || 0);
-
-const awayBttsRate =
-    Number(awayStats.bttsRate || 0);
-
-const averageBttsRate =
-    (
-        homeBttsRate +
-        awayBttsRate
-    ) / 2;
-
-const xgBtts =
-    Math.max(
-        0,
-        Math.min(
-            100,
-            ((xg.totalExpectedGoals - 1.2) / 2.8) * 100
-        )
-    );
-
-const bttsConfidence =
-    Math.min(
-        85,
-        Math.round(
-            poissonBtts * 0.65 +
-            averageBttsRate * 0.20 +
-            xgBtts * 0.15
-        )
-    );
-
 const btts =
-    bttsConfidence >= 55
+    bttsScore >= 60
         ? "OUI"
         : "NON";
-
 
     /* =========================
        DECISION
