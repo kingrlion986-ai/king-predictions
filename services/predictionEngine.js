@@ -216,8 +216,8 @@ async function analyzeMatch(match) {
         );
 
 
-        /* =========================
-   MARKETS
+/* =========================
+   MARKETS — CALIBRATED
 ========================= */
 
 const overRate =
@@ -232,29 +232,48 @@ const bttsRate =
         awayStats.bttsRate
     );
 
+
+/*
+=================================
+OVER 2.5
+=================================
+*/
+
+const poissonOver25 =
+    Number(poisson.over25 || 0);
+
 const overScore =
     Math.round(
-        marketScore({
-            poisson,
-            confidence,
-            rate: overRate,
-            xg: xg.totalExpectedGoals,
-            threshold: 2,
-            type: "OVER"
-        })
+        (
+            poissonOver25 * 0.70 +
+            overRate * 0.30
+        )
     );
+
+
+/*
+=================================
+BTTS
+=================================
+*/
+
+const poissonBTTS =
+    Number(poisson.btts || 0);
 
 const bttsScore =
     Math.round(
-        marketScore({
-            poisson,
-            confidence,
-            rate: bttsRate,
-            xg: xg.totalExpectedGoals,
-            threshold: 1.8,
-            type: "BTTS"
-        })
+        (
+            poissonBTTS * 0.70 +
+            bttsRate * 0.30
+        )
     );
+
+
+/*
+=================================
+PREDICTION
+=================================
+*/
 
 const over25 =
     overScore >= 60
