@@ -43,7 +43,7 @@ const HISTORY_FILE =
 const ANALYSIS_CACHE = new Map();
 
 const ANALYSIS_TTL =
-  15 * 60 * 1000;
+    5 * 60 * 1000;
 
 const ANALYSIS_RUNNING = new Map();
 
