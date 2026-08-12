@@ -18,162 +18,104 @@ function calculateConfidence({
     poisson = null
 }) {
 
-    /*
-    =================================
-    1. PROBABILITÉ DU FAVORI
-    =================================
-    */
-
     const values = [
         Number(probabilities?.homeWin || 0),
         Number(probabilities?.draw || 0),
         Number(probabilities?.awayWin || 0)
-    ];
+    ].sort((a, b) => b - a);
 
-    const sorted = [...values].sort((a, b) => b - a);
+    const favorite = values[0];
+    const second = values[1];
+    const separation = favorite - second;
 
-    const favoriteProbability = sorted[0];
-    const secondProbability = sorted[1];
+    const homePlayed = Number(homeStats?.played || 0);
+    const awayPlayed = Number(awayStats?.played || 0);
+    const minPlayed = Math.min(homePlayed, awayPlayed);
 
-    /*
-    Écart réel entre le favori et le second choix.
-    */
+    const stability = (
+        Number(homeStats?.stability ?? 50) +
+        Number(awayStats?.stability ?? 50)
+    ) / 2;
 
-    const separation =
-        favoriteProbability - secondProbability;
-
-
-    /*
-    =================================
-    2. QUALITÉ DES DONNÉES
-    =================================
-    */
-
-    const homePlayed = Number(
-        homeStats?.played ||
-        homeStats?.matchesPlayed ||
-        homeStats?.matches ||
-        0
-    );
-
-    const awayPlayed = Number(
-        awayStats?.played ||
-        awayStats?.matchesPlayed ||
-        awayStats?.matches ||
-        0
-    );
-
-    const minPlayed = Math.min(
-        homePlayed,
-        awayPlayed
-    );
-
-    /*
-    8 matchs = données complètes.
-    */
-
-    const dataQuality = clamp(
-        (minPlayed / 8) * 100,
-        0,
-        100
-    );
-
-
-    /*
-    =================================
-    3. FIABILITÉ
-    =================================
-    */
-
-    const reliability =
-        (
-            Number(homeStats?.reliability ?? 0.5) +
-            Number(awayStats?.reliability ?? 0.5)
-        ) / 2;
-
-    const reliabilityScore =
-        clamp(reliability * 100, 0, 100);
-
-
-    /*
-    =================================
-    4. STABILITÉ
-    =================================
-    */
-
-    const stability =
-        (
-            Number(homeStats?.stability ?? 50) +
-            Number(awayStats?.stability ?? 50)
-        ) / 2;
-
-
-    /*
-    =================================
-    5. FORCE DES ÉQUIPES
-    =================================
-    */
+    const reliability = (
+        Number(homeStats?.reliability ?? 0.5) +
+        Number(awayStats?.reliability ?? 0.5)
+    ) / 2;
 
     const strengthGap = Math.abs(
         Number(homeStats?.strength ?? 50) -
         Number(awayStats?.strength ?? 50)
     );
 
+    let confidence = 0;
 
     /*
-    =================================
-    6. FORME
-    =================================
+    FAVORI
     */
-
-    const formGap = Math.abs(
-        Number(homeStats?.formPoints ?? 0) -
-        Number(awayStats?.formPoints ?? 0)
-    );
-
+    confidence += favorite * 0.45;
 
     /*
-    =================================
-    7. ELO / POISSON
-    =================================
+    SÉPARATION
     */
+    confidence += Math.min(separation * 2, 25);
 
-    let modelAgreement = 50;
+    /*
+    STABILITÉ
+    */
+    confidence += stability * 0.10;
 
-    if (
-        typeof eloProbability === "number" &&
-        Number.isFinite(eloProbability)
-    ) {
+    /*
+    FIABILITÉ
+    */
+    confidence += reliability * 100 * 0.10;
 
-        const poissonHome =
-            Number(probabilities?.homeWin || 0) / 100;
+    /*
+    DONNÉES
+    */
+    confidence += Math.min(minPlayed, 8) * 1.5;
 
-        const eloHome =
-            eloProbability;
-
-        const difference =
-            Math.abs(poissonHome - eloHome);
-
-        /*
-        0 différence = 100%
-        0.50 différence = 0%
-        */
-
-        modelAgreement = clamp(
-            100 - difference * 200,
-            0,
-            100
-        );
-    }
+    /*
+    FORCE
+    */
+    confidence += Math.min(strengthGap, 20) * 0.5;
 
 
     /*
-    =================================
-    8. POISSON RISK
-    =================================
+    =========================
+    PÉNALITÉS IMPORTANTES
+    =========================
     */
 
-    let poissonRisk = 0;
+    // Match pratiquement équilibré
+    if (favorite < 40)
+        confidence -= 30;
+
+    else if (favorite < 45)
+        confidence -= 20;
+
+    // Séparation très faible
+    if (separation < 3)
+        confidence -= 30;
+
+    else if (separation < 5)
+        confidence -= 20;
+
+    else if (separation < 8)
+        confidence -= 10;
+
+    // Équipes proches
+    if (strengthGap <= 4)
+        confidence -= 20;
+
+    else if (strengthGap <= 8)
+        confidence -= 10;
+
+
+    /*
+    =========================
+    POISSON
+    =========================
+    */
 
     if (poisson) {
 
@@ -183,258 +125,62 @@ function calculateConfidence({
         const dominance =
             Number(poisson.dominance || 0);
 
-        /*
-        Forte incertitude = pénalité.
-        */
+        if (uncertainty >= 60)
+            confidence -= 30;
 
-        if (uncertainty >= 55) {
-            poissonRisk -= 25;
-        }
-        else if (uncertainty >= 45) {
-            poissonRisk -= 15;
-        }
-        else if (uncertainty >= 35) {
-            poissonRisk -= 8;
-        }
+        else if (uncertainty >= 50)
+            confidence -= 20;
 
-        /*
-        Une forte dominance peut légèrement
-        améliorer la confiance.
-        */
+        else if (uncertainty >= 40)
+            confidence -= 10;
 
-        if (dominance >= 30) {
-            poissonRisk += 8;
-        }
-        else if (dominance >= 20) {
-            poissonRisk += 4;
-        }
-
+        if (dominance >= 30)
+            confidence += 8;
     }
 
 
     /*
-    =================================
-    9. SCORE DE BASE
-    =================================
-
-    IMPORTANT :
-
-    La confiance ne doit PAS être
-    une simple copie de la probabilité.
-
-    Elle mesure :
-
-    - qualité des données
-    - séparation
-    - stabilité
-    - fiabilité
-    - accord des modèles
-    - risque Poisson
-    */
-
-    let confidence =
-
-        20 +
-
-        /*
-        Séparation
-        */
-
-        separation * 0.35 +
-
-        /*
-        Probabilité du favori
-        */
-
-        Math.max(
-            0,
-            favoriteProbability - 33
-        ) * 0.30 +
-
-        /*
-        Données
-        */
-
-        dataQuality * 0.12 +
-
-        /*
-        Stabilité
-        */
-
-        stability * 0.06 +
-
-        /*
-        Fiabilité
-        */
-
-        reliabilityScore * 0.08 +
-
-        /*
-        Accord ELO
-        */
-
-        modelAgreement * 0.08 +
-
-        /*
-        Force
-        */
-
-        Math.min(strengthGap, 20) * 0.10 +
-
-        /*
-        Forme
-        */
-
-        Math.min(formGap, 10) * 0.08 +
-
-        poissonRisk;
-
-
-    /*
-    =================================
-    10. PÉNALITÉ MATCH ÉQUILIBRÉ
-    =================================
-    */
-
-    if (favoriteProbability < 45) {
-
-        confidence -= 15;
-
-    }
-
-    if (favoriteProbability < 40) {
-
-        confidence -= 10;
-
-    }
-
-
-    /*
-    =================================
-    11. PÉNALITÉ FAIBLE SÉPARATION
-    =================================
-    */
-
-    if (separation < 5) {
-
-        confidence -= 10;
-
-    }
-    else if (separation < 10) {
-
-        confidence -= 5;
-
-    }
-
-
-    /*
-    =================================
-    12. PÉNALITÉ ÉQUIPES PROCHES
-    =================================
-    */
-
-    if (strengthGap <= 4) {
-
-        confidence -= 10;
-
-    }
-    else if (strengthGap <= 8) {
-
-        confidence -= 5;
-
-    }
-
-
-    /*
-    =================================
-    13. PÉNALITÉ ELO ÉQUILIBRÉ
-    =================================
+    =========================
+    ELO
+    =========================
     */
 
     if (
-        eloProbability >= 0.46 &&
-        eloProbability <= 0.54
+        typeof eloProbability === "number" &&
+        eloProbability >= 0.45 &&
+        eloProbability <= 0.55
     ) {
-
-        confidence -= 10;
-
+        confidence -= 15;
     }
 
 
     /*
-    =================================
-    14. PÉNALITÉ DONNÉES INSUFFISANTES
-    =================================
+    =========================
+    LIMITE FINALE
+    =========================
     */
 
-    if (minPlayed < 3) {
-
-        confidence -= 20;
-
-    }
-    else if (minPlayed < 5) {
-
-        confidence -= 12;
-
-    }
-    else if (minPlayed < 8) {
-
-        confidence -= 5;
-
-    }
-
-
-    /*
-    =================================
-    15. LIMITES FINALES
-    =================================
-    */
-
-    confidence = clamp(
-        Math.round(confidence),
-        20,
-        85
+    confidence = Math.round(
+        clamp(confidence, 5, 95)
     );
 
 
-    /*
-    =================================
-    DEBUG
-    =================================
-    */
-
-    console.log("===== CONFIDENCE V20 =====");
+    console.log("===== CONFIDENCE V21 =====");
 
     console.log({
-
-        favoriteProbability,
-
+        favorite,
+        second,
         separation,
-
-        dataQuality,
-
         minPlayed,
-
         stability,
-
         reliability,
-
         strengthGap,
-
-        formGap,
-
-        modelAgreement,
-
-        poissonRisk,
-
         confidence
-
     });
-
 
     return confidence;
 }
-
+        
 
 module.exports = {
     calculateConfidence
