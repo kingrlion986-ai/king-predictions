@@ -217,57 +217,50 @@ async function analyzeMatch(match) {
 
 
 /* =========================
-   MARKETS — CALIBRATED
+   MARKETS — POISSON DIRECT
 ========================= */
 
-const overRate =
-    avg(
-        homeStats.over25Rate,
-        awayStats.over25Rate
-    );
-
-const bttsRate =
-    avg(
-        homeStats.bttsRate,
-        awayStats.bttsRate
-    );
-
-
-/*
-=================================
-OVER 2.5
-=================================
-*/
-
-const poissonOver25 =
+const over25Probability =
     Number(poisson.over25 || 0);
 
-const overScore =
-    Math.round(
-        (
-            poissonOver25 * 0.70 +
-            overRate * 0.30
-        )
-    );
-
-
-/*
-=================================
-BTTS
-=================================
-*/
-
-const poissonBTTS =
+const bttsProbability =
     Number(poisson.btts || 0);
 
-const bttsScore =
+
+/* =========================
+   OVER 2.5
+========================= */
+
+const over25 =
+    over25Probability >= 50
+        ? "OVER 2.5"
+        : "UNDER 2.5";
+
+
+const over25Confidence =
     Math.round(
-        (
-            poissonBTTS * 0.70 +
-            bttsRate * 0.30
-        )
+        over25Probability >= 50
+            ? over25Probability
+            : 100 - over25Probability
     );
 
+
+/* =========================
+   BTTS
+========================= */
+
+const btts =
+    bttsProbability >= 50
+        ? "OUI"
+        : "NON";
+
+
+const bttsConfidence =
+    Math.round(
+        bttsProbability >= 50
+            ? bttsProbability
+            : 100 - bttsProbability
+    );
 
 /*
 =================================
