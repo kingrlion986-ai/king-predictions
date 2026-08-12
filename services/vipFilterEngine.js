@@ -598,17 +598,31 @@ function filterVipMatches(matches = []) {
                CONDITIONS VIP
             */
 
+         const probabilities = p.probabilities || {};
+
+const favorite = Math.max(
+    num(probabilities.homeWin),
+    num(probabilities.draw),
+    num(probabilities.awayWin)
+);
+
+const second = [...[
+    num(probabilities.homeWin),
+    num(probabilities.draw),
+    num(probabilities.awayWin)
+]].sort((a, b) => b - a)[1];
+
+const separation = favorite - second;
+
+if (separation < 8) return false;
+
             return (
-
-                match.vipScore >= 70 &&
-
-                confidence >= 65 &&
-
-                getDataQuality(match) >= 75 &&
-
-                getModelAgreement(match) >= 60
-
-            );
+    match.vipScore >= 75 &&
+    confidence >= 70 &&
+    getDataQuality(match) >= 75 &&
+    getModelAgreement(match) >= 65 &&
+    p.winner !== "DRAW"
+);
 
         })
 
