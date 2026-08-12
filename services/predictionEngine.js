@@ -34,7 +34,7 @@ const ANALYSIS_CACHE =
     new Map();
 
 const ANALYSIS_TTL =
-    24 * 60 * 60 * 1000;
+    5 * 60 * 1000;
 
 
 /* =========================
@@ -44,7 +44,7 @@ const ANALYSIS_TTL =
 function getMatchKey(match) {
 
     return (
-        `${match.homeTeam.id}_` +
+        `V22_${match.homeTeam.id}_` +
         `${match.awayTeam.id}_` +
         `${match.utcDate}`
     );
