@@ -327,6 +327,11 @@ async function analyzeMatch(match) {
 
         });
 
+            const winnerConfidence = Math.min(
+    85,
+    Math.round(confidence)
+);
+
 
     /*
      * IMPORTANT :
@@ -594,7 +599,7 @@ async function analyzeMatch(match) {
             winner,
 
             winnerConfidence:
-                confidence,
+    winnerConfidence,
 
             aiDecision,
 
