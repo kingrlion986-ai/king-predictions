@@ -720,98 +720,116 @@ app.get(
    VIP 1X2
 ========================= */
 
-app.get(
-  "/vip/1x2",
-  async (req, res) => {
+app.get("/vip/1x2", async (req, res) => {
 
-    try {
+  try {
 
-      const analyses =
-        await getDailyPredictions();
+    const analyses = await getDailyPredictions();
 
+    const selected = analyses
+      .filter(a => {
 
-      /*
-         IMPORTANT :
-         On utilise maintenant
-         le vrai filtre VIP.
-      */
+        const p =
+          a.predictions?.probabilities || {};
 
-      const vipMatches =
-        filterVipMatches(
-          analyses
+        const favorite =
+          Math.max(
+            Number(p.homeWin || 0),
+            Number(p.draw || 0),
+            Number(p.awayWin || 0)
+          );
+
+        const sorted = [
+          Number(p.homeWin || 0),
+          Number(p.draw || 0),
+          Number(p.awayWin || 0)
+        ].sort((x, y) => y - x);
+
+        const separation =
+          sorted[0] - sorted[1];
+
+        const confidence =
+          Number(
+            a.predictions?.winnerConfidence || 0
+          );
+
+        const risk =
+          a.predictions?.aiDecision?.risk;
+
+        const decision =
+          a.predictions?.aiDecision?.decision;
+
+        /*
+         * VIP 1X2
+         *
+         * On demande une vraie domination,
+         * mais pas une condition impossible.
+         */
+
+        return (
+          favorite >= 65 &&
+          separation >= 15 &&
+          confidence >= 62 &&
+          risk !== "VERY HIGH" &&
+          decision !== "TRAP MATCH"
         );
 
-
-      const selected =
-        vipMatches.slice(
-          0,
-          SETTINGS.maxVIP_1X2
-        );
-
-
-      const result =
-        selected.map(a => ({
-
-          match:
-            `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`,
-
-          pick:
-            a.predictions.winner,
-
-          confidence:
-            a.predictions.winnerConfidence,
-
-          vipScore:
-            a.vipScore,
-
-          homeStrength:
-            a.teamStats.home.strength,
-
-          awayStrength:
-            a.teamStats.away.strength,
-
-          form: {
-
-            home:
-              `${a.teamStats.home.wins}W-${a.teamStats.home.draws}D-${a.teamStats.home.losses}L`,
-
-            away:
-              `${a.teamStats.away.wins}W-${a.teamStats.away.draws}D-${a.teamStats.away.losses}L`
-
-          }
-
-        }));
+      })
+      .sort((a, b) =>
+        Number(b.predictions.winnerConfidence || 0) -
+        Number(a.predictions.winnerConfidence || 0)
+      )
+      .slice(0, SETTINGS.maxVIP_1X2);
 
 
-      console.log(
-        "👑 VIP 1X2:",
-        result.length
-      );
+    const result = selected.map(a => ({
+
+      match:
+        `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`,
+
+      pick:
+        a.predictions.winner,
+
+      confidence:
+        a.predictions.winnerConfidence,
+
+      probabilities:
+        a.predictions.probabilities,
+
+      decision:
+        a.predictions.aiDecision?.decision,
+
+      risk:
+        a.predictions.aiDecision?.risk,
+
+      score:
+        a.predictions.predictionStrength
+
+    }));
 
 
-      res.json(
-        result
-      );
+    console.log(
+      "👑 VIP 1X2:",
+      result.length
+    );
 
-    } catch (err) {
 
-      console.error(
-        "VIP 1X2 ERROR:",
-        err
-      );
+    res.json(result);
 
-      res.status(500).json({
+  } catch (err) {
 
-        error:
-          "Internal server error"
+    console.error(
+      "VIP 1X2 ERROR:",
+      err
+    );
 
-      });
-
-    }
+    res.status(500).json({
+      error: "Internal server error"
+    });
 
   }
-);
 
+});
 
 /* =========================
    VIP OVER 2.5
