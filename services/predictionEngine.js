@@ -260,6 +260,28 @@ const bttsConfidence =
             ? bttsProbability
             : 100 - bttsProbability
     );
+
+            console.log("===== MARKET CALIBRATION =====");
+
+console.log({
+    match:
+        `${match.homeTeam.name} vs ${match.awayTeam.name}`,
+
+    poissonOver25:
+        over25Probability,
+
+    over25,
+    over25Confidence,
+
+    poissonBTTS:
+        bttsProbability,
+
+    btts,
+    bttsConfidence,
+
+    expectedGoals:
+        xg.totalExpectedGoals
+});
     
 
     /* =========================
