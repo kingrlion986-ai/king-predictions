@@ -373,17 +373,31 @@ console.log({
 
     probabilities,
 
-    over25Confidence:
+    // =========================
+    // MARKETS
+    // =========================
+
+    over25,
+
     over25Confidence,
 
-bttsConfidence:
+    btts,
+
     bttsConfidence,
+
+    // =========================
+    // SCORE EXACT
+    // =========================
 
     correctScore:
         poisson.exactScore?.score,
 
     correctScoreProbability:
         poisson.exactScore?.probability,
+
+    // =========================
+    // AI RATING
+    // =========================
 
     aiRating:
         finalRating,
