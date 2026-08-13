@@ -344,48 +344,46 @@ const bttsConfidence =
 
         predictions: {
 
-            winner,
+    winner,
 
-            winnerConfidence:
+    winnerConfidence:
+        confidence,
+
+    probabilities,
+
+    over25,
+    over25Confidence,
+
+    btts,
+    bttsConfidence,
+
+    correctScore:
+        poisson.exactScore?.score,
+
+    correctScoreProbability:
+        poisson.exactScore?.probability,
+
+    aiRating:
+        finalRating,
+
+    predictionStrength:
+        Math.round(
+            avg(
                 confidence,
-
-            probabilities,
-
-            over25,
-            over25Confidence:
-                overScore,
-
-            btts,
-            bttsConfidence:
-                bttsScore,
-
-            correctScore:
-                poisson.exactScore?.score,
-
-            correctScoreProbability:
-                poisson.exactScore?.probability,
-
-            aiRating:
                 finalRating,
+                poisson.matchScore
+            )
+        ),
 
-            predictionStrength:
-                Math.round(
-                    avg(
-                        confidence,
-                        finalRating,
-                        poisson.matchScore
-                    )
-                ),
+    quality:
+        confidence >= 70
+            ? "HIGH"
+            : confidence >= 55
+                ? "MEDIUM"
+                : "LOW",
 
-            quality:
-                confidence >= 70
-                    ? "HIGH"
-                    : confidence >= 55
-                        ? "MEDIUM"
-                        : "LOW",
-
-            aiDecision
-        },
+    aiDecision
+},
 
         teamStats: {
             home: homeStats,
