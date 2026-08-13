@@ -366,6 +366,10 @@ console.log({
 
         predictions: {
 
+    /* =========================
+       1X2
+    ========================= */
+
     winner,
 
     winnerConfidence:
@@ -373,21 +377,28 @@ console.log({
 
     probabilities,
 
-    // =========================
-    // MARKETS
-    // =========================
+
+    /* =========================
+       OVER 2.5
+    ========================= */
 
     over25,
 
     over25Confidence,
 
+
+    /* =========================
+       BTTS
+    ========================= */
+
     btts,
 
     bttsConfidence,
 
-    // =========================
-    // SCORE EXACT
-    // =========================
+
+    /* =========================
+       SCORE EXACT
+    ========================= */
 
     correctScore:
         poisson.exactScore?.score,
@@ -395,9 +406,10 @@ console.log({
     correctScoreProbability:
         poisson.exactScore?.probability,
 
-    // =========================
-    // AI RATING
-    // =========================
+
+    /* =========================
+       AI
+    ========================= */
 
     aiRating:
         finalRating,
