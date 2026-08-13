@@ -351,10 +351,10 @@ const bttsConfidence =
 
     probabilities,
 
-    over25,
+    over25Confidence:
     over25Confidence,
 
-    btts,
+bttsConfidence:
     bttsConfidence,
 
     correctScore:
