@@ -482,24 +482,27 @@ function filterVipMatches(matches = []) {
                CONDITIONS STRICTES
             */
 
-            if (confidence < 70)
-                return false;
+            if (confidence < 65)
+    return false;
 
-            if (favorite < 60)
-                return false;
+if (favorite < 62)
+    return false;
 
-            if (separation < 10)
-                return false;
+if (separation < 12)
+    return false;
 
-            if (dataQuality < 75)
-                return false;
+if (dataQuality < 75)
+    return false;
 
-            if (agreement < 70)
-                return false;
+if (agreement < 70)
+    return false;
 
-            if (p.winner === "DRAW")
-                return false;
+if (p.winner === "DRAW")
+    return false;
 
+if (match.vipScore < 68)
+    return false;
+         
             if (match.vipScore < 75)
                 return false;
 
@@ -549,17 +552,17 @@ function filterVipOver25(matches = []) {
             if (p.over25 !== "OVER 2.5")
                 return false;
 
-            if (confidence < 65)
-                return false;
+            if (confidence < 60)
+    return false;
 
-            if (xg < 2.20)
-                return false;
+if (xg < 2.20)
+    return false;
 
-            if (dataQuality < 75)
-                return false;
+if (dataQuality < 75)
+    return false;
 
-            if (match.vipScore < 70)
-                return false;
+if (match.vipScore < 65)
+    return false;
 
             return true;
         })
@@ -607,18 +610,18 @@ function filterVipBtts(matches = []) {
             if (p.btts !== "OUI")
                 return false;
 
-            if (confidence < 65)
-                return false;
+            if (confidence < 60)
+    return false;
 
-            if (xg < 2.00)
-                return false;
+if (xg < 2.00)
+    return false;
 
-            if (dataQuality < 75)
-                return false;
+if (dataQuality < 75)
+    return false;
 
-            if (match.vipScore < 70)
-                return false;
-
+if (match.vipScore < 65)
+    return false;
+         
             return true;
         })
 
