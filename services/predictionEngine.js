@@ -261,21 +261,6 @@ const bttsConfidence =
             : 100 - bttsProbability
     );
     
-/*
-=================================
-PREDICTION
-=================================
-*/
-
-const over25 =
-    overScore >= 60
-        ? "OVER 2.5"
-        : "UNDER 2.5";
-
-const btts =
-    bttsScore >= 60
-        ? "OUI"
-        : "NON";
 
     /* =========================
        DECISION
