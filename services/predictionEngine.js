@@ -216,8 +216,9 @@ async function analyzeMatch(match) {
         );
 
 
+
 /* =========================
-   MARKETS — POISSON DIRECT
+   MARKETS — CALIBRATED
 ========================= */
 
 const over25Probability =
@@ -236,7 +237,6 @@ const over25 =
         ? "OVER 2.5"
         : "UNDER 2.5";
 
-
 const over25Confidence =
     Math.round(
         over25Probability >= 50
@@ -254,14 +254,13 @@ const btts =
         ? "OUI"
         : "NON";
 
-
 const bttsConfidence =
     Math.round(
         bttsProbability >= 50
             ? bttsProbability
             : 100 - bttsProbability
     );
-
+    
 /*
 =================================
 PREDICTION
