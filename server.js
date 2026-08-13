@@ -720,99 +720,56 @@ app.get(
    VIP 1X2
 ========================= */
 
-app.get("/vip/1x2", async (req, res) => {
+
+  app.get("/vip/1x2", async (req, res) => {
 
   try {
 
-    const analyses = await getDailyPredictions();
+    const analyses =
+      await getDailyPredictions();
 
-    const selected = analyses
-      .filter(a => {
+    const vipMatches =
+      filterVipMatches(analyses);
 
-        const p =
-          a.predictions?.probabilities || {};
+    const selected =
+      vipMatches.slice(
+        0,
+        SETTINGS.maxVIP_1X2
+      );
 
-        const favorite =
-          Math.max(
-            Number(p.homeWin || 0),
-            Number(p.draw || 0),
-            Number(p.awayWin || 0)
-          );
+    const result =
+      selected.map(a => ({
 
-        const sorted = [
-          Number(p.homeWin || 0),
-          Number(p.draw || 0),
-          Number(p.awayWin || 0)
-        ].sort((x, y) => y - x);
+        match:
+          `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`,
 
-        const separation =
-          sorted[0] - sorted[1];
+        pick:
+          a.predictions.winner,
 
-        const confidence =
-          Number(
-            a.predictions?.winnerConfidence || 0
-          );
+        confidence:
+          a.predictions.winnerConfidence,
 
-        const risk =
-          a.predictions?.aiDecision?.risk;
+        probabilities:
+          a.predictions.probabilities,
 
-        const decision =
-          a.predictions?.aiDecision?.decision;
+        vipScore:
+          a.vipScore,
 
-        /*
-         * VIP 1X2
-         *
-         * On demande une vraie domination,
-         * mais pas une condition impossible.
-         */
+        decision:
+          a.predictions.aiDecision?.decision,
 
-        return (
-          favorite >= 65 &&
-          separation >= 15 &&
-          confidence >= 62 &&
-          risk !== "VERY HIGH" &&
-          decision !== "TRAP MATCH"
-        );
+        risk:
+          a.predictions.aiDecision?.risk,
 
-      })
-      .sort((a, b) =>
-        Number(b.predictions.winnerConfidence || 0) -
-        Number(a.predictions.winnerConfidence || 0)
-      )
-      .slice(0, SETTINGS.maxVIP_1X2);
+        score:
+          a.predictions.predictionStrength
 
-
-    const result = selected.map(a => ({
-
-      match:
-        `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`,
-
-      pick:
-        a.predictions.winner,
-
-      confidence:
-        a.predictions.winnerConfidence,
-
-      probabilities:
-        a.predictions.probabilities,
-
-      decision:
-        a.predictions.aiDecision?.decision,
-
-      risk:
-        a.predictions.aiDecision?.risk,
-
-      score:
-        a.predictions.predictionStrength
-
-    }));
-
+      }));
 
     console.log(
       "👑 VIP 1X2:",
       result.length
     );
-
 
     res.json(result);
 
@@ -824,7 +781,8 @@ app.get("/vip/1x2", async (req, res) => {
     );
 
     res.status(500).json({
-      error: "Internal server error"
+      error:
+        "Internal server error"
     });
 
   }
