@@ -370,69 +370,51 @@ function createCard(item, market) {
         `;
     }
 
-    card.innerHTML = `
+    const predictions = item.predictions || {};
+const probabilities = predictions.probabilities || {};
+const aiDecision = predictions.aiDecision || {};
+const model = item.model || {};
 
-        <div class="match-title">
-            👑 ${matchName}
-        </div>
+const homeWin = Number(probabilities.homeWin || 0);
+const draw = Number(probabilities.draw || 0);
+const awayWin = Number(probabilities.awayWin || 0);
 
-        <div class="market-badge">
-            ${market}
-        </div>
+const confidence =
+    Number(predictions.winnerConfidence || 0);
 
-        <div class="pick-box">
+const aiRating =
+    Number(predictions.aiRating || 0);
 
-            <span class="label">
-                🎯 PRONOSTIC
-            </span>
+const risk =
+    aiDecision.risk || "UNKNOWN";
 
-            <strong>
-                ${pick}
-            </strong>
+const decision =
+    aiDecision.decision || "NO BET";
 
-        </div>
+const winner =
+    predictions.winner || "-";
 
-        <div class="confidence">
+card.innerHTML = `
+    <h2>👑 ${item.match?.homeTeam?.name || item.homeTeam?.name || "Domicile"}
+    vs
+    ${item.match?.awayTeam?.name || item.awayTeam?.name || "Extérieur"}</h2>
 
-            <span>📊 Confiance</span>
+    <p>🎯 <strong>PRONOSTIC</strong></p>
 
-            <strong>
-                ${
-                    confidence !== null
-                        ? confidence + "%"
-                        : "-"
-                }
-            </strong>
+    <h3>${winner}</h3>
 
-        </div>
+    <p>📊 <strong>Confiance :</strong> ${confidence}%</p>
 
-        ${extra}
+    <p>🏠 Domicile : ${homeWin}%</p>
+    <p>🤝 Nul : ${draw}%</p>
+    <p>✈️ Extérieur : ${awayWin}%</p>
 
-        <div class="stats-grid">
+    <p>🧠 <strong>AI Score :</strong> ${aiRating}</p>
 
-            <div>
-                <span>🧠 VIP Score</span>
-                <strong>
-                    ${vipScore ?? "-"}
-                </strong>
-            </div>
+    <p>⚠️ <strong>Risque :</strong> ${risk}</p>
 
-            <div>
-                <span>⚠️ Risque</span>
-                <strong>
-                    ${risk}
-                </strong>
-            </div>
-
-        </div>
-
-        <div class="verdict ${verdict.className}">
-            ${verdict.label}
-        </div>
-
-    `;
-
-    return card;
+    <p>🔴 <strong>${decision}</strong></p>
+`;
 }
 
 /* ======================================================
