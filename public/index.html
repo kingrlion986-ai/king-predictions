@@ -2,14 +2,26 @@
 <html lang="fr">
 
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <title>KING PREDICTIONS AI</title>
 
-    <link rel="stylesheet" href="style.css">
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
 
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
+
 </head>
 
 <body>
@@ -18,13 +30,19 @@
 
     <div class="logo">
 
-        👑
+        <div class="crown">
+            👑
+        </div>
 
         <div>
 
-            <h1>KING PREDICTIONS AI</h1>
+            <h1>
+                KING PREDICTIONS AI
+            </h1>
 
-            <p>Football Prediction Engine</p>
+            <p>
+                Football Prediction Engine
+            </p>
 
         </div>
 
@@ -32,84 +50,120 @@
 
 </header>
 
+
 <section class="dashboard">
 
     <div class="card">
 
-        <h3>⚽ Matchs</h3>
+        <h3>
+            ⚽ Matchs
+        </h3>
 
-        <span id="matches">0</span>
-
-    </div>
-
-    <div class="card">
-
-        <h3>🎯 Pronostics</h3>
-
-        <span id="predictions">0</span>
+        <span id="matches">
+            0
+        </span>
 
     </div>
 
+
     <div class="card">
 
-        <h3>🔥 IA</h3>
+        <h3>
+            🎯 Pronostics
+        </h3>
 
-        <span>ACTIVE</span>
+        <span id="predictions">
+            0
+        </span>
 
     </div>
 
+
     <div class="card">
 
-        <h3>Version</h3>
+        <h3>
+            🔥 IA
+        </h3>
 
-        <span>V16</span>
+        <span class="active">
+            ACTIVE
+        </span>
+
+    </div>
+
+
+    <div class="card">
+
+        <h3>
+            Version
+        </h3>
+
+        <span>
+            V18
+        </span>
 
     </div>
 
 </section>
 
+
 <h2 class="title">
-Marchés
+    👑 Marchés
 </h2>
+
 
 <section class="buttons">
 
-<button onclick="currentMode='/free'; loadPredictions('/free')">
-🟢 FREE
-</button>
+    <button
+        class="market-button free"
+        onclick="loadPredictions('/free')"
+    >
+        🟢 FREE
+    </button>
 
-<button onclick="currentMode='/vip/1x2'; loadPredictions('/vip/1x2')">
-🔵 VIP 1X2
-</button>
 
-<button onclick="currentMode='/vip/over25'; loadPredictions('/vip/over25')">
-🟣 OVER 2.5
-</button>
+    <button
+        class="market-button vip1x2"
+        onclick="loadPredictions('/vip/1x2')"
+    >
+        💎 VIP 1X2
+    </button>
 
-<button onclick="currentMode='/vip/btts'; loadPredictions('/vip/btts')">
-🟠 BTTS
-</button>
 
-<button onclick="currentMode='/vip/score'; loadPredictions('/vip/score')">
-🔴 SCORE EXACT
-</button>
+    <button
+        class="market-button over"
+        onclick="loadPredictions('/vip/over25')"
+    >
+        🟣 VIP OVER 2.5
+    </button>
+
+
+    <button
+        class="market-button btts"
+        onclick="loadPredictions('/vip/btts')"
+    >
+        🟠 VIP BTTS
+    </button>
 
 </section>
 
+
 <h2 class="title">
-
-Résultats
-
+    📊 Résultats
 </h2>
+
 
 <div id="results">
 
+    <div class="loading">
+        ⏳ Chargement...
+    </div>
+
 </div>
+
 
 <script src="app.js"></script>
 
 </body>
 
 </html>
-Création de l'interface web
-
