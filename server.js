@@ -99,29 +99,41 @@ async function getAnalyses() {
 
 
 /* =========================
+   FORMAT MATCH
+========================= */
+
+function formatMatch(a) {
+    return {
+        home: a.match.homeTeam.name,
+        away: a.match.awayTeam.name,
+        name: `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`
+    };
+}
+
+
+/* =========================
    FREE
 ========================= */
 
 app.get("/free", async (req, res) => {
 
-    const data = await getAnalyses();
+    const data = await getDaily();
 
     if (!data.length)
         return res.json([]);
 
     const a = data[0];
+    const p = a.predictions;
+    const m = formatMatch(a);
 
     res.json([{
-        match:
-            `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`,
-
-        pick:
-            a.predictions.winner,
-
-        confidence:
-            a.predictions.winnerConfidence
+        match: m.name,
+        pick: p.winner,
+        confidence: p.winnerConfidence,
+        probabilities: p.probabilities,
+        risk: p.aiDecision?.risk || "UNKNOWN",
+        aiScore: p.aiRating
     }]);
-
 });
 
 
@@ -131,89 +143,84 @@ app.get("/free", async (req, res) => {
 
 app.get("/vip/1x2", async (req, res) => {
 
-    const data =
-        filterVipMatches(await getAnalyses())
-        .slice(0, 5)
-        .map(a => ({
+    const data = filterVipMatches(await getDaily());
 
-            match:
-                `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`,
+    res.json(
+        data.slice(0, 5).map(a => {
 
-            pick:
-                a.predictions.winner,
+            const p = a.predictions;
+            const m = formatMatch(a);
 
-            confidence:
-                a.predictions.winnerConfidence,
+            return {
+                match: m.name,
+                pick: p.winner,
+                confidence: p.winnerConfidence,
+                probabilities: p.probabilities,
+                vipScore: a.vipScore,
+                risk: p.aiDecision?.risk || "UNKNOWN",
+                aiScore: p.aiRating
+            };
 
-            probabilities:
-                a.predictions.probabilities,
-
-            vipScore:
-                a.vipScore,
-
-            risk:
-                a.predictions.aiDecision?.risk
-        }));
-
-    res.json(data);
+        })
+    );
 });
 
 
 /* =========================
-   VIP OVER
+   OVER 2.5
 ========================= */
 
 app.get("/vip/over25", async (req, res) => {
 
-    const data =
-        filterVipOver25(await getAnalyses())
-        .slice(0, 5)
-        .map(a => ({
+    const data = filterVipOver25(await getDaily());
 
-            match:
-                `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`,
+    res.json(
+        data.slice(0, 6).map(a => {
 
-            market:
-                a.predictions.over25,
+            const p = a.predictions;
+            const m = formatMatch(a);
 
-            confidence:
-                a.predictions.over25Confidence,
+            return {
+                match: m.name,
+                pick: p.over25,
+                confidence: p.over25Confidence,
+                expectedGoals: a.model?.expectedGoals || 0,
+                vipScore: a.vipScore,
+                risk: p.aiDecision?.risk || "UNKNOWN",
+                aiScore: p.aiRating
+            };
 
-            expectedGoals:
-                a.model.expectedGoals,
-
-            vipScore:
-                a.vipScore
-        }));
-
-    res.json(data);
+        })
+    );
 });
 
+
 /* =========================
-   VIP BTTS
+   BTTS
 ========================= */
 
 app.get("/vip/btts", async (req, res) => {
 
-    const data =
-        filterVipBtts(await getAnalyses())
-        .slice(0, 5)
-        .map(a => ({
+    const data = filterVipBtts(await getDaily());
 
-            match:
-                `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`,
+    res.json(
+        data.slice(0, 5).map(a => {
 
-            pick:
-                a.predictions.btts,
+            const p = a.predictions;
+            const m = formatMatch(a);
 
-            confidence:
-                a.predictions.bttsConfidence,
+            return {
+                match: m.name,
+                pick: p.btts,
+                confidence: p.bttsConfidence,
+                expectedGoals: a.model?.expectedGoals || 0,
+                vipScore: a.vipScore,
+                risk: p.aiDecision?.risk || "UNKNOWN",
+                aiScore: p.aiRating
+            };
 
-            vipScore:
-                a.vipScore
-        }));
-
-    res.json(data);
+        })
+    );
 });
 
 
@@ -223,42 +230,30 @@ app.get("/vip/btts", async (req, res) => {
 
 app.get("/vip/score", async (req, res) => {
 
-    const data =
-        (await getAnalyses())
-        .map(a => ({
+    const data = await getDaily();
 
-            match:
-                `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`,
+    const results = data
+        .filter(a => a?.predictions?.correctScore)
+        .map(a => {
 
-            score:
-                a.predictions.correctScore,
+            const p = a.predictions;
+            const m = formatMatch(a);
 
-            probability:
-                a.predictions.correctScoreProbability,
+            return {
+                match: m.name,
+                pick: p.correctScore,
+                probability: p.correctScoreProbability,
+                expectedGoals: a.model?.expectedGoals || 0,
+                aiScore: p.aiRating,
+                risk: p.aiDecision?.risk || "UNKNOWN"
+            };
 
-            xg:
-                a.model.expectedGoals,
+        })
+        .sort((a, b) =>
+            b.probability - a.probability
+        );
 
-            aiScore:
-                a.predictions.aiRating,
-
-            risk:
-                a.predictions.aiDecision?.risk
-
-        }))
-        .filter(a =>
-            a.score &&
-            a.probability >= 8
-        )
-        .sort(
-            (a, b) =>
-                b.probability -
-                a.probability
-        )
-        .slice(0, 3);
-
-    res.json(data);
-
+    res.json(results.slice(0, 5));
 });
 
 
