@@ -132,12 +132,30 @@ app.get("/free", async (req, res) => {
 app.get("/vip/1x2", async (req, res) => {
 
     const data =
-        filterVipMatches(
-            await getAnalyses()
-        ).slice(0, 5);
+        filterVipMatches(await getAnalyses())
+        .slice(0, 5)
+        .map(a => ({
+
+            match:
+                `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`,
+
+            pick:
+                a.predictions.winner,
+
+            confidence:
+                a.predictions.winnerConfidence,
+
+            probabilities:
+                a.predictions.probabilities,
+
+            vipScore:
+                a.vipScore,
+
+            risk:
+                a.predictions.aiDecision?.risk
+        }));
 
     res.json(data);
-
 });
 
 
@@ -148,14 +166,28 @@ app.get("/vip/1x2", async (req, res) => {
 app.get("/vip/over25", async (req, res) => {
 
     const data =
-        filterVipOver25(
-            await getAnalyses()
-        ).slice(0, 5);
+        filterVipOver25(await getAnalyses())
+        .slice(0, 5)
+        .map(a => ({
+
+            match:
+                `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`,
+
+            market:
+                a.predictions.over25,
+
+            confidence:
+                a.predictions.over25Confidence,
+
+            expectedGoals:
+                a.model.expectedGoals,
+
+            vipScore:
+                a.vipScore
+        }));
 
     res.json(data);
-
 });
-
 
 /* =========================
    VIP BTTS
@@ -164,12 +196,24 @@ app.get("/vip/over25", async (req, res) => {
 app.get("/vip/btts", async (req, res) => {
 
     const data =
-        filterVipBtts(
-            await getAnalyses()
-        ).slice(0, 5);
+        filterVipBtts(await getAnalyses())
+        .slice(0, 5)
+        .map(a => ({
+
+            match:
+                `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`,
+
+            pick:
+                a.predictions.btts,
+
+            confidence:
+                a.predictions.bttsConfidence,
+
+            vipScore:
+                a.vipScore
+        }));
 
     res.json(data);
-
 });
 
 
