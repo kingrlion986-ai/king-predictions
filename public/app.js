@@ -1,20 +1,154 @@
-console.log("👑 APP JS READY");
+console.log("👑 KING APP READY");
 
 let currentMode = "/free";
 
 
-/* =========================
-   LOAD
-========================= */
+function name(item) {
+
+    const m = item.match;
+
+    if (typeof m === "string")
+        return m;
+
+    if (m?.homeTeam?.name && m?.awayTeam?.name)
+        return `${m.homeTeam.name} vs ${m.awayTeam.name}`;
+
+    if (item.homeTeam?.name && item.awayTeam?.name)
+        return `${item.homeTeam.name} vs ${item.awayTeam.name}`;
+
+    return "Match inconnu";
+}
+
+
+function predictions(item) {
+    return item.predictions || {};
+}
+
+
+function card(item) {
+
+    const p = predictions(item);
+    const model = item.model || {};
+
+    const match = name(item);
+
+    /* SCORE */
+
+    if (currentMode === "/vip/score") {
+
+        return `
+        <h2>👑 ${match}</h2>
+        <p>📌 SCORE EXACT</p>
+
+        <h2>🎯 ${p.correctScore || item.score || "-"}</h2>
+
+        <p>📊 Probabilité :
+        ${p.correctScoreProbability ??
+          item.probability ?? 0}%</p>
+
+        <p>⚽ XG :
+        ${model.expectedGoals ??
+          item.xg ?? "-"}</p>
+
+        <p>🧠 AI Score :
+        ${p.aiRating ?? item.aiScore ?? 0}/100</p>
+
+        <p>⚠️ Risque :
+        ${p.aiDecision?.risk ??
+          item.risk ?? "UNKNOWN"}</p>
+        `;
+    }
+
+
+    /* OVER */
+
+    if (currentMode === "/vip/over25") {
+
+        return `
+        <h2>👑 ${match}</h2>
+        <p>📌 OVER 2.5</p>
+
+        <h2>🎯
+        ${p.over25 ?? item.market ?? "-"}</h2>
+
+        <p>📊 Confiance :
+        ${p.over25Confidence ??
+          item.confidence ?? 0}%</p>
+
+        <p>⚽ XG :
+        ${model.expectedGoals ??
+          item.expectedGoals ?? "-"}</p>
+
+        <p>🧠 VIP Score :
+        ${item.vipScore ?? "-"}</p>
+        `;
+    }
+
+
+    /* BTTS */
+
+    if (currentMode === "/vip/btts") {
+
+        return `
+        <h2>👑 ${match}</h2>
+        <p>📌 BTTS</p>
+
+        <h2>🎯
+        ${p.btts ?? item.pick ?? "-"}</h2>
+
+        <p>📊 Confiance :
+        ${p.bttsConfidence ??
+          item.confidence ?? 0}%</p>
+
+        <p>🧠 VIP Score :
+        ${item.vipScore ?? "-"}</p>
+        `;
+    }
+
+
+    /* 1X2 */
+
+    const probs = p.probabilities || item.probabilities || {};
+
+    return `
+    <h2>👑 ${match}</h2>
+
+    <p>📌 1X2</p>
+
+    <h2>🎯
+    ${p.winner ?? item.pick ?? "-"}</h2>
+
+    <p>📊 Confiance :
+    ${p.winnerConfidence ??
+      item.confidence ?? 0}%</p>
+
+    <p>🏠 Domicile :
+    ${probs.homeWin ?? 0}%</p>
+
+    <p>🤝 Nul :
+    ${probs.draw ?? 0}%</p>
+
+    <p>✈️ Extérieur :
+    ${probs.awayWin ?? 0}%</p>
+
+    <p>🧠 VIP Score :
+    ${item.vipScore ?? "-"}</p>
+
+    <p>⚠️ Risque :
+    ${p.aiDecision?.risk ??
+      item.risk ?? "UNKNOWN"}</p>
+    `;
+}
+
 
 async function loadPredictions(url) {
 
     currentMode = url;
 
-    const box =
+    const results =
         document.getElementById("results");
 
-    box.innerHTML =
+    results.innerHTML =
         "<h2>⏳ Analyse...</h2>";
 
     try {
@@ -25,214 +159,63 @@ async function loadPredictions(url) {
             });
 
         if (!response.ok)
-            throw new Error(
-                `HTTP ${response.status}`
-            );
+            throw new Error(`HTTP ${response.status}`);
 
         const data =
             await response.json();
 
+        const list =
+            Array.isArray(data)
+                ? data
+                : data.data || [];
+
         document.getElementById("matches")
-            .innerText = data.length;
+            .innerText = list.length;
 
         document.getElementById("predictions")
-            .innerText = data.length;
+            .innerText = list.length;
 
-        if (!data.length) {
+        if (!list.length) {
 
-            box.innerHTML = `
-                <div class="empty-card">
-                    <h2>🔍 Aucun match</h2>
-                    <p>
-                    Aucun match ne respecte
-                    actuellement les critères.
-                    </p>
-                </div>
-            `;
+            results.innerHTML = `
+            <div class="empty-card">
+                <h2>🔍 Aucun match</h2>
+                <p>
+                Aucun match ne respecte
+                actuellement les critères.
+                </p>
+            </div>`;
 
             return;
         }
 
-        box.innerHTML = "";
+        results.innerHTML = "";
 
-        data.forEach(item => {
+        list.forEach(item => {
 
-            const card =
+            const div =
                 document.createElement("div");
 
-            card.className =
+            div.className =
                 "prediction-card";
 
-            card.innerHTML =
-                createCard(item);
+            div.innerHTML =
+                card(item);
 
-            box.appendChild(card);
+            results.appendChild(div);
 
         });
 
     } catch (error) {
 
-        box.innerHTML = `
-            <div class="error-card">
-                ❌ ${error.message}
-            </div>
-        `;
+        console.error(error);
 
+        results.innerHTML = `
+        <div class="error-card">
+            ❌ ${error.message}
+        </div>`;
     }
 }
 
-
-/* =========================
-   CARD
-========================= */
-
-function createCard(item) {
-
-    if (currentMode === "/vip/score") {
-
-        return `
-
-        <h2>👑 ${item.match}</h2>
-
-        <p>📌 SCORE EXACT</p>
-
-        <h2>
-            🎯 ${item.score}
-        </h2>
-
-        <p>
-            📊 Probabilité :
-            ${item.probability}%
-        </p>
-
-        <p>
-            ⚽ XG :
-            ${item.xg}
-        </p>
-
-        <p>
-            🧠 AI Score :
-            ${item.aiScore}/100
-        </p>
-
-        <p>
-            ⚠️ Risque :
-            ${item.risk || "UNKNOWN"}
-        </p>
-
-        `;
-
-    }
-
-
-    if (currentMode === "/vip/over25") {
-
-        return `
-
-        <h2>👑 ${item.match}</h2>
-
-        <p>📌 OVER 2.5</p>
-
-        <h2>
-            🎯 ${item.market}
-        </h2>
-
-        <p>
-            📊 Confiance :
-            ${item.confidence}%
-        </p>
-
-        <p>
-            ⚽ XG :
-            ${item.expectedGoals}
-        </p>
-
-        <p>
-            🧠 VIP Score :
-            ${item.vipScore}
-        </p>
-
-        `;
-
-    }
-
-
-    if (currentMode === "/vip/btts") {
-
-        return `
-
-        <h2>👑 ${item.match}</h2>
-
-        <p>📌 BTTS</p>
-
-        <h2>
-            🎯 ${item.pick}
-        </h2>
-
-        <p>
-            📊 Confiance :
-            ${item.confidence}%
-        </p>
-
-        <p>
-            🧠 VIP Score :
-            ${item.vipScore}
-        </p>
-
-        `;
-
-    }
-
-
-    /* 1X2 */
-
-    const p =
-        item.probabilities || {};
-
-    return `
-
-    <h2>👑 ${item.match}</h2>
-
-    <p>📌 1X2</p>
-
-    <h2>
-        🎯 ${item.pick}
-    </h2>
-
-    <p>
-        📊 Confiance :
-        ${item.confidence}%
-    </p>
-
-    <p>🏠 Domicile :
-        ${p.homeWin ?? 0}%
-    </p>
-
-    <p>🤝 Nul :
-        ${p.draw ?? 0}%
-    </p>
-
-    <p>✈️ Extérieur :
-        ${p.awayWin ?? 0}%
-    </p>
-
-    <p>
-        🧠 VIP Score :
-        ${item.vipScore ?? "-"}
-    </p>
-
-    <p>
-        ⚠️ Risque :
-        ${item.risk ?? "UNKNOWN"}
-    </p>
-
-    `;
-
-}
-
-
-/* =========================
-   START
-========================= */
 
 loadPredictions("/free");
