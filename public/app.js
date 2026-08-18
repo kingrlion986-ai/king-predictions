@@ -168,9 +168,51 @@ function createCard(item) {
         num(item.vipScore);
 
 
-    let verdict =
-        "🟡 À SURVEILLER";
+    let verdict = "🟡 À SURVEILLER";
 
+
+/* ==================================================
+   SCORE EXACT
+================================================== */
+
+if (market === "SCORE EXACT") {
+
+    if (
+        decision === "TRAP MATCH" ||
+        risk === "VERY HIGH"
+    ) {
+
+        verdict = "🔴 TRÈS RISQUÉ";
+
+    }
+    else if (
+        confidence >= 12
+    ) {
+
+        verdict = "🟢 MEILLEUR SCORE";
+
+    }
+    else if (
+        confidence >= 9
+    ) {
+
+        verdict = "🟡 SCORE INTÉRESSANT";
+
+    }
+    else {
+
+        verdict = "⚪ FAIBLE PROBABILITÉ";
+
+    }
+
+}
+
+
+/* ==================================================
+   AUTRES MARCHÉS
+================================================== */
+
+else {
 
     if (
         decision === "TRAP MATCH" ||
@@ -178,41 +220,37 @@ function createCard(item) {
         risk === "HIGH"
     ) {
 
-        verdict =
-            "🔴 NO BET";
+        verdict = "🔴 NO BET";
 
     }
     else if (
         confidence >= 75
     ) {
 
-        verdict =
-            "🟢 TRÈS BON";
+        verdict = "🟢 TRÈS BON";
 
     }
     else if (
         confidence >= 65
     ) {
 
-        verdict =
-            "🟢 BON";
+        verdict = "🟢 BON";
 
     }
     else if (
         confidence >= 55
     ) {
 
-        verdict =
-            "🟡 PRUDENT";
+        verdict = "🟡 PRUDENT";
 
     }
     else {
 
-        verdict =
-            "🔴 NO BET";
+        verdict = "🔴 NO BET";
 
     }
 
+}
 
     let content = "";
 
@@ -462,10 +500,21 @@ function createCard(item) {
         ${
             market !== "FREE"
             ? `
-                <p>
-                    💎 <strong>VIP Score :</strong>
-                    ${vipScore}
-                </p>
+                ${
+    market === "SCORE EXACT"
+    ? `
+        <p>
+            🧠 <strong>AI Score :</strong>
+            ${aiRating}
+        </p>
+    `
+    : `
+        <p>
+            💎 <strong>VIP Score :</strong>
+            ${vipScore}
+        </p>
+    `
+                }
             `
             : ""
         }
