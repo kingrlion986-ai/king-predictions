@@ -1,499 +1,584 @@
-console.log("👑 KING PREDICTIONS AI - APP JS LOADED");
+console.log(
+    "👑 KING PREDICTIONS AI - APP JS LOADED"
+);
 
 let currentMode = "/free";
 
 const PAGE_CACHE = new Map();
 
+
 /* ======================================================
    HELPERS
 ====================================================== */
 
-function num(value, fallback = null) {
+function num(value, fallback = 0) {
+
     const n = Number(value);
-    return Number.isFinite(n) ? n : fallback;
+
+    return Number.isFinite(n)
+        ? n
+        : fallback;
+
 }
+
 
 function getPredictions(item) {
+
     return item?.predictions || {};
+
 }
+
 
 function getModel(item) {
+
     return item?.model || {};
+
 }
 
-function getHome(item) {
-    return item?.teamStats?.home || {};
-}
-
-function getAway(item) {
-    return item?.teamStats?.away || {};
-}
 
 /* ======================================================
-   MATCH NAME
+   MATCH
 ====================================================== */
 
 function getMatchName(item) {
 
-    return (
-        item?.match ||
-        item?.name ||
-        (
-            item?.homeTeam?.name &&
-            item?.awayTeam?.name
-                ? `${item.homeTeam.name} vs ${item.awayTeam.name}`
-                : null
-        ) ||
-        (
-            getHome(item)?.teamName &&
-            getAway(item)?.teamName
-                ? `${getHome(item).teamName} vs ${getAway(item).teamName}`
-                : null
-        ) ||
-        "Match inconnu"
-    );
+    if (item?.match) {
+
+        if (
+            typeof item.match === "string"
+        ) {
+
+            return item.match;
+
+        }
+
+        if (
+            item.match.homeTeam &&
+            item.match.awayTeam
+        ) {
+
+            return (
+                `${item.match.homeTeam.name} vs ` +
+                `${item.match.awayTeam.name}`
+            );
+
+        }
+
+    }
+
+
+    if (
+        item?.homeTeam?.name &&
+        item?.awayTeam?.name
+    ) {
+
+        return (
+            `${item.homeTeam.name} vs ` +
+            `${item.awayTeam.name}`
+        );
+
+    }
+
+
+    return "Match inconnu";
+
 }
 
+
 /* ======================================================
-   WINNER
+   MARKET
 ====================================================== */
 
-function getWinner(item) {
+function getMarket() {
 
-    const p = getPredictions(item);
+    if (
+        currentMode ===
+        "/vip/over25"
+    )
+        return "OVER 2.5";
 
-    return (
-        p.winner ||
-        item?.winner ||
-        item?.pick ||
-        item?.prediction ||
-        "-"
-    );
+
+    if (
+        currentMode ===
+        "/vip/btts"
+    )
+        return "BTTS";
+
+
+    if (
+        currentMode ===
+        "/vip/score"
+    )
+        return "SCORE EXACT";
+
+
+    return "1X2";
+
 }
 
-/* ======================================================
-   CONFIDENCE
-====================================================== */
-
-function getWinnerConfidence(item) {
-
-    const p = getPredictions(item);
-
-    return num(
-        p.winnerConfidence ??
-        p.confidence ??
-        item?.confidence,
-        null
-    );
-}
 
 /* ======================================================
-   RISK
+   CARD
 ====================================================== */
 
-function getRisk(item) {
+function createCard(item) {
 
-    const p = getPredictions(item);
+    const p =
+        getPredictions(item);
 
-    return (
-        p?.aiDecision?.risk ||
-        p?.risk ||
-        item?.risk ||
-        "UNKNOWN"
-    );
-}
+    const model =
+        getModel(item);
 
-/* ======================================================
-   AI DECISION
-====================================================== */
+    const market =
+        item.vipMarket ||
+        getMarket();
 
-function getDecision(item) {
 
-    const p = getPredictions(item);
+    const matchName =
+        getMatchName(item);
 
-    return (
-        p?.aiDecision?.decision ||
-        item?.decision ||
-        null
-    );
-}
 
-/* ======================================================
-   VERDICT UI
-====================================================== */
+    const confidence =
+        market === "1X2"
+            ? num(p.winnerConfidence)
+            : market === "OVER 2.5"
+                ? num(p.over25Confidence)
+                : market === "BTTS"
+                    ? num(p.bttsConfidence)
+                    : num(
+                        p.correctScoreProbability
+                    );
 
-function getVerdict(item, market) {
 
-    const p = getPredictions(item);
+    const risk =
+        p.aiDecision?.risk ||
+        "UNKNOWN";
 
-    const risk = getRisk(item);
-    const decision = getDecision(item);
+
+    const decision =
+        p.aiDecision?.decision ||
+        "NO BET";
+
+
+    const aiRating =
+        num(p.aiRating);
+
+
+    const vipScore =
+        num(item.vipScore);
+
+
+    let verdict =
+        "🟡 À SURVEILLER";
+
 
     if (
         decision === "TRAP MATCH" ||
         risk === "VERY HIGH" ||
         risk === "HIGH"
     ) {
-        return {
-            label: "🔴 NO BET",
-            className: "danger"
-        };
+
+        verdict =
+            "🔴 NO BET";
+
+    }
+    else if (
+        confidence >= 75
+    ) {
+
+        verdict =
+            "🟢 TRÈS BON";
+
+    }
+    else if (
+        confidence >= 65
+    ) {
+
+        verdict =
+            "🟢 BON";
+
+    }
+    else if (
+        confidence >= 55
+    ) {
+
+        verdict =
+            "🟡 PRUDENT";
+
+    }
+    else {
+
+        verdict =
+            "🔴 NO BET";
+
     }
 
-    let confidence = null;
 
-    if (market === "1X2") {
-        confidence = getWinnerConfidence(item);
-    }
+    let content = "";
 
-    if (market === "OVER 2.5") {
-        confidence = num(
-            p.over25Confidence,
-            null
-        );
-    }
 
-    if (market === "BTTS") {
-        confidence = num(
-            p.bttsConfidence,
-            null
-        );
-    }
-
-    if (confidence === null) {
-        return {
-            label: "🟡 À SURVEILLER",
-            className: "warning"
-        };
-    }
-
-    if (confidence >= 75) {
-        return {
-            label: "🟢 TRÈS BON",
-            className: "excellent"
-        };
-    }
-
-    if (confidence >= 65) {
-        return {
-            label: "🟢 BON",
-            className: "good"
-        };
-    }
-
-    if (confidence >= 55) {
-        return {
-            label: "🟡 PRUDENT",
-            className: "warning"
-        };
-    }
-
-    return {
-        label: "🔴 NO BET",
-        className: "danger"
-    };
-}
-
-/* ======================================================
-   MARKET PICK
-====================================================== */
-
-function getMarketPick(item, market) {
-
-    const p = getPredictions(item);
-
-    if (market === "1X2") {
-        return (
-            p.winner ||
-            item?.winner ||
-            item?.pick ||
-            "-"
-        );
-    }
-
-    if (market === "OVER 2.5") {
-        return (
-            p.over25 ||
-            item?.over25 ||
-            "-"
-        );
-    }
-
-    if (market === "BTTS") {
-        return (
-            p.btts ||
-            item?.btts ||
-            "-"
-        );
-    }
-
-    return "-";
-}
-
-/* ======================================================
-   CARD
-====================================================== */
-
-function createCard(item, market) {
-
-    const p = getPredictions(item);
-    const model = getModel(item);
-
-    const home = getHome(item);
-    const away = getAway(item);
-
-    const matchName = getMatchName(item);
-
-    const verdict =
-        getVerdict(
-            item,
-            market
-        );
-
-    const confidence =
-        market === "1X2"
-            ? getWinnerConfidence(item)
-            : market === "OVER 2.5"
-                ? num(p.over25Confidence)
-                : market === "BTTS"
-                    ? num(p.bttsConfidence)
-                    : null;
-
-    const pick =
-        getMarketPick(
-            item,
-            market
-        );
-
-    const expectedGoals =
-        num(
-            model.expectedGoals,
-            null
-        );
-
-    const vipScore =
-        num(
-            item.vipScore,
-            null
-        );
-
-    const risk =
-        getRisk(item);
-
-    const card =
-        document.createElement("div");
-
-    card.className = "prediction-card";
-
-    let extra = "";
-
-    /* =========================
+    /* ==================================================
        1X2
-    ========================= */
+    ================================================== */
 
-    if (market === "1X2") {
+    if (
+        market === "1X2"
+    ) {
 
         const probabilities =
             p.probabilities || {};
 
-        extra = `
+
+        content = `
+
+            <p>
+                🎯 <strong>PRONOSTIC</strong>
+            </p>
+
+            <h3>
+                ${p.winner || "-"}
+            </h3>
+
+            <p>
+                📊 <strong>Confiance :</strong>
+                ${confidence}%
+            </p>
+
             <div class="probabilities">
-                <div>
-                    <span>🏠 Domicile</span>
-                    <strong>${num(probabilities.homeWin, 0)}%</strong>
-                </div>
 
-                <div>
-                    <span>🤝 Nul</span>
-                    <strong>${num(probabilities.draw, 0)}%</strong>
-                </div>
+                <p>
+                    🏠 Domicile :
+                    <strong>
+                        ${num(
+                            probabilities.homeWin
+                        )}%
+                    </strong>
+                </p>
 
-                <div>
-                    <span>✈️ Extérieur</span>
-                    <strong>${num(probabilities.awayWin, 0)}%</strong>
-                </div>
+                <p>
+                    🤝 Nul :
+                    <strong>
+                        ${num(
+                            probabilities.draw
+                        )}%
+                    </strong>
+                </p>
+
+                <p>
+                    ✈️ Extérieur :
+                    <strong>
+                        ${num(
+                            probabilities.awayWin
+                        )}%
+                    </strong>
+                </p>
+
             </div>
+
         `;
+
     }
 
-    /* =========================
-       OVER
-    ========================= */
 
-    if (market === "OVER 2.5") {
+    /* ==================================================
+       OVER 2.5
+    ================================================== */
 
-        extra = `
+    else if (
+        market ===
+        "OVER 2.5"
+    ) {
+
+        content = `
+
+            <p>
+                🎯 <strong>PRONOSTIC</strong>
+            </p>
+
+            <h3>
+                ${p.over25 || "-"}
+            </h3>
+
+            <p>
+                📊 <strong>Confiance :</strong>
+                ${confidence}%
+            </p>
+
             <div class="stats-grid">
 
-                <div>
-                    <span>⚽ XG</span>
+                <p>
+                    ⚽ XG :
                     <strong>
-                        ${expectedGoals ?? "-"}
+                        ${num(
+                            model.expectedGoals
+                        )}
                     </strong>
-                </div>
+                </p>
 
-                <div>
-                    <span>🔥 OVER</span>
+                <p>
+                    🔥 OVER :
                     <strong>
-                        ${num(p.over25Confidence, 0)}%
+                        ${num(
+                            p.over25Confidence
+                        )}%
                     </strong>
-                </div>
+                </p>
 
             </div>
+
         `;
+
     }
 
-    /* =========================
+
+    /* ==================================================
        BTTS
-    ========================= */
+    ================================================== */
 
-    if (market === "BTTS") {
+    else if (
+        market ===
+        "BTTS"
+    ) {
 
-        extra = `
+        content = `
+
+            <p>
+                🎯 <strong>PRONOSTIC</strong>
+            </p>
+
+            <h3>
+                ${p.btts || "-"}
+            </h3>
+
+            <p>
+                📊 <strong>Confiance :</strong>
+                ${confidence}%
+            </p>
+
             <div class="stats-grid">
 
-                <div>
-                    <span>⚽ XG</span>
+                <p>
+                    ⚽ XG :
                     <strong>
-                        ${expectedGoals ?? "-"}
+                        ${num(
+                            model.expectedGoals
+                        )}
                     </strong>
-                </div>
+                </p>
 
-                <div>
-                    <span>🎯 BTTS</span>
+                <p>
+                    🎯 BTTS :
                     <strong>
-                        ${num(p.bttsConfidence, 0)}%
+                        ${num(
+                            p.bttsConfidence
+                        )}%
                     </strong>
-                </div>
+                </p>
 
             </div>
+
         `;
+
     }
+
+
+    /* ==================================================
+       SCORE EXACT
+    ================================================== */
+
+    else if (
+        market ===
+        "SCORE EXACT"
+    ) {
+
+        content = `
+
+            <p>
+                🎯 <strong>SCORE PRÉVU</strong>
+            </p>
+
+            <h2>
+                ${p.correctScore || "-"}
+            </h2>
+
+            <p>
+                📊 <strong>Probabilité :</strong>
+                ${num(
+                    p.correctScoreProbability
+                )}%
+            </p>
+
+            <p>
+                ⚽ XG :
+                <strong>
+                    ${num(
+                        model.expectedGoals
+                    )}
+                </strong>
+            </p>
+
+            <small>
+                ⚠️ Le score exact est une
+                estimation probabiliste, pas
+                une garantie.
+            </small>
+
+        `;
+
+    }
+
+
+    const card =
+        document.createElement(
+            "div"
+        );
+
+
+    card.className =
+        "prediction-card";
+
 
     card.innerHTML = `
 
-        <div class="match-title">
+        <h2>
             👑 ${matchName}
-        </div>
+        </h2>
 
-        <div class="market-badge">
-            ${market}
-        </div>
+        <hr>
 
-        <div class="pick-box">
+        <p>
+            📌 <strong>${market}</strong>
+        </p>
 
-            <span class="label">
-                🎯 PRONOSTIC
-            </span>
+        ${content}
 
-            <strong>
-                ${pick}
-            </strong>
+        <hr>
 
-        </div>
+        <p>
+            🧠 <strong>AI Score :</strong>
+            ${aiRating}
+        </p>
 
-        <div class="confidence">
+        ${
+            market !== "FREE"
+            ? `
+                <p>
+                    💎 <strong>VIP Score :</strong>
+                    ${vipScore}
+                </p>
+            `
+            : ""
+        }
 
-            <span>📊 Confiance</span>
+        <p>
+            ⚠️ <strong>Risque :</strong>
+            ${risk}
+        </p>
 
-            <strong>
-                ${
-                    confidence !== null
-                        ? confidence + "%"
-                        : "-"
-                }
-            </strong>
-
-        </div>
-
-        ${extra}
-
-        <div class="stats-grid">
-
-            <div>
-                <span>🧠 VIP Score</span>
-                <strong>
-                    ${vipScore ?? "-"}
-                </strong>
-            </div>
-
-            <div>
-                <span>⚠️ Risque</span>
-                <strong>
-                    ${risk}
-                </strong>
-            </div>
-
-        </div>
-
-        <div class="verdict ${verdict.className}">
-            ${verdict.label}
-        </div>
+        <p>
+            <strong>${verdict}</strong>
+        </p>
 
     `;
 
+
     return card;
+
 }
 
+
 /* ======================================================
-   NORMALIZE API RESPONSE
+   NORMALIZE
 ====================================================== */
 
 function normalizeResponse(data) {
 
-    if (Array.isArray(data)) {
+    if (
+        Array.isArray(data)
+    )
         return data;
-    }
 
-    if (Array.isArray(data?.data)) {
+
+    if (
+        Array.isArray(data?.data)
+    )
         return data.data;
-    }
 
-    if (Array.isArray(data?.matches)) {
-        return data.matches;
-    }
 
-    if (Array.isArray(data?.predictions)) {
+    if (
+        Array.isArray(data?.predictions)
+    )
         return data.predictions;
-    }
 
-    if (data && typeof data === "object") {
+
+    if (
+        data &&
+        typeof data === "object"
+    )
         return [data];
-    }
+
 
     return [];
+
 }
 
+
 /* ======================================================
-   EMPTY STATE
+   EMPTY
 ====================================================== */
 
-function showEmptyState(url) {
+function showEmptyState() {
 
     const results =
-        document.getElementById("results");
+        document.getElementById(
+            "results"
+        );
+
 
     let message =
-        "Aucune prédiction disponible actuellement.";
+        "Aucun match ne respecte actuellement les critères.";
 
-    if (url === "/vip/1x2") {
+
+    if (
+        currentMode ===
+        "/vip/1x2"
+    ) {
 
         message =
             "💎 Aucun match ne respecte actuellement les critères VIP 1X2.";
 
-    } else if (url === "/vip/over25") {
+    }
+    else if (
+        currentMode ===
+        "/vip/over25"
+    ) {
 
         message =
             "🟣 Aucun match ne respecte actuellement les critères VIP OVER 2.5.";
 
-    } else if (url === "/vip/btts") {
+    }
+    else if (
+        currentMode ===
+        "/vip/btts"
+    ) {
 
         message =
             "🟠 Aucun match ne respecte actuellement les critères VIP BTTS.";
 
     }
+    else if (
+        currentMode ===
+        "/vip/score"
+    ) {
+
+        message =
+            "📊 Aucun score exact disponible actuellement.";
+
+    }
+
 
     results.innerHTML = `
+
         <div class="empty-card">
 
             <div class="empty-icon">
@@ -510,12 +595,16 @@ function showEmptyState(url) {
 
             <small>
                 Le moteur préfère ne rien proposer
-                plutôt que de forcer une mauvaise prédiction.
+                plutôt que de forcer une mauvaise
+                prédiction.
             </small>
 
         </div>
+
     `;
+
 }
+
 
 /* ======================================================
    DISPLAY
@@ -524,84 +613,88 @@ function showEmptyState(url) {
 function displayPredictions(data) {
 
     const results =
-        document.getElementById("results");
-
-    const list =
-        normalizeResponse(data);
-
-    document.getElementById("matches").innerText =
-        list.length;
-
-    document.getElementById("predictions").innerText =
-        list.length;
-
-    if (!list.length) {
-
-        showEmptyState(
-            currentMode
+        document.getElementById(
+            "results"
         );
 
-        return;
-    }
+
+    const list =
+        normalizeResponse(
+            data
+        );
+
+
+    document.getElementById(
+        "matches"
+    ).innerText =
+        list.length;
+
+
+    document.getElementById(
+        "predictions"
+    ).innerText =
+        list.length;
+
 
     results.innerHTML = "";
 
-    let market = "1X2";
 
-    if (currentMode === "/vip/over25") {
-        market = "OVER 2.5";
+    if (!list.length) {
+
+        showEmptyState();
+
+        return;
+
     }
 
-    if (currentMode === "/vip/btts") {
-        market = "BTTS";
-    }
 
     list.forEach(item => {
 
         results.appendChild(
-            createCard(
-                item,
-                market
-            )
+            createCard(item)
         );
 
     });
+
 }
 
+
 /* ======================================================
-   LOAD PREDICTIONS
+   LOAD
 ====================================================== */
 
-async function loadPredictions(url) {
+async function loadPredictions(
+    url
+) {
+
+    currentMode =
+        url;
+
 
     const results =
-        document.getElementById("results");
+        document.getElementById(
+            "results"
+        );
 
-    currentMode = url;
 
     results.innerHTML = `
+
         <div class="loading">
+
             ⏳ Analyse des prédictions...
+
         </div>
+
     `;
 
-    /* =========================
-       CACHE
-    ========================= */
 
-    if (PAGE_CACHE.has(url)) {
+    /*
+     * Pour éviter qu'une ancienne réponse
+     * reste affichée toute la journée après
+     * une nouvelle analyse.
+     */
+    PAGE_CACHE.delete(url);
 
-        console.log(
-            "⚡ PAGE CACHE:",
-            url
-        );
-
-        displayPredictions(
-            PAGE_CACHE.get(url)
-        );
-
-        return;
-    }
 
     try {
 
@@ -610,23 +703,29 @@ async function loadPredictions(url) {
             url
         );
 
+
         const response =
             await fetch(
                 url,
                 {
-                    cache: "no-store"
+                    cache:
+                        "no-store"
                 }
             );
+
 
         if (!response.ok) {
 
             throw new Error(
                 `HTTP ${response.status}`
             );
+
         }
+
 
         const data =
             await response.json();
+
 
         console.log(
             "✅ API RESPONSE:",
@@ -634,14 +733,17 @@ async function loadPredictions(url) {
             data
         );
 
+
         PAGE_CACHE.set(
             url,
             data
         );
 
+
         displayPredictions(
             data
         );
+
 
     } catch (error) {
 
@@ -649,6 +751,7 @@ async function loadPredictions(url) {
             "❌ API ERROR:",
             error
         );
+
 
         results.innerHTML = `
 
@@ -663,7 +766,11 @@ async function loadPredictions(url) {
                 </p>
 
                 <button
-                    onclick="reloadCurrentPage()"
+                    onclick="
+                        loadPredictions(
+                            currentMode
+                        )
+                    "
                 >
                     🔄 Réessayer
                 </button>
@@ -671,23 +778,11 @@ async function loadPredictions(url) {
             </div>
 
         `;
+
     }
+
 }
 
-/* ======================================================
-   REFRESH
-====================================================== */
-
-function reloadCurrentPage() {
-
-    PAGE_CACHE.delete(
-        currentMode
-    );
-
-    loadPredictions(
-        currentMode
-    );
-}
 
 /* ======================================================
    START
