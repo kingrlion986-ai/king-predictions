@@ -30,7 +30,14 @@ const PORT = process.env.PORT || 3000;
 const HISTORY_FILE = path.join(__dirname, "history.json");
 
 const CACHE_TTL = 15 * 60 * 1000;
-const MAX_ANALYSES = 5;
+
+/*
+ * On analyse plusieurs matchs afin d'avoir
+ * suffisamment de candidats VIP.
+ *
+ * Le moteur reste strict ensuite.
+ */
+const MAX_ANALYSES = 8;
 
 let cache = null;
 let cacheTime = 0;
@@ -43,30 +50,180 @@ let dailyDate = null;
 ====================================================== */
 
 function loadHistory() {
+
   try {
+
     return JSON.parse(
-      fs.readFileSync(HISTORY_FILE, "utf8")
+      fs.readFileSync(
+        HISTORY_FILE,
+        "utf8"
+      )
     );
+
   } catch {
+
     return [];
+
   }
 }
 
+
 function validAnalysis(a) {
-  const h = a?.teamStats?.home;
-  const v = a?.teamStats?.away;
+
+  const h =
+    a?.teamStats?.home;
+
+  const v =
+    a?.teamStats?.away;
 
   return (
+
     a?.match &&
     h &&
     v &&
+
     Number(h.played) >= 5 &&
     Number(v.played) >= 5
+
   );
+
 }
 
+
 function matchName(a) {
-  return `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`;
+
+  return (
+    `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`
+  );
+
+}
+
+
+/*
+ * Normalisation centrale.
+ *
+ * TOUTES les routes utilisent cette structure.
+ * Cela évite les incohérences entre backend et UI.
+ */
+function publicPrediction(a) {
+
+  const p =
+    a?.predictions || {};
+
+  const model =
+    a?.model || {};
+
+  const probabilities =
+    p?.probabilities || {};
+
+  const decision =
+    p?.aiDecision || {};
+
+  return {
+
+    match:
+      matchName(a),
+
+    homeTeam:
+      a.match.homeTeam,
+
+    awayTeam:
+      a.match.awayTeam,
+
+    predictions: {
+
+      winner:
+        p.winner ?? null,
+
+      winnerConfidence:
+        Number(p.winnerConfidence ?? 0),
+
+      probabilities: {
+
+        homeWin:
+          Number(probabilities.homeWin ?? 0),
+
+        draw:
+          Number(probabilities.draw ?? 0),
+
+        awayWin:
+          Number(probabilities.awayWin ?? 0)
+
+      },
+
+      over25:
+        p.over25 ?? null,
+
+      over25Confidence:
+        Number(p.over25Confidence ?? 0),
+
+      btts:
+        p.btts ?? null,
+
+      bttsConfidence:
+        Number(p.bttsConfidence ?? 0),
+
+      correctScore:
+        p.correctScore ?? null,
+
+      correctScoreProbability:
+        Number(
+          p.correctScoreProbability ?? 0
+        ),
+
+      aiRating:
+        Number(p.aiRating ?? 0),
+
+      predictionStrength:
+        Number(
+          p.predictionStrength ?? 0
+        ),
+
+      quality:
+        p.quality ?? null,
+
+      aiDecision: {
+
+        decision:
+          decision.decision ?? "NO BET",
+
+        risk:
+          decision.risk ?? "UNKNOWN",
+
+        score:
+          Number(decision.score ?? 0)
+
+      }
+
+    },
+
+    model: {
+
+      expectedGoals:
+        Number(model.expectedGoals ?? 0),
+
+      expectedHomeGoals:
+        Number(
+          model.expectedHomeGoals ?? 0
+        ),
+
+      expectedAwayGoals:
+        Number(
+          model.expectedAwayGoals ?? 0
+        )
+
+    },
+
+    teamStats: {
+
+      home: a.teamStats.home,
+
+      away: a.teamStats.away
+
+    }
+
+  };
+
 }
 
 
@@ -80,37 +237,66 @@ async function buildAnalyses() {
     cache &&
     Date.now() - cacheTime < CACHE_TTL
   ) {
-    console.log("⚡ ANALYSIS CACHE:", cache.length);
+
+    console.log(
+      "⚡ ANALYSIS CACHE:",
+      cache.length
+    );
+
     return cache;
+
   }
 
+
   if (building) {
+
     return building;
+
   }
+
 
   building = (async () => {
 
-    const matches = await getMatches();
+    const matches =
+      await getMatches();
+
 
     if (!matches?.length) {
-      console.log("⚠️ NO FUTURE MATCHES");
+
+      console.log(
+        "⚠️ NO FUTURE MATCHES"
+      );
+
       return [];
+
     }
 
+
+    /*
+     * On prend davantage de candidats.
+     *
+     * Les filtres VIP décident ensuite
+     * lesquels sont réellement bons.
+     */
     const selected =
-      matches.slice(0, MAX_ANALYSES);
+      matches.slice(
+        0,
+        MAX_ANALYSES
+      );
+
 
     console.log(
       "🎯 MATCHES FOR AI:",
-      selected.map(
-        m =>
-          `${m.homeTeam.name} vs ${m.awayTeam.name}`
-      )
+      selected.length
     );
+
 
     const results = [];
 
-    for (const match of selected) {
+
+    for (
+      const match of selected
+    ) {
 
       try {
 
@@ -121,10 +307,18 @@ async function buildAnalyses() {
           match.awayTeam.name
         );
 
-        const result =
-          await analyzeMatch(match);
 
-        if (!validAnalysis(result)) {
+        const result =
+          await analyzeMatch(
+            match
+          );
+
+
+        if (
+          !validAnalysis(
+            result
+          )
+        ) {
 
           console.log(
             "🚫 REJECTED — INSUFFICIENT DATA:",
@@ -134,42 +328,61 @@ async function buildAnalyses() {
           );
 
           continue;
+
         }
 
-        results.push(result);
+
+        results.push(
+          result
+        );
+
 
         console.log(
           "✅ AI READY:",
           matchName(result)
         );
 
+
       } catch (err) {
 
-        console.log(
+        console.error(
           "❌ ANALYSIS ERROR:",
           err.message
         );
 
       }
+
     }
 
-    cache = results;
-    cacheTime = Date.now();
+
+    cache =
+      results;
+
+    cacheTime =
+      Date.now();
+
 
     console.log(
       "🤖 AI READY:",
       results.length
     );
 
+
     return results;
 
   })();
 
+
   try {
+
     return await building;
+
   } finally {
+
     building = null;
+
   }
+
 }
 
 
@@ -180,26 +393,37 @@ async function buildAnalyses() {
 async function getDaily() {
 
   const today =
-    new Date().toISOString().slice(0, 10);
+    new Date()
+      .toISOString()
+      .slice(0, 10);
+
 
   if (
     dailyDate === today &&
     cache
   ) {
+
     return cache;
+
   }
+
 
   const data =
     await buildAnalyses();
 
-  dailyDate = today;
+
+  dailyDate =
+    today;
+
 
   console.log(
     "👑 DAILY READY:",
     data.length
   );
 
+
   return data;
+
 }
 
 
@@ -207,328 +431,593 @@ async function getDaily() {
    FREE
 ====================================================== */
 
-app.get("/free", async (req, res) => {
+app.get(
+  "/free",
+  async (req, res) => {
 
-  try {
+    try {
 
-    const analyses = await getDaily();
+      const analyses =
+        await getDaily();
 
-    if (!analyses.length) {
-      return res.json({
-        error: "No valid prediction available"
+
+      if (!analyses.length) {
+
+        return res.json([]);
+
+      }
+
+
+      /*
+       * FREE = meilleur candidat disponible.
+       */
+      const a =
+        analyses[0];
+
+
+      res.json([
+        publicPrediction(a)
+      ]);
+
+
+    } catch (err) {
+
+      console.error(
+        "FREE ERROR:",
+        err.message
+      );
+
+
+      res.status(500).json({
+        error:
+          "Internal server error"
       });
+
     }
 
-    const a = analyses[0];
-    const p = a.predictions;
-
-    res.json({
-      match: matchName(a),
-      prediction: "1X2",
-      pick: p.winner,
-      confidence: p.winnerConfidence,
-      quality: p.quality,
-      stats: {
-        homeStrength:
-          a.teamStats.home.strength,
-        awayStrength:
-          a.teamStats.away.strength
-      }
-    });
-
-  } catch (err) {
-
-    console.error("FREE ERROR:", err.message);
-
-    res.status(500).json({
-      error: "Internal server error"
-    });
   }
-});
+);
 
 
 /* ======================================================
    VIP 1X2
 ====================================================== */
 
-app.get("/vip/1x2", async (req, res) => {
+app.get(
+  "/vip/1x2",
+  async (req, res) => {
 
-  try {
+    try {
 
-    const data =
-      filterVipMatches(await getDaily())
-        .slice(0, 5)
-        .map(a => ({
+      const filtered =
+        filterVipMatches(
+          await getDaily()
+        );
 
-          match: matchName(a),
 
-          pick:
-            a.predictions.winner,
+      const data =
+        filtered
+          .slice(0, 5)
+          .map(a => ({
 
-          confidence:
-            a.predictions.winnerConfidence,
+            ...publicPrediction(a),
 
-          probabilities:
-            a.predictions.probabilities,
+            vipMarket:
+              "1X2",
 
-          vipScore:
-            a.vipScore,
+            vipScore:
+              Number(
+                a.vipScore ?? 0
+              )
 
-          decision:
-            a.predictions.aiDecision?.decision,
+          }));
 
-          risk:
-            a.predictions.aiDecision?.risk,
 
-          score:
-            a.predictions.predictionStrength
+      console.log(
+        "👑 VIP 1X2:",
+        data.length
+      );
 
-        }));
 
-    console.log("👑 VIP 1X2:", data.length);
+      res.json(data);
 
-    res.json(data);
 
-  } catch (err) {
+    } catch (err) {
 
-    console.error("VIP 1X2 ERROR:", err.message);
+      console.error(
+        "VIP 1X2 ERROR:",
+        err.message
+      );
 
-    res.status(500).json({
-      error: "Internal server error"
-    });
+
+      res.status(500).json({
+        error:
+          "Internal server error"
+      });
+
+    }
+
   }
-});
+);
 
 
 /* ======================================================
    VIP OVER 2.5
 ====================================================== */
 
-app.get("/vip/over25", async (req, res) => {
+app.get(
+  "/vip/over25",
+  async (req, res) => {
 
-  try {
+    try {
 
-    const data =
-      filterVipOver25(await getDaily())
-        .slice(0, 6)
-        .map(a => ({
+      const filtered =
+        filterVipOver25(
+          await getDaily()
+        );
 
-          match: matchName(a),
 
-          market:
-            a.predictions.over25,
+      const data =
+        filtered
+          .slice(0, 6)
+          .map(a => ({
 
-          confidence:
-            a.predictions.over25Confidence,
+            ...publicPrediction(a),
 
-          vipScore:
-            a.vipScore,
+            vipMarket:
+              "OVER 2.5",
 
-          expectedGoals:
-            a.model?.expectedGoals ?? 0
+            vipScore:
+              Number(
+                a.vipScore ?? 0
+              )
 
-        }));
+          }));
 
-    console.log("🔥 VIP OVER25:", data.length);
 
-    res.json(data);
+      console.log(
+        "🔥 VIP OVER25:",
+        data.length
+      );
 
-  } catch (err) {
 
-    console.error("VIP OVER25 ERROR:", err.message);
+      res.json(data);
 
-    res.status(500).json({
-      error: "Internal server error"
-    });
+
+    } catch (err) {
+
+      console.error(
+        "VIP OVER25 ERROR:",
+        err.message
+      );
+
+
+      res.status(500).json({
+        error:
+          "Internal server error"
+      });
+
+    }
+
   }
-});
+);
 
 
 /* ======================================================
    VIP BTTS
 ====================================================== */
 
-app.get("/vip/btts", async (req, res) => {
+app.get(
+  "/vip/btts",
+  async (req, res) => {
 
-  try {
+    try {
 
-    const data =
-      filterVipBtts(await getDaily())
-        .slice(0, 5)
-        .map(a => ({
+      const filtered =
+        filterVipBtts(
+          await getDaily()
+        );
 
-          match: matchName(a),
 
-          pick:
-            a.predictions.btts,
+      const data =
+        filtered
+          .slice(0, 5)
+          .map(a => ({
 
-          confidence:
-            a.predictions.bttsConfidence,
+            ...publicPrediction(a),
 
-          vipScore:
-            a.vipScore
+            vipMarket:
+              "BTTS",
 
-        }));
+            vipScore:
+              Number(
+                a.vipScore ?? 0
+              )
 
-    console.log("🔥 VIP BTTS:", data.length);
+          }));
 
-    res.json(data);
 
-  } catch (err) {
+      console.log(
+        "🔥 VIP BTTS:",
+        data.length
+      );
 
-    console.error("VIP BTTS ERROR:", err.message);
 
-    res.status(500).json({
-      error: "Internal server error"
-    });
+      res.json(data);
+
+
+    } catch (err) {
+
+      console.error(
+        "VIP BTTS ERROR:",
+        err.message
+      );
+
+
+      res.status(500).json({
+        error:
+          "Internal server error"
+      });
+
+    }
+
   }
-});
+);
+
+
+/* ======================================================
+   SCORE EXACT
+====================================================== */
+
+app.get(
+  "/vip/score",
+  async (req, res) => {
+
+    try {
+
+      const analyses =
+        await getDaily();
+
+
+      /*
+       * Le score exact n'est jamais présenté
+       * comme une certitude.
+       *
+       * On classe simplement les meilleurs
+       * scores exacts produits par Poisson.
+       */
+      const data =
+        analyses
+
+          .filter(a =>
+            validAnalysis(a)
+          )
+
+          .filter(a =>
+            a.predictions?.correctScore
+          )
+
+          .sort((a, b) => {
+
+            return (
+              Number(
+                b.predictions
+                  ?.correctScoreProbability
+                || 0
+              )
+              -
+              Number(
+                a.predictions
+                  ?.correctScoreProbability
+                || 0
+              )
+            );
+
+          })
+
+          .slice(0, 3)
+
+          .map(a => ({
+
+            ...publicPrediction(a),
+
+            vipMarket:
+              "SCORE EXACT",
+
+            vipScore:
+              Number(
+                a.predictions
+                  ?.correctScoreProbability
+                || 0
+              )
+
+          }));
+
+
+      console.log(
+        "📊 SCORE EXACT:",
+        data.length
+      );
+
+
+      res.json(data);
+
+
+    } catch (err) {
+
+      console.error(
+        "SCORE ERROR:",
+        err.message
+      );
+
+
+      res.status(500).json({
+        error:
+          "Internal server error"
+      });
+
+    }
+
+  }
+);
 
 
 /* ======================================================
    HISTORY
 ====================================================== */
 
-app.get("/history", (req, res) => {
-  res.json(loadHistory());
-});
+app.get(
+  "/history",
+  (req, res) => {
+
+    res.json(
+      loadHistory()
+    );
+
+  }
+);
 
 
 /* ======================================================
    ACCURACY
 ====================================================== */
 
-app.get("/accuracy", (req, res) => {
+app.get(
+  "/accuracy",
+  (req, res) => {
 
-  const history = loadHistory();
+    const history =
+      loadHistory();
 
-  let checked = 0;
-  let correct = 0;
 
-  for (const day of history) {
+    let checked = 0;
 
-    for (const pred of day.predictions || []) {
+    let correct = 0;
 
-      if (!pred.winner || !pred.result)
-        continue;
 
-      checked++;
+    for (
+      const day of history
+    ) {
 
-      if (pred.winner === pred.result)
-        correct++;
+      for (
+        const pred
+        of day.predictions || []
+      ) {
+
+        if (
+          !pred.winner ||
+          !pred.result
+        )
+          continue;
+
+
+        checked++;
+
+
+        if (
+          pred.winner ===
+          pred.result
+        ) {
+
+          correct++;
+
+        }
+
+      }
+
     }
-  }
 
-  res.json({
-    checked,
-    correct,
-    accuracy:
-      checked
-        ? Math.round(correct / checked * 100)
-        : 0
-  });
-});
+
+    res.json({
+
+      checked,
+
+      correct,
+
+      accuracy:
+        checked
+          ? Math.round(
+              correct /
+              checked *
+              100
+            )
+          : 0
+
+    });
+
+  }
+);
 
 
 /* ======================================================
    HEALTH
 ====================================================== */
 
-app.get("/health", (req, res) => {
+app.get(
+  "/health",
+  (req, res) => {
 
-  res.json({
-    status: "ok",
-    ai: "KING PREDICTIONS AI",
-    analyses: cache?.length || 0,
-    cacheAge:
-      cacheTime
-        ? Math.round(
-            (Date.now() - cacheTime) / 1000
-          )
-        : null
-  });
-});
+    res.json({
+
+      status:
+        "ok",
+
+      ai:
+        "KING PREDICTIONS AI",
+
+      analyses:
+        cache?.length || 0,
+
+      cacheAge:
+        cacheTime
+          ? Math.round(
+              (
+                Date.now() -
+                cacheTime
+              ) / 1000
+            )
+          : null
+
+    });
+
+  }
+);
 
 
 /* ======================================================
    DEBUG
 ====================================================== */
 
-app.get("/debug", async (req, res) => {
+app.get(
+  "/debug",
+  async (req, res) => {
 
-  try {
+    try {
 
-    const matches = await getMatches();
+      const matches =
+        await getMatches();
 
-    res.json(
-      matches.map(m => ({
-        home: m.homeTeam.name,
-        homeId: m.homeTeam.id,
-        away: m.awayTeam.name,
-        awayId: m.awayTeam.id,
-        date: m.utcDate
-      }))
-    );
 
-  } catch (err) {
+      res.json(
+        matches.map(m => ({
 
-    res.status(500).json({
-      error: err.message
-    });
+          home:
+            m.homeTeam.name,
+
+          homeId:
+            m.homeTeam.id,
+
+          away:
+            m.awayTeam.name,
+
+          awayId:
+            m.awayTeam.id,
+
+          date:
+            m.utcDate
+
+        }))
+      );
+
+
+    } catch (err) {
+
+      res.status(500).json({
+
+        error:
+          err.message
+
+      });
+
+    }
+
   }
-});
+);
 
 
 /* ======================================================
    HOME
 ====================================================== */
 
-app.get("/", (req, res) => {
+app.get(
+  "/",
+  (req, res) => {
 
-  res.sendFile(
-    path.join(__dirname, "public/index.html")
-  );
+    res.sendFile(
+      path.join(
+        __dirname,
+        "public/index.html"
+      )
+    );
 
-});
+  }
+);
 
 
 /* ======================================================
    START
 ====================================================== */
 
-app.listen(PORT, "0.0.0.0", async () => {
+app.listen(
+  PORT,
+  "0.0.0.0",
+  async () => {
 
-  console.log("👑 KING PREDICTIONS AI ONLINE");
-  console.log("🚀 PORT:", PORT);
-
-  try {
-
-    await initializeDatabase();
-
-    console.log("✅ DATABASE READY");
-
-    await getDaily();
-
-    console.log("✅ AI PRELOAD READY");
-
-    startDailyScheduler(async () => {
-
-      console.log("♻️ DAILY RESET");
-
-      cache = null;
-      cacheTime = 0;
-      dailyDate = null;
-
-      await getDaily();
-    });
-
-  } catch (err) {
-
-    console.error(
-      "❌ STARTUP ERROR:",
-      err.stack
+    console.log(
+      "👑 KING PREDICTIONS AI ONLINE"
     );
 
-  }
+    console.log(
+      "🚀 PORT:",
+      PORT
+    );
 
-});
+
+    try {
+
+      await initializeDatabase();
+
+      console.log(
+        "✅ DATABASE READY"
+      );
+
+
+      await getDaily();
+
+      console.log(
+        "✅ AI PRELOAD READY"
+      );
+
+
+      startDailyScheduler(
+        async () => {
+
+          console.log(
+            "♻️ DAILY RESET"
+          );
+
+
+          cache = null;
+
+          cacheTime = 0;
+
+          dailyDate = null;
+
+
+          await getDaily();
+
+        }
+      );
+
+
+    } catch (err) {
+
+      console.error(
+        "❌ STARTUP ERROR:",
+        err.stack
+      );
+
+    }
+
+  }
+);
