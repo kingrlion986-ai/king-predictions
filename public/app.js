@@ -1,143 +1,159 @@
-console.log("👑 KING APP READY");
+console.log("👑 KING AI APP");
 
 let currentMode = "/free";
 
 
-function name(item) {
+function marketName(url) {
 
-    const m = item.match;
+    if (url === "/vip/1x2")
+        return "1X2";
 
-    if (typeof m === "string")
-        return m;
+    if (url === "/vip/over25")
+        return "OVER 2.5";
 
-    if (m?.homeTeam?.name && m?.awayTeam?.name)
-        return `${m.homeTeam.name} vs ${m.awayTeam.name}`;
+    if (url === "/vip/btts")
+        return "BTTS";
 
-    if (item.homeTeam?.name && item.awayTeam?.name)
-        return `${item.homeTeam.name} vs ${item.awayTeam.name}`;
+    if (url === "/vip/score")
+        return "SCORE EXACT";
 
-    return "Match inconnu";
+    return "1X2";
 }
 
 
-function predictions(item) {
-    return item.predictions || {};
-}
+function showCard(a, market) {
+
+    const results =
+        document.getElementById("results");
+
+    let html = `
+        <div class="prediction-card">
+
+        <h2>👑 ${a.match}</h2>
+
+        <p>📌 ${market}</p>
+    `;
 
 
-function card(item) {
+    /* 1X2 */
 
-    const p = predictions(item);
-    const model = item.model || {};
+    if (market === "1X2") {
 
-    const match = name(item);
+        const p =
+            a.probabilities || {};
 
-    /* SCORE */
+        html += `
+            <p>🎯 <strong>PRONOSTIC</strong></p>
 
-    if (currentMode === "/vip/score") {
+            <h3>${a.pick || "-"}</h3>
 
-        return `
-        <h2>👑 ${match}</h2>
-        <p>📌 SCORE EXACT</p>
+            <p>📊 Confiance :
+            ${a.confidence ?? "-"}%</p>
 
-        <h2>🎯 ${p.correctScore || item.score || "-"}</h2>
+            <p>🏠 Domicile :
+            ${p.homeWin ?? 0}%</p>
 
-        <p>📊 Probabilité :
-        ${p.correctScoreProbability ??
-          item.probability ?? 0}%</p>
+            <p>🤝 Nul :
+            ${p.draw ?? 0}%</p>
 
-        <p>⚽ XG :
-        ${model.expectedGoals ??
-          item.xg ?? "-"}</p>
+            <p>✈️ Extérieur :
+            ${p.awayWin ?? 0}%</p>
 
-        <p>🧠 AI Score :
-        ${p.aiRating ?? item.aiScore ?? 0}/100</p>
+            <p>🧠 AI Score :
+            ${a.aiScore ?? "-"}</p>
 
-        <p>⚠️ Risque :
-        ${p.aiDecision?.risk ??
-          item.risk ?? "UNKNOWN"}</p>
+            ${
+                a.vipScore != null
+                ? `<p>💎 VIP Score : ${a.vipScore}</p>`
+                : ""
+            }
+
+            <p>⚠️ Risque :
+            ${a.risk || "UNKNOWN"}</p>
         `;
     }
 
 
     /* OVER */
 
-    if (currentMode === "/vip/over25") {
+    if (market === "OVER 2.5") {
 
-        return `
-        <h2>👑 ${match}</h2>
-        <p>📌 OVER 2.5</p>
+        html += `
+            <p>🎯 <strong>${a.pick || "-"}</strong></p>
 
-        <h2>🎯
-        ${p.over25 ?? item.market ?? "-"}</h2>
+            <p>📊 Confiance :
+            ${a.confidence ?? "-"}%</p>
 
-        <p>📊 Confiance :
-        ${p.over25Confidence ??
-          item.confidence ?? 0}%</p>
+            <p>⚽ XG :
+            ${a.expectedGoals ?? "-"}</p>
 
-        <p>⚽ XG :
-        ${model.expectedGoals ??
-          item.expectedGoals ?? "-"}</p>
+            <p>🧠 AI Score :
+            ${a.aiScore ?? "-"}</p>
 
-        <p>🧠 VIP Score :
-        ${item.vipScore ?? "-"}</p>
+            <p>💎 VIP Score :
+            ${a.vipScore ?? "-"}</p>
+
+            <p>⚠️ Risque :
+            ${a.risk || "UNKNOWN"}</p>
         `;
     }
 
 
     /* BTTS */
 
-    if (currentMode === "/vip/btts") {
+    if (market === "BTTS") {
 
-        return `
-        <h2>👑 ${match}</h2>
-        <p>📌 BTTS</p>
+        html += `
+            <p>🎯 <strong>${a.pick || "-"}</strong></p>
 
-        <h2>🎯
-        ${p.btts ?? item.pick ?? "-"}</h2>
+            <p>📊 Confiance :
+            ${a.confidence ?? "-"}%</p>
 
-        <p>📊 Confiance :
-        ${p.bttsConfidence ??
-          item.confidence ?? 0}%</p>
+            <p>⚽ XG :
+            ${a.expectedGoals ?? "-"}</p>
 
-        <p>🧠 VIP Score :
-        ${item.vipScore ?? "-"}</p>
+            <p>🧠 AI Score :
+            ${a.aiScore ?? "-"}</p>
+
+            <p>💎 VIP Score :
+            ${a.vipScore ?? "-"}</p>
+
+            <p>⚠️ Risque :
+            ${a.risk || "UNKNOWN"}</p>
         `;
     }
 
 
-    /* 1X2 */
+    /* SCORE EXACT */
 
-    const probs = p.probabilities || item.probabilities || {};
+    if (market === "SCORE EXACT") {
 
-    return `
-    <h2>👑 ${match}</h2>
+        html += `
+            <p>🎯 <strong>${a.pick || "-"}</strong></p>
 
-    <p>📌 1X2</p>
+            <p>📊 Probabilité :
+            ${a.probability ?? "-"}%</p>
 
-    <h2>🎯
-    ${p.winner ?? item.pick ?? "-"}</h2>
+            <p>⚽ XG :
+            ${a.expectedGoals ?? "-"}</p>
 
-    <p>📊 Confiance :
-    ${p.winnerConfidence ??
-      item.confidence ?? 0}%</p>
+            <p>🧠 AI Score :
+            ${a.aiScore ?? "-"}/100</p>
 
-    <p>🏠 Domicile :
-    ${probs.homeWin ?? 0}%</p>
+            <p>⚠️ Risque :
+            ${a.risk || "UNKNOWN"}</p>
 
-    <p>🤝 Nul :
-    ${probs.draw ?? 0}%</p>
+            <small>
+                Le score exact est une estimation
+                probabiliste, pas une garantie.
+            </small>
+        `;
+    }
 
-    <p>✈️ Extérieur :
-    ${probs.awayWin ?? 0}%</p>
 
-    <p>🧠 VIP Score :
-    ${item.vipScore ?? "-"}</p>
+    html += `</div>`;
 
-    <p>⚠️ Risque :
-    ${p.aiDecision?.risk ??
-      item.risk ?? "UNKNOWN"}</p>
-    `;
+    results.innerHTML += html;
 }
 
 
@@ -159,15 +175,25 @@ async function loadPredictions(url) {
             });
 
         if (!response.ok)
-            throw new Error(`HTTP ${response.status}`);
+            throw new Error(
+                `HTTP ${response.status}`
+            );
 
         const data =
             await response.json();
 
+        console.log(
+            "API:",
+            url,
+            data
+        );
+
+        results.innerHTML = "";
+
         const list =
             Array.isArray(data)
                 ? data
-                : data.data || [];
+                : [];
 
         document.getElementById("matches")
             .innerText = list.length;
@@ -178,42 +204,34 @@ async function loadPredictions(url) {
         if (!list.length) {
 
             results.innerHTML = `
-            <div class="empty-card">
-                <h2>🔍 Aucun match</h2>
-                <p>
-                Aucun match ne respecte
-                actuellement les critères.
-                </p>
-            </div>`;
+                <div class="empty-card">
+                    <h2>🔍 Aucun match</h2>
+                    <p>
+                    Aucun match ne respecte
+                    actuellement les critères.
+                    </p>
+                </div>
+            `;
 
             return;
         }
 
-        results.innerHTML = "";
+        const market =
+            marketName(url);
 
-        list.forEach(item => {
+        list.forEach(a =>
+            showCard(a, market)
+        );
 
-            const div =
-                document.createElement("div");
+    } catch (err) {
 
-            div.className =
-                "prediction-card";
-
-            div.innerHTML =
-                card(item);
-
-            results.appendChild(div);
-
-        });
-
-    } catch (error) {
-
-        console.error(error);
+        console.error(err);
 
         results.innerHTML = `
-        <div class="error-card">
-            ❌ ${error.message}
-        </div>`;
+            <div class="error-card">
+                ❌ Erreur : ${err.message}
+            </div>
+        `;
     }
 }
 
