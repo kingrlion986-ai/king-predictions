@@ -5,361 +5,146 @@
 }
 
 body {
-    font-family: "Poppins", sans-serif;
-    background: #080b12;
-    color: #ffffff;
-    min-height: 100vh;
+    font-family: Arial, sans-serif;
+    background: #0b0f19;
+    color: #fff;
+    padding: 20px;
 }
 
 header {
-    padding: 25px 20px;
-    border-bottom: 1px solid #1d2430;
-    background: #0d111a;
-}
-
-.logo {
-    max-width: 1100px;
-    margin: auto;
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-
-.crown {
-    font-size: 45px;
-}
-
-.logo h1 {
-    font-size: 24px;
-    font-weight: 800;
-}
-
-.logo p {
-    color: #8f9aaa;
-    font-size: 13px;
-}
-
-.dashboard {
-    max-width: 1100px;
-    margin: 25px auto;
-    padding: 0 15px;
-
-    display: grid;
-    grid-template-columns:
-        repeat(4, 1fr);
-
-    gap: 15px;
-}
-
-.dashboard .card {
-    background: #111722;
-    border: 1px solid #202938;
-    border-radius: 14px;
-    padding: 20px;
     text-align: center;
+    margin-bottom: 25px;
 }
 
-.dashboard h3 {
-    font-size: 13px;
-    color: #8994a5;
+header h1 {
+    font-size: 28px;
     margin-bottom: 8px;
 }
 
-.dashboard span {
-    font-size: 24px;
-    font-weight: 800;
+header p {
+    color: #aaa;
 }
 
-.active {
-    color: #35d47b;
+.status {
+    margin-top: 12px;
+    font-size: 14px;
 }
 
-.title {
-    max-width: 1100px;
-    margin: 30px auto 15px;
-    padding: 0 15px;
-    font-size: 20px;
+.status strong {
+    color: #00e676;
 }
 
-.buttons {
-    max-width: 1100px;
-    margin: auto;
-    padding: 0 15px;
+.status span {
+    margin-left: 10px;
+    color: #aaa;
+}
 
+nav {
     display: grid;
-    grid-template-columns:
-        repeat(4, 1fr);
-
-    gap: 12px;
-}
-
-.market-button {
-    border: 1px solid #293345;
-    background: #111722;
-    color: white;
-
-    padding: 15px 10px;
-
-    border-radius: 12px;
-
-    font-family: inherit;
-    font-weight: 700;
-
-    cursor: pointer;
-
-    transition: 0.2s;
-}
-
-.market-button:hover {
-    transform: translateY(-2px);
-    border-color: #53627a;
-    background: #18202d;
-}
-
-.free {
-    border-color: #167a4a;
-}
-
-.vip1x2 {
-    border-color: #285da8;
-}
-
-.over {
-    border-color: #7042a8;
-}
-
-.btts {
-    border-color: #a76128;
-}
-
-#results {
-    max-width: 1100px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    max-width: 700px;
     margin: auto;
-    padding: 0 15px 40px;
 }
 
-.prediction-card {
-    position: relative;
-
-    background: #111722;
-
-    border: 1px solid #263142;
-
-    border-radius: 16px;
-
-    padding: 20px;
-
-    margin-bottom: 16px;
-
-    box-shadow:
-        0 8px 30px rgba(0,0,0,0.25);
+button {
+    border: 0;
+    border-radius: 12px;
+    padding: 15px;
+    background: #171d2b;
+    color: #fff;
+    font-size: 15px;
+    cursor: pointer;
 }
 
-.match-title {
-    font-size: 18px;
-    font-weight: 700;
-    margin-bottom: 12px;
+button:hover {
+    background: #242c3d;
 }
 
-.market-badge {
-    display: inline-block;
+.stats {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin: 25px auto;
+}
 
-    background: #1d2735;
+.stats div {
+    background: #171d2b;
+    padding: 15px 25px;
+    border-radius: 12px;
+    text-align: center;
+}
 
-    border-radius: 20px;
+.stats strong {
+    display: block;
+    font-size: 22px;
+    margin-top: 5px;
+}
 
-    padding: 5px 12px;
+main {
+    max-width: 700px;
+    margin: auto;
+}
 
-    font-size: 11px;
-    font-weight: 700;
-
+main > h2 {
     margin-bottom: 15px;
 }
 
-.pick-box {
-    background: #182130;
+.prediction-card {
+    background: #171d2b;
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 15px;
+    border: 1px solid #252d3d;
+}
 
-    border-radius: 12px;
-
-    padding: 15px;
-
+.prediction-card h2 {
+    font-size: 19px;
     margin-bottom: 12px;
 }
 
-.pick-box .label {
-    display: block;
-
-    color: #8d99aa;
-
-    font-size: 11px;
-
-    margin-bottom: 5px;
+.prediction-card h3 {
+    font-size: 24px;
+    margin: 15px 0;
 }
 
-.pick-box strong {
-    font-size: 22px;
-}
-
-.confidence {
-    display: flex;
-
-    justify-content: space-between;
-    align-items: center;
-
-    padding: 12px 0;
-
-    border-bottom: 1px solid #222c3a;
-}
-
-.confidence span {
-    color: #8d99aa;
-}
-
-.confidence strong {
-    font-size: 20px;
-}
-
-.probabilities,
-.stats-grid {
-    display: grid;
-
-    grid-template-columns:
-        repeat(3, 1fr);
-
-    gap: 10px;
-
-    margin-top: 14px;
-}
-
-.stats-grid {
-    grid-template-columns:
-        repeat(2, 1fr);
-}
-
-.probabilities div,
-.stats-grid div {
-    background: #0c1119;
-
-    border-radius: 10px;
-
-    padding: 12px;
-
-    text-align: center;
-}
-
-.probabilities span,
-.stats-grid span {
-    display: block;
-
-    font-size: 10px;
-
-    color: #7f8a9b;
-
-    margin-bottom: 5px;
-}
-
-.probabilities strong,
-.stats-grid strong {
-    font-size: 16px;
-}
-
-.verdict {
-    margin-top: 15px;
-
-    padding: 12px;
-
-    border-radius: 10px;
-
-    text-align: center;
-
-    font-weight: 800;
-}
-
-.excellent {
-    background: rgba(24, 180, 95, 0.15);
-    border: 1px solid #18b45f;
-}
-
-.good {
-    background: rgba(50, 130, 220, 0.15);
-    border: 1px solid #3282dc;
-}
-
-.warning {
-    background: rgba(220, 170, 30, 0.15);
-    border: 1px solid #dca91e;
-}
-
-.danger {
-    background: rgba(220, 50, 50, 0.15);
-    border: 1px solid #dc3232;
+.prediction-card p {
+    margin: 8px 0;
+    color: #ccc;
 }
 
 .loading,
 .empty-card,
 .error-card {
-    background: #111722;
-
-    border: 1px solid #263142;
-
-    border-radius: 16px;
-
-    padding: 35px;
-
     text-align: center;
+    padding: 30px;
+    background: #171d2b;
+    border-radius: 15px;
 }
 
-.empty-icon {
-    font-size: 40px;
-    margin-bottom: 10px;
+.error-card {
+    color: #ff5252;
 }
 
-.empty-card p {
-    color: #9aa5b5;
-    margin: 10px 0;
-}
+@media (max-width: 600px) {
 
-.empty-card small {
-    color: #697587;
-}
-
-.error-card button {
-    margin-top: 15px;
-
-    padding: 10px 20px;
-
-    border: none;
-
-    border-radius: 8px;
-
-    background: #246bdb;
-
-    color: white;
-
-    font-family: inherit;
-
-    cursor: pointer;
-}
-
-@media (max-width: 700px) {
-
-    .dashboard {
-        grid-template-columns:
-            repeat(2, 1fr);
+    body {
+        padding: 12px;
     }
 
-    .buttons {
-        grid-template-columns:
-            repeat(2, 1fr);
+    header h1 {
+        font-size: 23px;
     }
 
-    .logo h1 {
-        font-size: 18px;
+    nav {
+        grid-template-columns: 1fr;
     }
 
-    .probabilities {
-        grid-template-columns:
-            1fr;
+    .stats {
+        gap: 8px;
     }
 
+    .stats div {
+        padding: 12px 18px;
+    }
 }
