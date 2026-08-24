@@ -198,17 +198,13 @@ app.get("/vip/over25", async (req, res) => {
 /* =========================
    BTTS
 ========================= */
-
 app.get("/vip/btts", async (req, res) => {
-
     try {
-
-        const data =
-            filterVipBtts(await getDaily())
-            .sort(
-                (a, b) =>
-                    (b.predictions?.bttsConfidence || 0) -
-                    (a.predictions?.bttsConfidence || 0)
+        const data = (await getDaily())
+            .filter(a => a?.predictions?.btts)
+            .sort((a, b) =>
+                (b.predictions.bttsConfidence || 0) -
+                (a.predictions.bttsConfidence || 0)
             )
             .slice(0, 5)
             .map(format);
@@ -216,15 +212,63 @@ app.get("/vip/btts", async (req, res) => {
         res.json(data);
 
     } catch (err) {
-
         console.error("BTTS:", err);
-
         res.status(500).json({
             error: err.message
         });
     }
 });
 
+
+app.get("/safest", async (req, res) => {
+    try {
+        const data = await getDaily();
+        const choices = [];
+
+        for (const a of data) {
+            const p = a.predictions || {};
+
+            if (p.winner && p.winnerConfidence) {
+                choices.push({
+                    ...format(a),
+                    market: "1X2",
+                    pick: p.winner,
+                    confidence: p.winnerConfidence
+                });
+            }
+
+            if (p.over25 && p.over25Confidence) {
+                choices.push({
+                    ...format(a),
+                    market: "OVER 2.5",
+                    pick: p.over25,
+                    confidence: p.over25Confidence
+                });
+            }
+
+            if (p.btts && p.bttsConfidence) {
+                choices.push({
+                    ...format(a),
+                    market: "BTTS",
+                    pick: p.btts,
+                    confidence: p.bttsConfidence
+                });
+            }
+        }
+
+        choices.sort(
+            (a, b) => b.confidence - a.confidence
+        );
+
+        res.json(choices[0] || null);
+
+    } catch (err) {
+        console.error("SAFEST:", err);
+        res.status(500).json({
+            error: err.message
+        });
+    }
+});
 
 /* =========================
    PARI LE PLUS SÛR
