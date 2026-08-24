@@ -2,156 +2,82 @@
 <html lang="fr">
 
 <head>
-
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>KING PREDICTIONS AI</title>
 
-    <link
-        rel="stylesheet"
-        href="style.css"
-    >
-
-    <link
-        href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap"
-        rel="stylesheet"
-    >
-
+    <link rel="stylesheet" href="/style.css">
 </head>
 
 <body>
 
 <header>
 
-    <div class="logo">
+    <h1>👑 KING PREDICTIONS AI</h1>
 
-        <div class="crown">
-            👑
-        </div>
+    <p>Football Prediction Engine</p>
 
-        <div>
-
-            <h1>
-                KING PREDICTIONS AI
-            </h1>
-
-            <p>
-                Football Prediction Engine
-            </p>
-
-        </div>
-
+    <div class="status">
+        🔥 IA <strong>ACTIVE</strong>
+        <span>V1</span>
     </div>
 
 </header>
 
 
-<section class="dashboard">
+<nav>
 
-    <div class="card">
+    <button onclick="loadPredictions('/vip/1x2')">
+        💎 1X2
+    </button>
 
-        <h3>
-            ⚽ Matchs
-        </h3>
+    <button onclick="loadPredictions('/vip/over25')">
+        🟣 OVER 2.5
+    </button>
 
-        <span id="matches">
-            0
-        </span>
+    <button onclick="loadPredictions('/vip/btts')">
+        🟠 BTTS
+    </button>
 
+    <button onclick="loadPredictions('/safest')">
+        🏆 PARI LE PLUS SÛR
+    </button>
+
+</nav>
+
+
+<section class="stats">
+
+    <div>
+        ⚽ Matchs
+        <strong id="matches">0</strong>
     </div>
 
-
-    <div class="card">
-
-        <h3>
-            🎯 Pronostics
-        </h3>
-
-        <span id="predictions">
-            0
-        </span>
-
-    </div>
-
-
-    <div class="card">
-
-        <h3>
-            🔥 IA
-        </h3>
-
-        <span class="active">
-            ACTIVE
-        </span>
-
-    </div>
-
-
-    <div class="card">
-
-        <h3>
-            Version
-        </h3>
-
-        <span>
-            V18
-        </span>
-
+    <div>
+        🎯 Pronostics
+        <strong id="predictions">0</strong>
     </div>
 
 </section>
 
 
-<h2 class="title">
-    👑 Marchés
-</h2>
+<main>
 
+    <h2>📊 Résultats</h2>
 
-<section class="buttons">
+    <div id="results">
 
-<button onclick="loadPredictions('/free')">
-🟢 FREE
-</button>
+        <div class="loading">
+            ⏳ Chargement...
+        </div>
 
-<button onclick="loadPredictions('/vip/1x2')">
-💎 VIP 1X2
-</button>
-
-<button onclick="loadPredictions('/vip/over25')">
-🟣 VIP OVER 2.5
-</button>
-
-<button onclick="loadPredictions('/vip/btts')">
-🟠 VIP BTTS
-</button>
-
-<button onclick="loadPredictions('/vip/score')">
-📊 SCORE EXACT
-</button>
-
-</section>
-
-
-<h2 class="title">
-    📊 Résultats
-</h2>
-
-
-<div id="results">
-
-    <div class="loading">
-        ⏳ Chargement...
     </div>
 
-</div>
+</main>
 
 
-<script src="app.js"></script>
+<script src="/app.js"></script>
 
 </body>
 
