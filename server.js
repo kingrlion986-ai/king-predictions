@@ -134,19 +134,13 @@ function format(a) {
 /* =========================
    1X2 — 2 MATCHS
 ========================= */
-
 app.get("/vip/1x2", async (req, res) => {
-
     try {
-
-        const data =
-            filterVipMatches(
-                await getDaily()
-            )
-            .sort(
-                (a, b) =>
-                    (b.predictions?.winnerConfidence || 0) -
-                    (a.predictions?.winnerConfidence || 0)
+        const data = (await getDaily())
+            .filter(a => a?.predictions?.winner)
+            .sort((a, b) =>
+                (b.predictions.winnerConfidence || 0) -
+                (a.predictions.winnerConfidence || 0)
             )
             .slice(0, 2)
             .map(format);
@@ -154,15 +148,30 @@ app.get("/vip/1x2", async (req, res) => {
         res.json(data);
 
     } catch (err) {
-
         console.error("1X2:", err);
-
-        res.status(500).json({
-            error: err.message
-        });
+        res.status(500).json({ error: err.message });
     }
 });
 
+
+app.get("/vip/over25", async (req, res) => {
+    try {
+        const data = (await getDaily())
+            .filter(a => a?.predictions?.over25)
+            .sort((a, b) =>
+                (b.predictions.over25Confidence || 0) -
+                (a.predictions.over25Confidence || 0)
+            )
+            .slice(0, 2)
+            .map(format);
+
+        res.json(data);
+
+    } catch (err) {
+        console.error("OVER:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
 
 /* =========================
    OVER 2.5
