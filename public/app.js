@@ -1,97 +1,134 @@
-console.log("👑 KING PREDICTIONS AI V1");
+console.log("👑 KING PREDICTIONS AI");
 
-let currentMode = "/vip/1x2";
+let currentMode = "/safest";
+
+function num(v) {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+}
 
 function name(a) {
-    const m = a?.match;
+    if (typeof a?.match === "string") return a.match;
 
-    return m?.homeTeam && m?.awayTeam
-        ? `${m.homeTeam.name} vs ${m.awayTeam.name}`
-        : "Match inconnu";
+    if (a?.match?.homeTeam && a?.match?.awayTeam) {
+        return `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`;
+    }
+
+    if (a?.homeTeam && a?.awayTeam) {
+        return `${a.homeTeam.name} vs ${a.awayTeam.name}`;
+    }
+
+    return "Match inconnu";
 }
 
-function n(value, fallback = "-") {
-    return Number.isFinite(Number(value))
-        ? Number(value)
-        : fallback;
-}
+function show(data, mode) {
 
-function card(a, market) {
+    const results = document.getElementById("results");
 
-    const p = a.predictions || {};
-    const ai = p.aiDecision || {};
-    const model = a.model || {};
+    let list = Array.isArray(data)
+        ? data
+        : data
+            ? [data]
+            : [];
 
-    let pick = "-";
-    let confidence = "-";
+    document.getElementById("matches").textContent = list.length;
+    document.getElementById("predictions").textContent = list.length;
 
-    if (market === "1X2") {
-        pick = p.winner;
-        confidence = p.winnerConfidence;
+    if (!list.length) {
+        results.innerHTML = `
+            <div class="empty-card">
+                🔍 Aucun pari disponible.
+            </div>
+        `;
+        return;
     }
 
-    if (market === "OVER 2.5") {
-        pick = p.over25;
-        confidence = p.over25Confidence;
-    }
+    results.innerHTML = list.map(a => {
 
-    if (market === "BTTS") {
-        pick = p.btts;
-        confidence = p.bttsConfidence;
-    }
+        const p = a.predictions || {};
+        const model = a.model || {};
+        const ai = p.aiDecision || {};
 
-    return `
-        <div class="prediction-card">
+        let market = "1X2";
+        let pick = p.winner || "-";
+        let confidence = num(p.winnerConfidence);
 
-            <h2>👑 ${name(a)}</h2>
+        if (mode === "/vip/over25") {
+            market = "OVER 2.5";
+            pick = p.over25 || "-";
+            confidence = num(p.over25Confidence);
+        }
 
-            <p>📌 ${market}</p>
+        if (mode === "/vip/btts") {
+            market = "BTTS";
+            pick = p.btts || "-";
+            confidence = num(p.bttsConfidence);
+        }
 
-            <h3>🎯 ${pick || "-"}</h3>
+        if (mode === "/safest") {
+            market = a.market || "1X2";
+            pick = a.pick || p.winner || "-";
+            confidence = num(
+                a.confidence || p.winnerConfidence
+            );
+        }
 
-            <p>
-                📊 Confiance :
-                <strong>${n(confidence)}%</strong>
-            </p>
+        const probabilities = p.probabilities || {};
 
-            ${
-                market === "1X2"
-                ? `
-                    <p>🏠 Domicile :
-                    ${n(p.probabilities?.homeWin, 0)}%</p>
+        return `
+            <article class="prediction-card">
 
-                    <p>🤝 Nul :
-                    ${n(p.probabilities?.draw, 0)}%</p>
+                <h2>👑 ${name(a)}</h2>
 
-                    <p>✈️ Extérieur :
-                    ${n(p.probabilities?.awayWin, 0)}%</p>
-                `
-                : ""
-            }
+                <p>📌 <strong>${market}</strong></p>
 
-            ${
-                market !== "1X2"
-                ? `
-                    <p>⚽ XG :
-                    ${n(model.expectedGoals)}</p>
-                `
-                : ""
-            }
+                <h3>🎯 ${pick}</h3>
 
-            <p>🧠 AI Score :
-                ${n(p.aiRating, 0)}/100
-            </p>
+                <p>
+                    📊 <strong>Confiance :</strong>
+                    ${confidence}%
+                </p>
 
-            <p>💎 VIP Score :
-                ${n(a.vipScore, 0)}
-            </p>
+                ${
+                    market === "1X2"
+                    ? `
+                        <p>🏠 Domicile : ${num(probabilities.homeWin)}%</p>
+                        <p>🤝 Nul : ${num(probabilities.draw)}%</p>
+                        <p>✈️ Extérieur : ${num(probabilities.awayWin)}%</p>
+                    `
+                    : ""
+                }
 
-            <p>⚠️ Risque :
-                ${ai.risk || "-"}
-            </p>
+                ${
+                    market === "OVER 2.5" || market === "BTTS"
+                    ? `
+                        <p>⚽ XG : ${num(model.expectedGoals)}</p>
+                    `
+                    : ""
+                }
 
-        </div>
-    `;
+                <p>
+                    🧠 AI Score :
+                    ${num(p.aiRating)}/100
+                </p>
+
+                ${
+                    a.vipScore !== undefined
+                    ? `
+                        <p>💎 VIP Score : ${num(a.vipScore)}</p>
+                    `
+                    : ""
+                }
+
+                <p>
+                    ⚠️ Risque :
+                    ${ai.risk || a.risk || "UNKNOWN"}
+                </p>
+
+            </article>
+        `;
+
+    }).join("");
 }
 
 
@@ -99,77 +136,48 @@ async function loadPredictions(url) {
 
     currentMode = url;
 
-    const results =
-        document.getElementById("results");
+    const results = document.getElementById("results");
 
-    results.innerHTML =
-        "<div class='loading'>⏳ Analyse...</div>";
+    results.innerHTML = `
+        <div class="loading">
+            ⏳ Analyse...
+        </div>
+    `;
 
     try {
 
-        const response =
-            await fetch(url, {
-                cache: "no-store"
-            });
+        const response = await fetch(
+            url,
+            { cache: "no-store" }
+        );
 
-        if (!response.ok)
-            throw new Error(
-                `HTTP ${response.status}`
-            );
-
-        let data =
-            await response.json();
-
-        const market =
-    url === "/vip/over25"
-        ? "OVER 2.5"
-        : url === "/vip/btts"
-            ? "BTTS"
-            : url === "/safest"
-                ? data?.market || "1X2"
-                : "1X2";
-
-        if (url === "/safest") {
-
-            if (data) {
-    data = [data];
-} else {
-    data = [];
-            }
-
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
         }
 
-        if (!Array.isArray(data))
-            data = [];
+        const data = await response.json();
 
-        document.getElementById("matches")
-            .textContent = data.length;
-
-        document.getElementById("predictions")
-            .textContent = data.length;
-
-        results.innerHTML =
-            data.length
-                ? data.map(a =>
-                    card(a, data[0]?.market || market)
-                  ).join("")
-                : `
-                    <div class="empty-card">
-                        🔍 Aucun pari disponible.
-                    </div>
-                `;
+        show(data, url);
 
     } catch (error) {
 
-        console.error("❌", error);
+        console.error(error);
 
         results.innerHTML = `
             <div class="error-card">
                 ❌ Erreur : ${error.message}
+                <br><br>
+                <button onclick="loadPredictions(currentMode)">
+                    🔄 Réessayer
+                </button>
             </div>
         `;
     }
 }
 
 
-loadPredictions("/vip/1x2");
+/* =========================
+   START
+========================= */
+
+loadPredictions("/safest");
