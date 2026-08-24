@@ -1,239 +1,218 @@
-console.log("👑 KING AI APP");
+console.log("👑 KING PREDICTIONS AI - APP JS");
 
 let currentMode = "/free";
+const CACHE = new Map();
 
+const $ = id => document.getElementById(id);
 
-function marketName(url) {
-
-    if (url === "/vip/1x2")
-        return "1X2";
-
-    if (url === "/vip/over25")
-        return "OVER 2.5";
-
-    if (url === "/vip/btts")
-        return "BTTS";
-
-    if (url === "/vip/score")
-        return "SCORE EXACT";
-
-    return "1X2";
+function list(data) {
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.predictions)) return data.predictions;
+    if (data?.match) return [data];
+    return [];
 }
 
+function matchName(a) {
+    if (typeof a.match === "string") return a.match;
 
-function showCard(a, market) {
+    if (a.match?.homeTeam && a.match?.awayTeam) {
+        return `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`;
+    }
 
-    const results =
-        document.getElementById("results");
+    if (a.homeTeam && a.awayTeam) {
+        return `${a.homeTeam.name} vs ${a.awayTeam.name}`;
+    }
 
-    let html = `
+    return "Match inconnu";
+}
+
+function card(a, mode) {
+
+    const p = a.predictions || {};
+    const m = a.model || {};
+
+    let title = "1X2";
+    let pick = p.winner || "-";
+    let confidence = p.winnerConfidence;
+    let extra = "";
+
+    if (mode === "/vip/over25") {
+        title = "OVER 2.5";
+        pick = p.over25 || "-";
+        confidence = p.over25Confidence;
+
+        extra = `
+            <p>⚽ XG : ${m.expectedGoals ?? "-"}</p>
+        `;
+    }
+
+    if (mode === "/vip/btts") {
+        title = "BTTS";
+        pick = p.btts || "-";
+        confidence = p.bttsConfidence;
+    }
+
+    if (mode === "/vip/score") {
+        title = "SCORE EXACT";
+        pick = p.correctScore || "-";
+        confidence = p.correctScoreProbability;
+
+        extra = `
+            <p>⚽ XG : ${m.expectedGoals ?? "-"}</p>
+        `;
+    }
+
+    let probabilities = "";
+
+    if (mode === "/free" || mode === "/vip/1x2") {
+
+        const x = p.probabilities || {};
+
+        probabilities = `
+            <p>🏠 Domicile : ${x.homeWin ?? "-"}%</p>
+            <p>🤝 Nul : ${x.draw ?? "-"}%</p>
+            <p>✈️ Extérieur : ${x.awayWin ?? "-"}%</p>
+        `;
+    }
+
+    const ai = p.aiRating ?? "-";
+    const risk = p.aiDecision?.risk ?? "-";
+    const decision = p.aiDecision?.decision;
+
+    let verdict = "";
+
+    if (decision === "NO BET" || risk === "VERY HIGH") {
+        verdict = "🔴 NO BET";
+    } else if (Number(confidence) >= 75) {
+        verdict = "🟢 TRÈS BON";
+    } else if (Number(confidence) >= 65) {
+        verdict = "🟢 BON";
+    } else if (Number(confidence) >= 55) {
+        verdict = "🟡 PRUDENT";
+    } else {
+        verdict = "🔴 NO BET";
+    }
+
+    return `
         <div class="prediction-card">
 
-        <h2>👑 ${a.match}</h2>
+            <h2>👑 ${matchName(a)}</h2>
 
-        <p>📌 ${market}</p>
-    `;
+            <p>📌 ${title}</p>
 
+            <h3>🎯 ${pick}</h3>
 
-    /* 1X2 */
+            <p>
+                📊 Probabilité :
+                ${confidence ?? "-"}%
+            </p>
 
-    if (market === "1X2") {
+            ${probabilities}
 
-        const p =
-            a.probabilities || {};
+            ${extra}
 
-        html += `
-            <p>🎯 <strong>PRONOSTIC</strong></p>
+            <p>🧠 AI Score : ${ai}</p>
 
-            <h3>${a.pick || "-"}</h3>
-
-            <p>📊 Confiance :
-            ${a.confidence ?? "-"}%</p>
-
-            <p>🏠 Domicile :
-            ${p.homeWin ?? 0}%</p>
-
-            <p>🤝 Nul :
-            ${p.draw ?? 0}%</p>
-
-            <p>✈️ Extérieur :
-            ${p.awayWin ?? 0}%</p>
-
-            <p>🧠 AI Score :
-            ${a.aiScore ?? "-"}</p>
-
-            ${
-                a.vipScore != null
+            ${a.vipScore !== undefined
                 ? `<p>💎 VIP Score : ${a.vipScore}</p>`
                 : ""
             }
 
-            <p>⚠️ Risque :
-            ${a.risk || "UNKNOWN"}</p>
-        `;
-    }
+            <p>⚠️ Risque : ${risk}</p>
 
+            <p>${verdict}</p>
 
-    /* OVER */
-
-    if (market === "OVER 2.5") {
-
-        html += `
-            <p>🎯 <strong>${a.pick || "-"}</strong></p>
-
-            <p>📊 Confiance :
-            ${a.confidence ?? "-"}%</p>
-
-            <p>⚽ XG :
-            ${a.expectedGoals ?? "-"}</p>
-
-            <p>🧠 AI Score :
-            ${a.aiScore ?? "-"}</p>
-
-            <p>💎 VIP Score :
-            ${a.vipScore ?? "-"}</p>
-
-            <p>⚠️ Risque :
-            ${a.risk || "UNKNOWN"}</p>
-        `;
-    }
-
-
-    /* BTTS */
-
-    if (market === "BTTS") {
-
-        html += `
-            <p>🎯 <strong>${a.pick || "-"}</strong></p>
-
-            <p>📊 Confiance :
-            ${a.confidence ?? "-"}%</p>
-
-            <p>⚽ XG :
-            ${a.expectedGoals ?? "-"}</p>
-
-            <p>🧠 AI Score :
-            ${a.aiScore ?? "-"}</p>
-
-            <p>💎 VIP Score :
-            ${a.vipScore ?? "-"}</p>
-
-            <p>⚠️ Risque :
-            ${a.risk || "UNKNOWN"}</p>
-        `;
-    }
-
-
-    /* SCORE EXACT */
-
-    if (market === "SCORE EXACT") {
-
-        html += `
-            <p>🎯 <strong>${a.pick || "-"}</strong></p>
-
-            <p>📊 Probabilité :
-            ${a.probability ?? "-"}%</p>
-
-            <p>⚽ XG :
-            ${a.expectedGoals ?? "-"}</p>
-
-            <p>🧠 AI Score :
-            ${a.aiScore ?? "-"}/100</p>
-
-            <p>⚠️ Risque :
-            ${a.risk || "UNKNOWN"}</p>
-
-            <small>
-                Le score exact est une estimation
-                probabiliste, pas une garantie.
-            </small>
-        `;
-    }
-
-
-    html += `</div>`;
-
-    results.innerHTML += html;
+        </div>
+    `;
 }
 
+function empty() {
+    $("results").innerHTML = `
+        <div class="empty-card">
+            <div class="empty-icon">🔍</div>
+            <h2>Aucun match</h2>
+            <p>
+                Aucun match ne respecte actuellement
+                les critères.
+            </p>
+            <small>
+                Le moteur préfère ne rien proposer
+                plutôt que de forcer une mauvaise prédiction.
+            </small>
+        </div>
+    `;
+}
+
+function display(data) {
+
+    const matches = list(data);
+
+    $("matches").textContent = matches.length;
+    $("predictions").textContent = matches.length;
+
+    if (!matches.length) {
+        empty();
+        return;
+    }
+
+    $("results").innerHTML =
+        matches.map(a => card(a, currentMode)).join("");
+}
 
 async function loadPredictions(url) {
 
     currentMode = url;
 
-    const results =
-        document.getElementById("results");
+    $("results").innerHTML = `
+        <div class="loading">
+            ⏳ Analyse des prédictions...
+        </div>
+    `;
 
-    results.innerHTML =
-        "<h2>⏳ Analyse...</h2>";
+    if (CACHE.has(url)) {
+        display(CACHE.get(url));
+        return;
+    }
 
     try {
 
-        const response =
-            await fetch(url, {
-                cache: "no-store"
-            });
-
-        if (!response.ok)
-            throw new Error(
-                `HTTP ${response.status}`
-            );
-
-        const data =
-            await response.json();
-
-        console.log(
-            "API:",
+        const response = await fetch(
             url,
-            data
+            { cache: "no-store" }
         );
 
-        results.innerHTML = "";
-
-        const list =
-            Array.isArray(data)
-                ? data
-                : [];
-
-        document.getElementById("matches")
-            .innerText = list.length;
-
-        document.getElementById("predictions")
-            .innerText = list.length;
-
-        if (!list.length) {
-
-            results.innerHTML = `
-                <div class="empty-card">
-                    <h2>🔍 Aucun match</h2>
-                    <p>
-                    Aucun match ne respecte
-                    actuellement les critères.
-                    </p>
-                </div>
-            `;
-
-            return;
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
         }
 
-        const market =
-            marketName(url);
+        const data = await response.json();
 
-        list.forEach(a =>
-            showCard(a, market)
-        );
+        console.log("✅ API:", url, data);
 
-    } catch (err) {
+        CACHE.set(url, data);
 
-        console.error(err);
+        display(data);
 
-        results.innerHTML = `
+    } catch (error) {
+
+        console.error("❌ API ERROR:", error);
+
+        $("results").innerHTML = `
             <div class="error-card">
-                ❌ Erreur : ${err.message}
+                <h2>❌ Erreur</h2>
+                <p>${error.message}</p>
+
+                <button onclick="reload()">
+                    🔄 Réessayer
+                </button>
             </div>
         `;
     }
 }
 
+function reload() {
+    CACHE.delete(currentMode);
+    loadPredictions(currentMode);
+}
 
 loadPredictions("/free");
