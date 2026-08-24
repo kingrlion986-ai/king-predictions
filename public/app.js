@@ -121,15 +121,21 @@ async function loadPredictions(url) {
             await response.json();
 
         const market =
-            url === "/vip/over25"
-                ? "OVER 2.5"
-                : url === "/vip/btts"
-                    ? "BTTS"
-                    : "1X2";
+    url === "/vip/over25"
+        ? "OVER 2.5"
+        : url === "/vip/btts"
+            ? "BTTS"
+            : url === "/safest"
+                ? data?.market || "1X2"
+                : "1X2";
 
         if (url === "/safest") {
 
-            data = data ? [data] : [];
+            if (data) {
+    data = [data];
+} else {
+    data = [];
+            }
 
         }
 
