@@ -2,8 +2,10 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 
-const { getMatches, initializeDatabase } =
-    require("./services/footballApi");
+const {
+    getMatches,
+    initializeDatabase
+} = require("./services/footballApi");
 
 const { analyzeMatch } =
     require("./services/predictionEngine");
@@ -26,33 +28,39 @@ let cache = [];
 let cacheTime = 0;
 let building = null;
 
-const TTL = 15 * 60 * 1000;
-const MAX_MATCHES = 12;
+const CACHE_TTL = 15 * 60 * 1000;
+const MAX_ANALYSES = 5;
 
 
 /* =========================
-   ANALYSE
+   BUILD AI
 ========================= */
 
-async function getAnalyses() {
+async function buildAnalyses() {
 
     if (
         cache.length &&
-        Date.now() - cacheTime < TTL
+        Date.now() - cacheTime < CACHE_TTL
     ) {
         return cache;
     }
 
-    if (building) return building;
+    if (building) {
+        return building;
+    }
 
     building = (async () => {
 
         const matches = await getMatches();
 
+        if (!matches?.length) {
+            return [];
+        }
+
         const results = [];
 
         for (
-            const match of matches.slice(0, MAX_MATCHES)
+            const match of matches.slice(0, MAX_ANALYSES)
         ) {
 
             try {
@@ -60,19 +68,29 @@ async function getAnalyses() {
                 const a =
                     await analyzeMatch(match);
 
+                if (!a) continue;
+
                 if (
-                    a &&
-                    a.teamStats?.home?.played >= 5 &&
-                    a.teamStats?.away?.played >= 5
+                    Number(a.teamStats?.home?.played) < 5 ||
+                    Number(a.teamStats?.away?.played) < 5
                 ) {
-                    results.push(a);
+                    continue;
                 }
 
-            } catch (e) {
+                results.push(a);
+
+                console.log(
+                    "✅ AI READY:",
+                    match.homeTeam.name,
+                    "vs",
+                    match.awayTeam.name
+                );
+
+            } catch (err) {
 
                 console.log(
                     "❌ ANALYSIS:",
-                    e.message
+                    err.message
                 );
 
             }
@@ -82,7 +100,7 @@ async function getAnalyses() {
         cacheTime = Date.now();
 
         console.log(
-            "👑 AI READY:",
+            "🤖 AI READY:",
             results.length
         );
 
@@ -99,14 +117,40 @@ async function getAnalyses() {
 
 
 /* =========================
-   FORMAT MATCH
+   DAILY
 ========================= */
 
-function formatMatch(a) {
+async function getDaily() {
+    return await buildAnalyses();
+}
+
+
+/* =========================
+   FORMAT
+========================= */
+
+function format(a) {
+
+    const p = a.predictions || {};
+
     return {
-        home: a.match.homeTeam.name,
-        away: a.match.awayTeam.name,
-        name: `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`
+        match:
+            `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`,
+
+        homeTeam: a.match.homeTeam,
+        awayTeam: a.match.awayTeam,
+
+        predictions: p,
+
+        model: a.model,
+
+        teamStats: a.teamStats,
+
+        vipScore:
+            a.vipScore ??
+            p.aiRating ??
+            p.predictionStrength ??
+            0
     };
 }
 
@@ -117,23 +161,27 @@ function formatMatch(a) {
 
 app.get("/free", async (req, res) => {
 
-    const data = await getDaily();
+    try {
 
-    if (!data.length)
-        return res.json([]);
+        const data =
+            await getDaily();
 
-    const a = data[0];
-    const p = a.predictions;
-    const m = formatMatch(a);
+        if (!data.length) {
+            return res.json([]);
+        }
 
-    res.json([{
-        match: m.name,
-        pick: p.winner,
-        confidence: p.winnerConfidence,
-        probabilities: p.probabilities,
-        risk: p.aiDecision?.risk || "UNKNOWN",
-        aiScore: p.aiRating
-    }]);
+        res.json([
+            format(data[0])
+        ]);
+
+    } catch (err) {
+
+        console.error("FREE:", err);
+
+        res.status(500).json({
+            error: err.message
+        });
+    }
 });
 
 
@@ -143,84 +191,96 @@ app.get("/free", async (req, res) => {
 
 app.get("/vip/1x2", async (req, res) => {
 
-    const data = filterVipMatches(await getDaily());
+    try {
 
-    res.json(
-        data.slice(0, 5).map(a => {
+        const data =
+            filterVipMatches(
+                await getDaily()
+            )
+            .slice(0, 5)
+            .map(format);
 
-            const p = a.predictions;
-            const m = formatMatch(a);
+        console.log(
+            "👑 VIP 1X2:",
+            data.length
+        );
 
-            return {
-                match: m.name,
-                pick: p.winner,
-                confidence: p.winnerConfidence,
-                probabilities: p.probabilities,
-                vipScore: a.vipScore,
-                risk: p.aiDecision?.risk || "UNKNOWN",
-                aiScore: p.aiRating
-            };
+        res.json(data);
 
-        })
-    );
+    } catch (err) {
+
+        console.error("1X2:", err);
+
+        res.status(500).json({
+            error: err.message
+        });
+    }
 });
 
 
 /* =========================
-   OVER 2.5
+   VIP OVER
 ========================= */
 
 app.get("/vip/over25", async (req, res) => {
 
-    const data = filterVipOver25(await getDaily());
+    try {
 
-    res.json(
-        data.slice(0, 6).map(a => {
+        const data =
+            filterVipOver25(
+                await getDaily()
+            )
+            .slice(0, 6)
+            .map(format);
 
-            const p = a.predictions;
-            const m = formatMatch(a);
+        console.log(
+            "🔥 VIP OVER:",
+            data.length
+        );
 
-            return {
-                match: m.name,
-                pick: p.over25,
-                confidence: p.over25Confidence,
-                expectedGoals: a.model?.expectedGoals || 0,
-                vipScore: a.vipScore,
-                risk: p.aiDecision?.risk || "UNKNOWN",
-                aiScore: p.aiRating
-            };
+        res.json(data);
 
-        })
-    );
+    } catch (err) {
+
+        console.error("OVER:", err);
+
+        res.status(500).json({
+            error: err.message
+        });
+    }
 });
 
 
 /* =========================
-   BTTS
+   VIP BTTS
 ========================= */
 
 app.get("/vip/btts", async (req, res) => {
 
-    const data = filterVipBtts(await getDaily());
+    try {
 
-    res.json(
-        data.slice(0, 5).map(a => {
+        const data =
+            filterVipBtts(
+                await getDaily()
+            )
+            .slice(0, 5)
+            .map(format);
 
-            const p = a.predictions;
-            const m = formatMatch(a);
+        console.log(
+            "🔥 VIP BTTS:",
+            data.length
+        );
 
-            return {
-                match: m.name,
-                pick: p.btts,
-                confidence: p.bttsConfidence,
-                expectedGoals: a.model?.expectedGoals || 0,
-                vipScore: a.vipScore,
-                risk: p.aiDecision?.risk || "UNKNOWN",
-                aiScore: p.aiRating
-            };
+        res.json(data);
 
-        })
-    );
+    } catch (err) {
+
+        console.error("BTTS:", err);
+
+        res.status(500).json({
+            error: err.message
+        });
+    }
 });
 
 
@@ -230,30 +290,31 @@ app.get("/vip/btts", async (req, res) => {
 
 app.get("/vip/score", async (req, res) => {
 
-    const data = await getDaily();
+    try {
 
-    const results = data
-        .filter(a => a?.predictions?.correctScore)
-        .map(a => {
+        const data =
+            (await getDaily())
+            .filter(a =>
+                a?.predictions?.correctScore
+            )
+            .slice(0, 5)
+            .map(format);
 
-            const p = a.predictions;
-            const m = formatMatch(a);
-
-            return {
-                match: m.name,
-                pick: p.correctScore,
-                probability: p.correctScoreProbability,
-                expectedGoals: a.model?.expectedGoals || 0,
-                aiScore: p.aiRating,
-                risk: p.aiDecision?.risk || "UNKNOWN"
-            };
-
-        })
-        .sort((a, b) =>
-            b.probability - a.probability
+        console.log(
+            "📊 SCORE EXACT:",
+            data.length
         );
 
-    res.json(results.slice(0, 5));
+        res.json(data);
+
+    } catch (err) {
+
+        console.error("SCORE:", err);
+
+        res.status(500).json({
+            error: err.message
+        });
+    }
 });
 
 
@@ -273,17 +334,57 @@ app.get("/health", (req, res) => {
 
 
 /* =========================
+   HOME
+========================= */
+
+app.get("/", (req, res) => {
+
+    res.sendFile(
+        path.join(
+            __dirname,
+            "public",
+            "index.html"
+        )
+    );
+
+});
+
+
+/* =========================
    START
 ========================= */
 
-app.listen(PORT, "0.0.0.0", async () => {
+app.listen(
+    PORT,
+    "0.0.0.0",
+    async () => {
 
-    console.log(
-        "👑 KING PREDICTIONS AI ONLINE"
-    );
+        console.log(
+            "👑 KING PREDICTIONS AI ONLINE"
+        );
 
-    await initializeDatabase();
+        try {
 
-    await getAnalyses();
+            await initializeDatabase();
 
-});
+            console.log(
+                "✅ DATABASE READY"
+            );
+
+            await getDaily();
+
+            console.log(
+                "✅ AI PRELOAD READY"
+            );
+
+        } catch (err) {
+
+            console.error(
+                "❌ STARTUP:",
+                err.stack
+            );
+
+        }
+
+    }
+);
