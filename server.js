@@ -33,10 +33,10 @@ const MAX_ANALYSES = 5;
 
 
 /* =========================
-   BUILD AI
+   AI
 ========================= */
 
-async function buildAnalyses() {
+async function getDaily() {
 
     if (
         cache.length &&
@@ -45,17 +45,14 @@ async function buildAnalyses() {
         return cache;
     }
 
-    if (building) {
-        return building;
-    }
+    if (building) return building;
 
     building = (async () => {
 
         const matches = await getMatches();
 
-        if (!matches?.length) {
+        if (!matches?.length)
             return [];
-        }
 
         const results = [];
 
@@ -73,23 +70,14 @@ async function buildAnalyses() {
                 if (
                     Number(a.teamStats?.home?.played) < 5 ||
                     Number(a.teamStats?.away?.played) < 5
-                ) {
-                    continue;
-                }
+                ) continue;
 
                 results.push(a);
-
-                console.log(
-                    "✅ AI READY:",
-                    match.homeTeam.name,
-                    "vs",
-                    match.awayTeam.name
-                );
 
             } catch (err) {
 
                 console.log(
-                    "❌ ANALYSIS:",
+                    "❌ AI:",
                     err.message
                 );
 
@@ -100,7 +88,7 @@ async function buildAnalyses() {
         cacheTime = Date.now();
 
         console.log(
-            "🤖 AI READY:",
+            "👑 AI READY:",
             results.length
         );
 
@@ -117,76 +105,34 @@ async function buildAnalyses() {
 
 
 /* =========================
-   DAILY
-========================= */
-
-async function getDaily() {
-    return await buildAnalyses();
-}
-
-
-/* =========================
    FORMAT
 ========================= */
 
 function format(a) {
 
-    const p = a.predictions || {};
-
     return {
-        match:
-            `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`,
+        match: {
+            homeTeam: a.match.homeTeam,
+            awayTeam: a.match.awayTeam
+        },
 
-        homeTeam: a.match.homeTeam,
-        awayTeam: a.match.awayTeam,
+        predictions: a.predictions,
 
-        predictions: p,
-
-        model: a.model,
-
-        teamStats: a.teamStats,
+        model: {
+            expectedGoals:
+                a.model?.expectedGoals
+        },
 
         vipScore:
             a.vipScore ??
-            p.aiRating ??
-            p.predictionStrength ??
+            a.predictions?.aiRating ??
             0
     };
 }
 
 
 /* =========================
-   FREE
-========================= */
-
-app.get("/free", async (req, res) => {
-
-    try {
-
-        const data =
-            await getDaily();
-
-        if (!data.length) {
-            return res.json([]);
-        }
-
-        res.json([
-            format(data[0])
-        ]);
-
-    } catch (err) {
-
-        console.error("FREE:", err);
-
-        res.status(500).json({
-            error: err.message
-        });
-    }
-});
-
-
-/* =========================
-   VIP 1X2
+   1X2 — 2 MATCHS
 ========================= */
 
 app.get("/vip/1x2", async (req, res) => {
@@ -197,13 +143,13 @@ app.get("/vip/1x2", async (req, res) => {
             filterVipMatches(
                 await getDaily()
             )
-            .slice(0, 5)
+            .sort(
+                (a, b) =>
+                    (b.predictions?.winnerConfidence || 0) -
+                    (a.predictions?.winnerConfidence || 0)
+            )
+            .slice(0, 2)
             .map(format);
-
-        console.log(
-            "👑 VIP 1X2:",
-            data.length
-        );
 
         res.json(data);
 
@@ -219,7 +165,7 @@ app.get("/vip/1x2", async (req, res) => {
 
 
 /* =========================
-   VIP OVER
+   OVER 2.5
 ========================= */
 
 app.get("/vip/over25", async (req, res) => {
@@ -227,16 +173,14 @@ app.get("/vip/over25", async (req, res) => {
     try {
 
         const data =
-            filterVipOver25(
-                await getDaily()
+            filterVipOver25(await getDaily())
+            .sort(
+                (a, b) =>
+                    (b.predictions?.over25Confidence || 0) -
+                    (a.predictions?.over25Confidence || 0)
             )
-            .slice(0, 6)
+            .slice(0, 5)
             .map(format);
-
-        console.log(
-            "🔥 VIP OVER:",
-            data.length
-        );
 
         res.json(data);
 
@@ -252,7 +196,7 @@ app.get("/vip/over25", async (req, res) => {
 
 
 /* =========================
-   VIP BTTS
+   BTTS
 ========================= */
 
 app.get("/vip/btts", async (req, res) => {
@@ -260,16 +204,14 @@ app.get("/vip/btts", async (req, res) => {
     try {
 
         const data =
-            filterVipBtts(
-                await getDaily()
+            filterVipBtts(await getDaily())
+            .sort(
+                (a, b) =>
+                    (b.predictions?.bttsConfidence || 0) -
+                    (a.predictions?.bttsConfidence || 0)
             )
             .slice(0, 5)
             .map(format);
-
-        console.log(
-            "🔥 VIP BTTS:",
-            data.length
-        );
 
         res.json(data);
 
@@ -285,31 +227,68 @@ app.get("/vip/btts", async (req, res) => {
 
 
 /* =========================
-   SCORE EXACT
+   PARI LE PLUS SÛR
 ========================= */
 
-app.get("/vip/score", async (req, res) => {
+app.get("/safest", async (req, res) => {
 
     try {
 
-        const data =
-            (await getDaily())
-            .filter(a =>
-                a?.predictions?.correctScore
-            )
-            .slice(0, 5)
-            .map(format);
+        const data = await getDaily();
 
-        console.log(
-            "📊 SCORE EXACT:",
-            data.length
+        const choices = [];
+
+        for (const a of data) {
+
+            const p = a.predictions || {};
+
+            if (p.winnerConfidence) {
+
+                choices.push({
+                    ...format(a),
+                    market: "1X2",
+                    pick: p.winner,
+                    confidence: p.winnerConfidence
+                });
+
+            }
+
+            if (p.over25Confidence) {
+
+                choices.push({
+                    ...format(a),
+                    market: "OVER 2.5",
+                    pick: p.over25,
+                    confidence: p.over25Confidence
+                });
+
+            }
+
+            if (p.bttsConfidence) {
+
+                choices.push({
+                    ...format(a),
+                    market: "BTTS",
+                    pick: p.btts,
+                    confidence: p.bttsConfidence
+                });
+            }
+        }
+
+        choices.sort(
+            (a, b) =>
+                b.confidence - a.confidence
         );
 
-        res.json(data);
+        res.json(
+            choices.length
+                ? choices[0]
+                : null
+        );
 
     } catch (err) {
 
-        console.error("SCORE:", err);
+        console.error("SAFEST:", err);
 
         res.status(500).json({
             error: err.message
@@ -326,7 +305,8 @@ app.get("/health", (req, res) => {
 
     res.json({
         status: "ok",
-        ai: "KING PREDICTIONS AI",
+        ai: "ACTIVE",
+        version: "V1",
         analyses: cache.length
     });
 
@@ -383,8 +363,6 @@ app.listen(
                 "❌ STARTUP:",
                 err.stack
             );
-
         }
-
     }
 );
