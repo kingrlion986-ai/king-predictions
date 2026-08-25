@@ -40,11 +40,11 @@ let dailyDate = "";
 
 async function getDaily() {
 
-    const today = new Date()
-        .toISOString()
-        .slice(0, 10);
+    const today =
+        new Date().toISOString().slice(0, 10);
 
     if (dailyDate !== today) {
+
         cache = [];
         cacheTime = 0;
         dailyDate = today;
@@ -59,9 +59,7 @@ async function getDaily() {
         return cache;
     }
 
-    if (building) {
-        return building;
-    }
+    if (building) return building;
 
     building = (async () => {
 
@@ -71,33 +69,54 @@ async function getDaily() {
             return [];
         }
 
-        const todayMatches = matches.filter(
-            match =>
+        const todayMatches =
+            matches.filter(match =>
                 match.utcDate?.slice(0, 10) === today
-        );
+            );
 
-        const pool =
-            todayMatches.length
-                ? todayMatches
-                : matches;
+        let selected = [...todayMatches];
+
+        /*
+         * Si moins de 2 matchs aujourd'hui,
+         * on complète avec les prochains matchs.
+         */
+        if (selected.length < 2) {
+
+            for (const match of matches) {
+
+                if (
+                    selected.some(
+                        m => m.id === match.id
+                    )
+                ) {
+                    continue;
+                }
+
+                selected.push(match);
+
+                if (selected.length >= 2) {
+                    break;
+                }
+            }
+        }
+
+        /*
+         * Maximum 2 matchs pour notre V1
+         */
+        selected =
+            selected.slice(0, 2);
 
         console.log(
-            "📅 MATCHS DU JOUR:",
-            todayMatches.length
-        );
-
-        console.log(
-            "🎯 MATCHS À ANALYSER:",
-            pool.length
+            "🎯 MATCHES SELECTED:",
+            selected.map(
+                m =>
+                    `${m.homeTeam.name} vs ${m.awayTeam.name}`
+            )
         );
 
         const results = [];
 
-        for (const match of pool) {
-
-            if (results.length >= 5) {
-                break;
-            }
+        for (const match of selected) {
 
             try {
 
@@ -111,9 +130,7 @@ async function getDaily() {
                 const a =
                     await analyzeMatch(match);
 
-                if (!a) {
-                    continue;
-                }
+                if (!a) continue;
 
                 if (
                     Number(a.teamStats?.home?.played) < 5 ||
@@ -124,18 +141,12 @@ async function getDaily() {
 
                 results.push(a);
 
-                console.log(
-                    "✅ VALID:",
-                    results.length
-                );
-
             } catch (err) {
 
                 console.log(
                     "❌ AI:",
                     err.message
                 );
-
             }
         }
 
@@ -160,7 +171,7 @@ async function getDaily() {
         building = null;
 
     }
-}
+                }
 
 /* =========================
    FORMAT
