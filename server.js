@@ -35,6 +35,7 @@ const MAX_ANALYSES = 5;
 /* =========================
    AI
 ========================= */
+
 let dailyDate = "";
 
 async function getDaily() {
@@ -48,7 +49,6 @@ async function getDaily() {
 
         cache = [];
         cacheTime = 0;
-
         dailyDate = today;
     }
 
@@ -65,28 +65,25 @@ async function getDaily() {
 
         const matches = await getMatches();
 
-        const today = new Date().toISOString().slice(0, 10);
-
-const todayMatches = matches.filter(match =>
-    match.utcDate?.slice(0, 10) === today
-);
-
-        if (!matches?.length)
+        if (!matches?.length) {
             return [];
+        }
+
+        const todayMatches =
+            matches.filter(match =>
+                match.utcDate?.slice(0, 10) === today
+            );
+
+        const selected =
+            todayMatches.length
+                ? todayMatches
+                : matches;
 
         const results = [];
 
-        
-
-const todayMatches = matches.filter(m =>
-    m.utcDate?.slice(0, 10) === today
-);
-
-const selected = todayMatches.length
-    ? todayMatches
-    : matches;
-
-for (const match of selected.slice(0, MAX_ANALYSES)) {
+        for (
+            const match of selected.slice(0, MAX_ANALYSES)
+        ) {
 
             try {
 
@@ -98,7 +95,9 @@ for (const match of selected.slice(0, MAX_ANALYSES)) {
                 if (
                     Number(a.teamStats?.home?.played) < 5 ||
                     Number(a.teamStats?.away?.played) < 5
-                ) continue;
+                ) {
+                    continue;
+                }
 
                 results.push(a);
 
@@ -130,7 +129,6 @@ for (const match of selected.slice(0, MAX_ANALYSES)) {
         building = null;
     }
 }
-
 
 /* =========================
    FORMAT
