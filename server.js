@@ -65,14 +65,20 @@ async function getDaily() {
 
         const matches = await getMatches();
 
+        const today = new Date().toISOString().slice(0, 10);
+
+const todayMatches = matches.filter(match =>
+    match.utcDate?.slice(0, 10) === today
+);
+
         if (!matches?.length)
             return [];
 
         const results = [];
 
         for (
-            const match of matches.slice(0, MAX_ANALYSES)
-        ) {
+    const match of todayMatches.slice(0, MAX_ANALYSES)
+) {
 
             try {
 
