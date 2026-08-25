@@ -40,16 +40,16 @@ let dailyDate = "";
 
 async function getDaily() {
 
-    const today =
-        new Date().toISOString().slice(0, 10);
+    const today = new Date()
+        .toISOString()
+        .slice(0, 10);
 
     if (dailyDate !== today) {
-
-        console.log("📅 NEW DAY:", today);
-
         cache = [];
         cacheTime = 0;
         dailyDate = today;
+
+        console.log("📅 NEW DAY:", today);
     }
 
     if (
@@ -59,7 +59,9 @@ async function getDaily() {
         return cache;
     }
 
-    if (building) return building;
+    if (building) {
+        return building;
+    }
 
     building = (async () => {
 
@@ -69,28 +71,49 @@ async function getDaily() {
             return [];
         }
 
-        const todayMatches =
-            matches.filter(match =>
+        const todayMatches = matches.filter(
+            match =>
                 match.utcDate?.slice(0, 10) === today
-            );
+        );
 
-        const selected =
+        const pool =
             todayMatches.length
                 ? todayMatches
                 : matches;
 
+        console.log(
+            "📅 MATCHS DU JOUR:",
+            todayMatches.length
+        );
+
+        console.log(
+            "🎯 MATCHS À ANALYSER:",
+            pool.length
+        );
+
         const results = [];
 
-        for (
-            const match of selected.slice(0, MAX_ANALYSES)
-        ) {
+        for (const match of pool) {
+
+            if (results.length >= 5) {
+                break;
+            }
 
             try {
+
+                console.log(
+                    "🔎 ANALYZING:",
+                    match.homeTeam.name,
+                    "vs",
+                    match.awayTeam.name
+                );
 
                 const a =
                     await analyzeMatch(match);
 
-                if (!a) continue;
+                if (!a) {
+                    continue;
+                }
 
                 if (
                     Number(a.teamStats?.home?.played) < 5 ||
@@ -100,6 +123,11 @@ async function getDaily() {
                 }
 
                 results.push(a);
+
+                console.log(
+                    "✅ VALID:",
+                    results.length
+                );
 
             } catch (err) {
 
@@ -124,9 +152,13 @@ async function getDaily() {
     })();
 
     try {
+
         return await building;
+
     } finally {
+
         building = null;
+
     }
 }
 
