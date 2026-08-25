@@ -29,7 +29,7 @@ let cacheTime = 0;
 let building = null;
 
 const CACHE_TTL = 24 * 60 * 60 * 1000;
-const MAX_ANALYSES = 5;
+const MAX_ANALYSES = 15;
 
 
 /* =========================
