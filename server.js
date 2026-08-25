@@ -76,9 +76,17 @@ const todayMatches = matches.filter(match =>
 
         const results = [];
 
-        for (
-    const match of todayMatches.slice(0, MAX_ANALYSES)
-) {
+        const today = new Date().toISOString().slice(0, 10);
+
+const todayMatches = matches.filter(m =>
+    m.utcDate?.slice(0, 10) === today
+);
+
+const selected = todayMatches.length
+    ? todayMatches
+    : matches;
+
+for (const match of selected.slice(0, MAX_ANALYSES)) {
 
             try {
 
