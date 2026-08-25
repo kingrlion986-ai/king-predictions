@@ -52,9 +52,70 @@ async function getDaily() {
         dailyDate = today;
     }
 
-    return await buildAnalyses();
-}
+    if (
+        cache.length &&
+        Date.now() - cacheTime < CACHE_TTL
+    ) {
+        return cache;
+    }
 
+    if (building) return building;
+
+    building = (async () => {
+
+        const matches = await getMatches();
+
+        if (!matches?.length)
+            return [];
+
+        const results = [];
+
+        for (
+            const match of matches.slice(0, MAX_ANALYSES)
+        ) {
+
+            try {
+
+                const a =
+                    await analyzeMatch(match);
+
+                if (!a) continue;
+
+                if (
+                    Number(a.teamStats?.home?.played) < 5 ||
+                    Number(a.teamStats?.away?.played) < 5
+                ) continue;
+
+                results.push(a);
+
+            } catch (err) {
+
+                console.log(
+                    "❌ AI:",
+                    err.message
+                );
+
+            }
+        }
+
+        cache = results;
+        cacheTime = Date.now();
+
+        console.log(
+            "👑 AI READY:",
+            results.length
+        );
+
+        return results;
+
+    })();
+
+    try {
+        return await building;
+    } finally {
+        building = null;
+    }
+}
 
 
 /* =========================
