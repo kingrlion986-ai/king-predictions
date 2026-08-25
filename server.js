@@ -28,80 +28,33 @@ let cache = [];
 let cacheTime = 0;
 let building = null;
 
-const CACHE_TTL = 15 * 60 * 1000;
+const CACHE_TTL = 24 * 60 * 60 * 1000;
 const MAX_ANALYSES = 5;
 
 
 /* =========================
    AI
 ========================= */
+let dailyDate = "";
 
 async function getDaily() {
 
-    if (
-        cache.length &&
-        Date.now() - cacheTime < CACHE_TTL
-    ) {
-        return cache;
+    const today =
+        new Date().toISOString().slice(0, 10);
+
+    if (dailyDate !== today) {
+
+        console.log("📅 NEW DAY:", today);
+
+        cache = [];
+        cacheTime = 0;
+
+        dailyDate = today;
     }
 
-    if (building) return building;
-
-    building = (async () => {
-
-        const matches = await getMatches();
-
-        if (!matches?.length)
-            return [];
-
-        const results = [];
-
-        for (
-            const match of matches.slice(0, MAX_ANALYSES)
-        ) {
-
-            try {
-
-                const a =
-                    await analyzeMatch(match);
-
-                if (!a) continue;
-
-                if (
-                    Number(a.teamStats?.home?.played) < 5 ||
-                    Number(a.teamStats?.away?.played) < 5
-                ) continue;
-
-                results.push(a);
-
-            } catch (err) {
-
-                console.log(
-                    "❌ AI:",
-                    err.message
-                );
-
-            }
-        }
-
-        cache = results;
-        cacheTime = Date.now();
-
-        console.log(
-            "👑 AI READY:",
-            results.length
-        );
-
-        return results;
-
-    })();
-
-    try {
-        return await building;
-    } finally {
-        building = null;
-    }
+    return await buildAnalyses();
 }
+
 
 
 /* =========================
