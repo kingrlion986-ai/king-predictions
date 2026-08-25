@@ -76,7 +76,7 @@ const todayMatches = matches.filter(match =>
 
         const results = [];
 
-        const today = new Date().toISOString().slice(0, 10);
+        
 
 const todayMatches = matches.filter(m =>
     m.utcDate?.slice(0, 10) === today
