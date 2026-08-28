@@ -7,1159 +7,543 @@ const {
     initializeDatabase
 } = require("./services/footballApi");
 
-const {
-    analyzeMatch
-} = require("./services/predictionEngine");
+const { analyzeMatch } =
+    require("./services/predictionEngine");
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
-app.use(
-    express.static(
-        path.join(__dirname, "public")
-    )
-);
+app.use(express.static(path.join(__dirname, "public")));
 
-const PORT =
-    process.env.PORT || 3000;
-
-
-/* =====================================================
-   CONFIGURATION V1
-===================================================== */
-
-const CACHE_TTL =
-    24 * 60 * 60 * 1000;
-
-const MAX_ANALYSES = 30;
-
-const NEXT_24H =
-    24 * 60 * 60 * 1000;
-
-
-/* =====================================================
-   CACHE DAILY
-===================================================== */
+const PORT = process.env.PORT || 3000;
 
 let cache = [];
 let cacheTime = 0;
-let dailyDate = "";
 let building = null;
+let dailyDate = "";
+
+const CACHE_TTL = 24 * 60 * 60 * 1000;
+const MAX_ANALYSES = 30;
 
 
-/* =====================================================
-   GET DAILY
-===================================================== */
+/* =========================
+   DAILY ANALYSIS
+========================= */
 
 async function getDaily() {
 
     const today =
-        new Date()
-            .toISOString()
-            .slice(0, 10);
-
-
-    /*
-     * Nouveau jour
-     */
+        new Date().toISOString().slice(0, 10);
 
     if (dailyDate !== today) {
-
         cache = [];
         cacheTime = 0;
         dailyDate = today;
 
-        console.log(
-            "📅 NEW DAY:",
-            today
-        );
+        console.log("📅 NEW DAY:", today);
     }
-
-
-    /*
-     * Cache 24h
-     */
 
     if (
-        cache.length > 0 &&
+        cache.length &&
         Date.now() - cacheTime < CACHE_TTL
     ) {
-
         return cache;
     }
-
-
-    /*
-     * Empêche plusieurs analyses
-     * simultanées.
-     */
 
     if (building)
         return building;
 
-
     building = (async () => {
 
-        try {
+        const matches = await getMatches();
 
-            const matches =
-                await getMatches();
+        if (!matches?.length)
+            return [];
 
+        const now = Date.now();
 
-            if (
-                !Array.isArray(matches) ||
-                matches.length === 0
-            ) {
+        const limit =
+            now + 24 * 60 * 60 * 1000;
 
-                console.log(
-                    "⚠️ NO MATCHES"
-                );
+        const next24h = matches.filter(match => {
 
-                return [];
-            }
+            const time =
+                new Date(match.utcDate).getTime();
 
-
-            /*
-             * PROCHAINES 24 HEURES
-             */
-
-            const now =
-                Date.now();
-
-            const limit =
-                now + NEXT_24H;
-
-
-            const next24h =
-                matches.filter(match => {
-
-                    const time =
-                        new Date(
-                            match.utcDate
-                        ).getTime();
-
-                    return (
-                        Number.isFinite(time) &&
-                        time >= now &&
-                        time <= limit
-                    );
-
-                });
-
-
-            console.log(
-                "📅 MATCHES NEXT 24H:",
-                next24h.length
+            return (
+                time >= now &&
+                time <= limit
             );
 
+        });
 
-            /*
-             * On analyse jusqu'à 30 matchs.
-             */
+        console.log(
+            "📅 MATCHES 24H:",
+            next24h.length
+        );
 
-            const selected =
-                next24h.slice(
-                    0,
-                    MAX_ANALYSES
-                );
+        const results = [];
 
+        for (
+            const match of next24h.slice(0, MAX_ANALYSES)
+        ) {
 
-            console.log(
-                "🎯 MATCHES SELECTED:",
-                selected.length
-            );
+            try {
 
+                const a =
+                    await analyzeMatch(match);
 
-            const results = [];
+                if (!a)
+                    continue;
 
-
-            /*
-             * ANALYSE
-             */
-
-            for (
-                const match of selected
-            ) {
-
-                try {
-
-                    console.log(
-                        "🔎 ANALYZING:",
-                        `${match.homeTeam.name} vs ${match.awayTeam.name}`
-                    );
-
-
-                    const analysis =
-                        await analyzeMatch(
-                            match
-                        );
-
-
-                    if (!analysis)
-                        continue;
-
-
-                    const homePlayed =
-                        Number(
-                            analysis.teamStats
-                                ?.home
-                                ?.played || 0
-                        );
-
-
-                    const awayPlayed =
-                        Number(
-                            analysis.teamStats
-                                ?.away
-                                ?.played || 0
-                        );
-
-
-                    if (
-                        homePlayed < 5 ||
-                        awayPlayed < 5
-                    ) {
-
-                        console.log(
-                            "🚫 INSUFFICIENT DATA"
-                        );
-
-                        continue;
-                    }
-
-
-                    results.push(
-                        analysis
-                    );
-
-
-                } catch (err) {
-
-                    console.log(
-                        "❌ AI:",
-                        err.message
-                    );
-
+                if (
+                    Number(a.teamStats?.home?.played) < 5 ||
+                    Number(a.teamStats?.away?.played) < 5
+                ) {
+                    continue;
                 }
 
+                results.push(a);
+
+            } catch (err) {
+
+                console.log(
+                    "❌ AI:",
+                    err.message
+                );
+
             }
-
-
-            cache =
-                results;
-
-            cacheTime =
-                Date.now();
-
-
-            console.log(
-                "👑 AI READY:",
-                results.length
-            );
-
-
-            return results;
-
-
-        } catch (err) {
-
-            console.error(
-                "❌ DAILY AI:",
-                err
-            );
-
-            return [];
 
         }
 
+        cache = results;
+        cacheTime = Date.now();
+
+        console.log(
+            "👑 AI READY:",
+            results.length
+        );
+
+        return results;
+
     })();
 
-
     try {
-
         return await building;
-
     } finally {
-
         building = null;
-
     }
-
 }
 
 
-/* =====================================================
-   RISK
-===================================================== */
+/* =========================
+   HELPERS
+========================= */
 
-function getRisk(a) {
-
+function risk(a) {
     return (
-        a?.predictions
-            ?.aiDecision
-            ?.risk ||
+        a?.predictions?.aiDecision?.risk ||
         "HIGH"
     );
-
 }
 
-
-function riskValue(risk) {
-
-    if (risk === "LOW")
-        return 3;
-
-    if (risk === "MEDIUM")
-        return 2;
-
-    if (risk === "HIGH")
-        return 1;
-
-    return 0;
-}
-
-
-/* =====================================================
-   SAFE MATCH
-===================================================== */
-
-function isSafe(a) {
-
-    const risk =
-        getRisk(a);
-
+function safe(a) {
     return (
-        risk === "LOW" ||
-        risk === "MEDIUM"
+        risk(a) === "LOW" ||
+        risk(a) === "MEDIUM"
     );
-
 }
 
-
-/* =====================================================
-   AI SCORE
-===================================================== */
-
-function getAIScore(a) {
-
+function aiScore(a) {
     return Number(
-        a?.predictions
-            ?.aiRating ??
-        a?.vipScore ??
+        a?.predictions?.aiRating ||
+        a?.vipScore ||
         0
     );
-
 }
-
-
-/* =====================================================
-   FORMAT
-===================================================== */
 
 function format(a) {
 
     return {
-
-        match: {
-
-            id:
-                a.match?.id,
-
-            utcDate:
-                a.match?.utcDate,
-
-            competition:
-                a.match?.competition,
-
-            homeTeam:
-                a.match?.homeTeam,
-
-            awayTeam:
-                a.match?.awayTeam
-
-        },
-
-        predictions:
-            a.predictions,
+        match: a.match,
+        predictions: a.predictions,
 
         model: {
-
             expectedGoals:
                 a.model?.expectedGoals
-
         },
 
         vipScore:
             a.vipScore ??
             a.predictions?.aiRating ??
             0
-
     };
-
 }
 
 
-/* =====================================================
-   UNIQUE
-===================================================== */
+/* =========================
+   MARKET RANKING
+========================= */
 
-function uniqueByMatch(list) {
-
-    const map =
-        new Map();
-
-
-    for (
-        const item of list
-    ) {
-
-        const id =
-            item?.match?.id;
-
-
-        if (
-            id &&
-            !map.has(id)
-        ) {
-
-            map.set(
-                id,
-                item
-            );
-
-        }
-
-    }
-
-
-    return [
-        ...map.values()
-    ];
-
-}
-
-
-/* =====================================================
-   MARKET SCORE
-===================================================== */
-
-function marketRanking(
-    a,
-    market
-) {
+function rank(a, market) {
 
     const p =
-        a?.predictions || {};
-
+        a.predictions || {};
 
     let confidence = 0;
 
-
-    if (market === "1X2") {
-
+    if (market === "1X2")
         confidence =
-            Number(
-                p.winnerConfidence || 0
-            );
+            Number(p.winnerConfidence || 0);
 
-    }
-
-
-    if (market === "OVER") {
-
+    if (market === "OVER")
         confidence =
-            Number(
-                p.over25Confidence || 0
-            );
+            Number(p.over25Confidence || 0);
 
-    }
-
-
-    if (market === "BTTS") {
-
+    if (market === "BTTS")
         confidence =
-            Number(
-                p.bttsConfidence || 0
-            );
+            Number(p.bttsConfidence || 0);
 
-    }
-
-
-    const ai =
-        getAIScore(a);
-
-
-    const risk =
-        riskValue(
-            getRisk(a)
-        );
-
-
-    /*
-     * Priorité :
-     * 1. risque
-     * 2. confiance
-     * 3. AI Score
-     */
+    const riskScore =
+        risk(a) === "LOW" ? 3 :
+        risk(a) === "MEDIUM" ? 2 : 0;
 
     return (
-        risk * 1000 +
+        riskScore * 1000 +
         confidence * 5 +
-        ai * 2
+        aiScore(a) * 2
     );
-
 }
 
 
-/* =====================================================
-   GET MARKET CANDIDATES
-===================================================== */
+/* =========================
+   GET MARKET
+========================= */
 
-function getCandidates(
-    data,
-    market
-) {
+function market(data, type, used = new Set()) {
 
     return data
         .filter(a => {
 
-            if (!isSafe(a))
+            if (!safe(a))
                 return false;
 
+            if (
+                used.has(a.match?.id)
+            )
+                return false;
 
             const p =
-                a?.predictions || {};
+                a.predictions || {};
 
-
-            if (
-                market === "1X2"
-            ) {
-
-                return Boolean(
+            if (type === "1X2")
+                return !!(
                     p.winner &&
                     p.winnerConfidence
                 );
 
-            }
-
-
-            if (
-                market === "OVER"
-            ) {
-
-                return Boolean(
+            if (type === "OVER")
+                return !!(
                     p.over25 &&
                     p.over25Confidence
                 );
 
-            }
-
-
-            if (
-                market === "BTTS"
-            ) {
-
-                return Boolean(
+            if (type === "BTTS")
+                return !!(
                     p.btts &&
                     p.bttsConfidence
                 );
-
-            }
-
 
             return false;
 
         })
         .sort(
             (a, b) =>
-                marketRanking(
-                    b,
-                    market
-                ) -
-                marketRanking(
-                    a,
-                    market
-                )
+                rank(b, type) -
+                rank(a, type)
+        )
+        .slice(0, 2);
+}
+
+
+/* =========================
+   1X2
+========================= */
+
+app.get("/vip/1x2", async (req, res) => {
+
+    try {
+
+        const data =
+            await getDaily();
+
+        const selected =
+            market(data, "1X2");
+
+        res.json(
+            selected.map(format)
         );
 
-}
+    } catch (err) {
 
+        console.error("1X2:", err);
 
-/* =====================================================
-   DIVERSIFICATION
-===================================================== */
-
-function selectTwo(
-    candidates,
-    usedIds
-) {
-
-    const selected = [];
-
-
-    /*
-     * Première priorité :
-     * matchs jamais utilisés.
-     */
-
-    for (
-        const candidate of candidates
-    ) {
-
-        if (
-            selected.length >= 2
-        )
-            break;
-
-
-        const id =
-            candidate.match?.id;
-
-
-        if (
-            !usedIds.has(id)
-        ) {
-
-            selected.push(
-                candidate
-            );
-
-            usedIds.add(id);
-
-        }
-
-    }
-
-
-    /*
-     * Si on n'a pas 2 matchs différents,
-     * on complète avec le meilleur disponible.
-     *
-     * On ne force jamais un HIGH.
-     */
-
-    if (
-        selected.length < 2
-    ) {
-
-        for (
-            const candidate of candidates
-        ) {
-
-            if (
-                selected.length >= 2
-            )
-                break;
-
-
-            const already =
-                selected.some(
-                    x =>
-                        x.match?.id ===
-                        candidate.match?.id
-                );
-
-
-            if (!already) {
-
-                selected.push(
-                    candidate
-                );
-
-            }
-
-        }
-
-    }
-
-
-    return selected.slice(
-        0,
-        2
-    );
-
-}
-
-
-/* =====================================================
-   1X2
-===================================================== */
-
-app.get(
-    "/vip/1x2",
-    async (req, res) => {
-
-        try {
-
-            const data =
-                await getDaily();
-
-
-            const candidates =
-                getCandidates(
-                    data,
-                    "1X2"
-                );
-
-
-            const selected =
-                selectTwo(
-                    candidates,
-                    new Set()
-                );
-
-
-            res.json(
-                selected.map(format)
-            );
-
-
-        } catch (err) {
-
-            console.error(
-                "1X2:",
-                err
-            );
-
-
-            res.status(500).json({
-                error:
-                    err.message
-            });
-
-        }
-
-    }
-);
-
-
-/* =====================================================
-   OVER 2.5
-===================================================== */
-
-app.get(
-    "/vip/over25",
-    async (req, res) => {
-
-        try {
-
-            const data =
-                await getDaily();
-
-
-            const usedIds =
-                new Set();
-
-
-            /*
-             * Réserver les meilleurs 1X2
-             * pour éviter les doublons.
-             */
-
-            const winnerCandidates =
-                getCandidates(
-                    data,
-                    "1X2"
-                );
-
-
-            winnerCandidates
-                .slice(0, 2)
-                .forEach(a => {
-
-                    if (
-                        a.match?.id
-                    ) {
-
-                        usedIds.add(
-                            a.match.id
-                        );
-
-                    }
-
-                });
-
-
-            const candidates =
-                getCandidates(
-                    data,
-                    "OVER"
-                );
-
-
-            const selected =
-                selectTwo(
-                    candidates,
-                    usedIds
-                );
-
-
-            res.json(
-                selected.map(format)
-            );
-
-
-        } catch (err) {
-
-            console.error(
-                "OVER:",
-                err
-            );
-
-
-            res.status(500).json({
-                error:
-                    err.message
-            });
-
-        }
-
-    }
-);
-
-
-/* =====================================================
-   BTTS
-===================================================== */
-
-app.get(
-    "/vip/btts",
-    async (req, res) => {
-
-        try {
-
-            const data =
-                await getDaily();
-
-
-            const usedIds =
-                new Set();
-
-
-            /*
-             * Réserver les matchs
-             * déjà utilisés par 1X2
-             * et OVER.
-             */
-
-            getCandidates(
-                data,
-                "1X2"
-            )
-                .slice(0, 2)
-                .forEach(a => {
-
-                    if (
-                        a.match?.id
-                    ) {
-
-                        usedIds.add(
-                            a.match.id
-                        );
-
-                    }
-
-                });
-
-
-            const overCandidates =
-                getCandidates(
-                    data,
-                    "OVER"
-                );
-
-
-            for (
-                const a of overCandidates
-                    .slice(0, 2)
-            ) {
-
-                if (
-                    a.match?.id
-                ) {
-
-                    usedIds.add(
-                        a.match.id
-                    );
-
-                }
-
-            }
-
-
-            const candidates =
-                getCandidates(
-                    data,
-                    "BTTS"
-                );
-
-
-            const selected =
-                selectTwo(
-                    candidates,
-                    usedIds
-                );
-
-
-            res.json(
-                selected.map(format)
-            );
-
-
-        } catch (err) {
-
-            console.error(
-                "BTTS:",
-                err
-            );
-
-
-            res.status(500).json({
-                error:
-                    err.message
-            });
-
-        }
-
-    }
-);
-
-
-/* =====================================================
-   PARI LE PLUS SÛR
-===================================================== */
-
-app.get(
-    "/safest",
-    async (req, res) => {
-
-        try {
-
-            const data =
-                await getDaily();
-
-
-            const choices = [];
-
-
-            for (
-                const a of data
-            ) {
-
-                if (!isSafe(a))
-                    continue;
-
-
-                const p =
-                    a?.predictions || {};
-
-
-                /*
-                 * 1X2
-                 */
-
-                if (
-                    p.winner &&
-                    p.winnerConfidence
-                ) {
-
-                    choices.push({
-
-                        ...format(a),
-
-                        market:
-                            "1X2",
-
-                        pick:
-                            p.winner,
-
-                        confidence:
-                            Number(
-                                p.winnerConfidence
-                            ),
-
-                        aiScore:
-                            getAIScore(a),
-
-                        risk:
-                            getRisk(a)
-
-                    });
-
-                }
-
-
-                /*
-                 * OVER
-                 */
-
-                if (
-                    p.over25 &&
-                    p.over25Confidence
-                ) {
-
-                    choices.push({
-
-                        ...format(a),
-
-                        market:
-                            "OVER 2.5",
-
-                        pick:
-                            p.over25,
-
-                        confidence:
-                            Number(
-                                p.over25Confidence
-                            ),
-
-                        aiScore:
-                            getAIScore(a),
-
-                        risk:
-                            getRisk(a)
-
-                    });
-
-                }
-
-
-                /*
-                 * BTTS
-                 */
-
-                if (
-                    p.btts &&
-                    p.bttsConfidence
-                ) {
-
-                    choices.push({
-
-                        ...format(a),
-
-                        market:
-                            "BTTS",
-
-                        pick:
-                            p.btts,
-
-                        confidence:
-                            Number(
-                                p.bttsConfidence
-                            ),
-
-                        aiScore:
-                            getAIScore(a),
-
-                        risk:
-                            getRisk(a)
-
-                    });
-
-                }
-
-            }
-
-
-            choices.sort(
-                (a, b) => {
-
-                    const scoreA =
-                        riskValue(a.risk) * 1000 +
-                        a.confidence * 5 +
-                        a.aiScore * 2;
-
-
-                    const scoreB =
-                        riskValue(b.risk) * 1000 +
-                        b.confidence * 5 +
-                        b.aiScore * 2;
-
-
-                    return scoreB - scoreA;
-
-                }
-            );
-
-
-            res.json(
-                choices[0] || null
-            );
-
-
-        } catch (err) {
-
-            console.error(
-                "SAFEST:",
-                err
-            );
-
-
-            res.status(500).json({
-                error:
-                    err.message
-            });
-
-        }
-
-    }
-);
-
-
-/* =====================================================
-   HEALTH
-===================================================== */
-
-app.get(
-    "/health",
-    (req, res) => {
-
-        res.json({
-
-            status:
-                "ok",
-
-            ai:
-                "ACTIVE",
-
-            version:
-                "V1",
-
-            analyses:
-                cache.length,
-
-            dailyDate
-
+        res.status(500).json({
+            error: err.message
         });
 
     }
-);
+
+});
 
 
-/* =====================================================
-   HOME
-===================================================== */
+/* =========================
+   OVER 2.5
+========================= */
 
-app.get(
-    "/",
-    (req, res) => {
+app.get("/vip/over25", async (req, res) => {
 
-        res.sendFile(
-            path.join(
-                __dirname,
-                "public",
-                "index.html"
-            )
+    try {
+
+        const data =
+            await getDaily();
+
+        const used =
+            new Set(
+                market(data, "1X2")
+                    .map(a => a.match?.id)
+            );
+
+        const selected =
+            market(
+                data,
+                "OVER",
+                used
+            );
+
+        res.json(
+            selected.map(format)
         );
 
+    } catch (err) {
+
+        console.error("OVER:", err);
+
+        res.status(500).json({
+            error: err.message
+        });
+
     }
-);
+
+});
 
 
-/* =====================================================
+/* =========================
+   BTTS
+========================= */
+
+app.get("/vip/btts", async (req, res) => {
+
+    try {
+
+        const data =
+            await getDaily();
+
+        const used =
+            new Set([
+                ...market(data, "1X2")
+                    .map(a => a.match?.id),
+
+                ...market(data, "OVER")
+                    .map(a => a.match?.id)
+            ]);
+
+        const selected =
+            market(
+                data,
+                "BTTS",
+                used
+            );
+
+        res.json(
+            selected.map(format)
+        );
+
+    } catch (err) {
+
+        console.error("BTTS:", err);
+
+        res.status(500).json({
+            error: err.message
+        });
+
+    }
+
+});
+
+
+/* =========================
+   PARI LE PLUS SÛR
+========================= */
+
+app.get("/safest", async (req, res) => {
+
+    try {
+
+        const data =
+            await getDaily();
+
+        const choices = [];
+
+        for (const a of data) {
+
+            if (!safe(a))
+                continue;
+
+            const p =
+                a.predictions || {};
+
+
+            if (
+                p.winner &&
+                p.winnerConfidence
+            ) {
+
+                choices.push({
+                    ...format(a),
+                    market: "1X2",
+                    pick: p.winner,
+                    confidence:
+                        Number(
+                            p.winnerConfidence
+                        ),
+                    aiScore:
+                        aiScore(a),
+                    risk:
+                        risk(a)
+                });
+
+            }
+
+
+            if (
+                p.over25 &&
+                p.over25Confidence
+            ) {
+
+                choices.push({
+                    ...format(a),
+                    market: "OVER 2.5",
+                    pick: p.over25,
+                    confidence:
+                        Number(
+                            p.over25Confidence
+                        ),
+                    aiScore:
+                        aiScore(a),
+                    risk:
+                        risk(a)
+                });
+
+            }
+
+
+            if (
+                p.btts &&
+                p.bttsConfidence
+            ) {
+
+                choices.push({
+                    ...format(a),
+                    market: "BTTS",
+                    pick: p.btts,
+                    confidence:
+                        Number(
+                            p.bttsConfidence
+                        ),
+                    aiScore:
+                        aiScore(a),
+                    risk:
+                        risk(a)
+                });
+
+            }
+
+        }
+
+
+        choices.sort((a, b) => {
+
+            const A =
+                (a.risk === "LOW" ? 300 : 200) +
+                a.confidence * 5 +
+                a.aiScore * 2;
+
+            const B =
+                (b.risk === "LOW" ? 300 : 200) +
+                b.confidence * 5 +
+                b.aiScore * 2;
+
+            return B - A;
+
+        });
+
+
+        res.json(
+            choices[0] || null
+        );
+
+    } catch (err) {
+
+        console.error("SAFEST:", err);
+
+        res.status(500).json({
+            error: err.message
+        });
+
+    }
+
+});
+
+
+/* =========================
+   HEALTH
+========================= */
+
+app.get("/health", (req, res) => {
+
+    res.json({
+        status: "ok",
+        ai: "ACTIVE",
+        version: "V1",
+        analyses: cache.length,
+        dailyDate
+    });
+
+});
+
+
+/* =========================
+   HOME
+========================= */
+
+app.get("/", (req, res) => {
+
+    res.sendFile(
+        path.join(
+            __dirname,
+            "public",
+            "index.html"
+        )
+    );
+
+});
+
+
+/* =========================
    START
-===================================================== */
+========================= */
 
 app.listen(
     PORT,
@@ -1170,19 +554,14 @@ app.listen(
             "👑 KING PREDICTIONS AI ONLINE"
         );
 
-
         try {
 
             await initializeDatabase();
-
-
             await getDaily();
-
 
             console.log(
                 "✅ AI PRELOAD READY"
             );
-
 
         } catch (err) {
 
