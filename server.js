@@ -37,9 +37,12 @@ async function getDaily() {
         new Date().toISOString().slice(0, 10);
 
     if (dailyDate !== today) {
+
         cache = [];
         cacheTime = 0;
         dailyDate = today;
+
+        console.log("📅 NEW DAY:", today);
     }
 
     if (
@@ -55,19 +58,30 @@ async function getDaily() {
 
         const matches = await getMatches();
 
-        if (!matches?.length) return [];
+        if (!matches?.length)
+            return [];
 
         const now = Date.now();
-        const next24h = now + 24 * 60 * 60 * 1000;
 
-        const selected = matches
-            .filter(m => {
-                const time =
-                    new Date(m.utcDate).getTime();
+        const next24h =
+            now + 24 * 60 * 60 * 1000;
 
-                return time >= now && time <= next24h;
-            })
-            .slice(0, MAX_ANALYSES);
+        const selected =
+            matches
+                .filter(match => {
+
+                    const time =
+                        new Date(
+                            match.utcDate
+                        ).getTime();
+
+                    return (
+                        time >= now &&
+                        time <= next24h
+                    );
+
+                })
+                .slice(0, MAX_ANALYSES);
 
         console.log(
             "🎯 MATCHS 24H:",
@@ -80,15 +94,29 @@ async function getDaily() {
 
             try {
 
+                console.log(
+                    "🔎 ANALYZING:",
+                    match.homeTeam.name,
+                    "vs",
+                    match.awayTeam.name
+                );
+
                 const a =
                     await analyzeMatch(match);
 
-                if (!a) continue;
+                if (!a)
+                    continue;
 
                 if (
-                    Number(a.teamStats?.home?.played) < 5 ||
-                    Number(a.teamStats?.away?.played) < 5
-                ) continue;
+                    Number(
+                        a.teamStats?.home?.played
+                    ) < 5 ||
+                    Number(
+                        a.teamStats?.away?.played
+                    ) < 5
+                ) {
+                    continue;
+                }
 
                 results.push(a);
 
@@ -115,10 +143,41 @@ async function getDaily() {
     })();
 
     try {
+
         return await building;
+
     } finally {
+
         building = null;
+
     }
+}
+
+
+/* =========================
+   RISK
+========================= */
+
+function getRisk(a) {
+
+    return (
+        a?.predictions?.aiDecision?.risk ||
+        "HIGH"
+    );
+
+}
+
+
+function isSafe(a) {
+
+    const risk =
+        getRisk(a);
+
+    return (
+        risk === "LOW" ||
+        risk === "MEDIUM"
+    );
+
 }
 
 
@@ -129,12 +188,17 @@ async function getDaily() {
 function format(a) {
 
     return {
+
         match: {
-            homeTeam: a.match.homeTeam,
-            awayTeam: a.match.awayTeam
+            homeTeam:
+                a.match.homeTeam,
+
+            awayTeam:
+                a.match.awayTeam
         },
 
-        predictions: a.predictions,
+        predictions:
+            a.predictions,
 
         model: {
             expectedGoals:
@@ -146,6 +210,7 @@ function format(a) {
             a.predictions?.aiRating ??
             0
     };
+
 }
 
 
@@ -159,25 +224,43 @@ app.get("/vip/1x2", async (req, res) => {
 
         const data =
             (await getDaily())
-            .filter(a =>
-                a?.predictions?.winner
-            )
-            .sort((a, b) =>
-                (b.predictions.winnerConfidence || 0) -
-                (a.predictions.winnerConfidence || 0)
-            )
-            .slice(0, 2)
-            .map(format);
+
+                .filter(a =>
+                    a?.predictions?.winner &&
+                    a?.predictions?.winnerConfidence &&
+                    isSafe(a)
+                )
+
+                .sort((a, b) =>
+                    (
+                        b.predictions.winnerConfidence +
+                        (b.vipScore || 0)
+                    ) -
+                    (
+                        a.predictions.winnerConfidence +
+                        (a.vipScore || 0)
+                    )
+                )
+
+                .slice(0, 2)
+
+                .map(format);
 
         res.json(data);
 
     } catch (err) {
+
+        console.error(
+            "1X2:",
+            err
+        );
 
         res.status(500).json({
             error: err.message
         });
 
     }
+
 });
 
 
@@ -191,25 +274,43 @@ app.get("/vip/over25", async (req, res) => {
 
         const data =
             (await getDaily())
-            .filter(a =>
-                a?.predictions?.over25
-            )
-            .sort((a, b) =>
-                (b.predictions.over25Confidence || 0) -
-                (a.predictions.over25Confidence || 0)
-            )
-            .slice(0, 2)
-            .map(format);
+
+                .filter(a =>
+                    a?.predictions?.over25 &&
+                    a?.predictions?.over25Confidence &&
+                    isSafe(a)
+                )
+
+                .sort((a, b) =>
+                    (
+                        b.predictions.over25Confidence +
+                        (b.vipScore || 0)
+                    ) -
+                    (
+                        a.predictions.over25Confidence +
+                        (a.vipScore || 0)
+                    )
+                )
+
+                .slice(0, 2)
+
+                .map(format);
 
         res.json(data);
 
     } catch (err) {
+
+        console.error(
+            "OVER:",
+            err
+        );
 
         res.status(500).json({
             error: err.message
         });
 
     }
+
 });
 
 
@@ -223,25 +324,43 @@ app.get("/vip/btts", async (req, res) => {
 
         const data =
             (await getDaily())
-            .filter(a =>
-                a?.predictions?.btts
-            )
-            .sort((a, b) =>
-                (b.predictions.bttsConfidence || 0) -
-                (a.predictions.bttsConfidence || 0)
-            )
-            .slice(0, 2)
-            .map(format);
+
+                .filter(a =>
+                    a?.predictions?.btts &&
+                    a?.predictions?.bttsConfidence &&
+                    isSafe(a)
+                )
+
+                .sort((a, b) =>
+                    (
+                        b.predictions.bttsConfidence +
+                        (b.vipScore || 0)
+                    ) -
+                    (
+                        a.predictions.bttsConfidence +
+                        (a.vipScore || 0)
+                    )
+                )
+
+                .slice(0, 2)
+
+                .map(format);
 
         res.json(data);
 
     } catch (err) {
+
+        console.error(
+            "BTTS:",
+            err
+        );
 
         res.status(500).json({
             error: err.message
         });
 
     }
+
 });
 
 
@@ -253,58 +372,139 @@ app.get("/safest", async (req, res) => {
 
     try {
 
-        const data = await getDaily();
+        const data =
+            await getDaily();
+
         const choices = [];
 
         for (const a of data) {
 
-            const p = a.predictions || {};
+            if (!isSafe(a))
+                continue;
 
-            if (p.winner && p.winnerConfidence) {
+            const p =
+                a.predictions || {};
+
+            const aiScore =
+                Number(
+                    a.vipScore ??
+                    p.aiRating ??
+                    0
+                );
+
+
+            /* 1X2 */
+
+            if (
+                p.winner &&
+                p.winnerConfidence
+            ) {
+
                 choices.push({
+
                     ...format(a),
+
                     market: "1X2",
-                    pick: p.winner,
-                    confidence: p.winnerConfidence,
-                    aiScore: a.vipScore || 0
+
+                    pick:
+                        p.winner,
+
+                    confidence:
+                        p.winnerConfidence,
+
+                    aiScore
+
                 });
+
             }
 
-            if (p.over25 && p.over25Confidence) {
+
+            /* OVER */
+
+            if (
+                p.over25 &&
+                p.over25Confidence
+            ) {
+
                 choices.push({
+
                     ...format(a),
+
                     market: "OVER 2.5",
-                    pick: p.over25,
-                    confidence: p.over25Confidence,
-                    aiScore: a.vipScore || 0
+
+                    pick:
+                        p.over25,
+
+                    confidence:
+                        p.over25Confidence,
+
+                    aiScore
+
                 });
+
             }
 
-            if (p.btts && p.bttsConfidence) {
+
+            /* BTTS */
+
+            if (
+                p.btts &&
+                p.bttsConfidence
+            ) {
+
                 choices.push({
+
                     ...format(a),
+
                     market: "BTTS",
-                    pick: p.btts,
-                    confidence: p.bttsConfidence,
-                    aiScore: a.vipScore || 0
+
+                    pick:
+                        p.btts,
+
+                    confidence:
+                        p.bttsConfidence,
+
+                    aiScore
+
                 });
+
             }
+
         }
 
-        choices.sort((a, b) =>
-            (b.confidence + b.aiScore) -
-            (a.confidence + a.aiScore)
+
+        choices.sort((a, b) => {
+
+            const scoreA =
+                a.confidence * 0.60 +
+                a.aiScore * 0.40;
+
+            const scoreB =
+                b.confidence * 0.60 +
+                b.aiScore * 0.40;
+
+            return scoreB - scoreA;
+
+        });
+
+
+        res.json(
+            choices[0] || null
         );
 
-        res.json(choices[0] || null);
-
     } catch (err) {
+
+        console.error(
+            "SAFEST:",
+            err
+        );
 
         res.status(500).json({
             error: err.message
         });
 
     }
+
 });
 
 
@@ -315,10 +515,16 @@ app.get("/safest", async (req, res) => {
 app.get("/health", (req, res) => {
 
     res.json({
+
         status: "ok",
+
         ai: "ACTIVE",
+
         version: "V1",
-        analyses: cache.length
+
+        analyses:
+            cache.length
+
     });
 
 });
