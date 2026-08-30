@@ -1,8 +1,8 @@
 /*
 =========================================
  KING PREDICTIONS AI
- CONFIDENCE ENGINE V23
- STRICT / CALIBRATED / ANTI-OVERCONFIDENCE
+ CONFIDENCE ENGINE V24
+ CALIBRATED / STRICT / ANTI-OVERCONFIDENCE
 =========================================
 */
 
@@ -24,15 +24,16 @@ function calculateConfidence({
     poisson = null
 }) {
 
-    /* =========================
-       PROBABILITIES
-    ========================= */
+    /* =================================
+       1. PROBABILITÉS
+    ================================= */
 
-    const probs = [
-        num(probabilities.homeWin),
-        num(probabilities.draw),
-        num(probabilities.awayWin)
-    ].sort((a, b) => b - a);
+    const home = clamp(num(probabilities.homeWin), 0, 100);
+    const draw = clamp(num(probabilities.draw), 0, 100);
+    const away = clamp(num(probabilities.awayWin), 0, 100);
+
+    const probs = [home, draw, away]
+        .sort((a, b) => b - a);
 
     const favorite = probs[0];
     const second = probs[1];
@@ -41,9 +42,9 @@ function calculateConfidence({
         favorite - second;
 
 
-    /* =========================
-       DATA
-    ========================= */
+    /* =================================
+       2. DONNÉES
+    ================================= */
 
     const played =
         Math.min(
@@ -51,31 +52,41 @@ function calculateConfidence({
             num(awayStats.played)
         );
 
+    /*
+     * 8 matchs = données correctes,
+     * mais on ne transforme jamais cela
+     * directement en grosse confiance.
+     */
+
     const dataQuality =
         clamp(
-            played / 8 * 100,
+            played / 10 * 100,
             0,
             100
         );
 
 
-    /* =========================
-       RELIABILITY
-    ========================= */
+    /* =================================
+       3. FIABILITÉ
+    ================================= */
 
     const reliability =
-        (
-            num(homeStats.reliability, 0.5) +
-            num(awayStats.reliability, 0.5)
-        ) / 2;
+        clamp(
+            (
+                num(homeStats.reliability, 0.5) +
+                num(awayStats.reliability, 0.5)
+            ) / 2,
+            0,
+            1
+        );
 
     const reliabilityScore =
         reliability * 100;
 
 
-    /* =========================
-       STRENGTH
-    ========================= */
+    /* =================================
+       4. FORCE DES ÉQUIPES
+    ================================= */
 
     const strengthGap =
         Math.abs(
@@ -84,9 +95,9 @@ function calculateConfidence({
         );
 
 
-    /* =========================
-       ELO AGREEMENT
-    ========================= */
+    /* =================================
+       5. ELO
+    ================================= */
 
     const eloHome =
         clamp(
@@ -95,112 +106,192 @@ function calculateConfidence({
             100
         );
 
+    /*
+     * IMPORTANT :
+     * on compare uniquement l'orientation
+     * du modèle à l'ELO.
+     */
+
     const eloAgreement =
         clamp(
             100 -
-            Math.abs(favorite - eloHome) * 2,
+            Math.abs(favorite - eloHome) * 1.5,
             0,
             100
         );
 
 
-    /* =========================
-       POISSON
-    ========================= */
+    /* =================================
+       6. POISSON
+    ================================= */
 
     const uncertainty =
-        num(poisson?.uncertainty, 50);
+        clamp(
+            num(poisson?.uncertainty, 50),
+            0,
+            100
+        );
 
     const dominance =
-        num(poisson?.dominance, separation);
+        clamp(
+            num(poisson?.dominance, separation),
+            0,
+            100
+        );
 
 
-    /* =========================
-       BASE SCORE
-    ========================= */
+    /* =================================
+       7. SCORE DE BASE
+       
+       La probabilité favorite n'a plus
+       autant de poids.
+    ================================= */
 
     let confidence =
-        favorite * 0.45 +
+        favorite * 0.35 +
         separation * 0.25 +
         eloAgreement * 0.10 +
-        dataQuality * 0.08 +
-        reliabilityScore * 0.07 +
-        dominance * 0.05;
+        dataQuality * 0.10 +
+        reliabilityScore * 0.10 +
+        dominance * 0.10;
 
 
-    /* =========================
-       RISK PENALTIES
-    ========================= */
+    /* =================================
+       8. PÉNALITÉS
+    ================================= */
 
-    if (uncertainty >= 60)
-        confidence -= 20;
-
-    else if (uncertainty >= 50)
-        confidence -= 12;
-
-    else if (uncertainty >= 40)
-        confidence -= 6;
-
+    /*
+     * Match serré
+     */
 
     if (separation < 5)
-        confidence -= 15;
+        confidence -= 20;
 
     else if (separation < 8)
+        confidence -= 12;
+
+    else if (separation < 12)
+        confidence -= 5;
+
+
+    /*
+     * Incertitude
+     */
+
+    if (uncertainty >= 60)
+        confidence -= 25;
+
+    else if (uncertainty >= 50)
+        confidence -= 15;
+
+    else if (uncertainty >= 40)
         confidence -= 8;
 
 
+    /*
+     * Équipes proches
+     */
+
     if (strengthGap <= 4)
-        confidence -= 10;
+        confidence -= 15;
 
     else if (strengthGap <= 8)
-        confidence -= 5;
+        confidence -= 8;
 
 
-    if (reliability < 0.60)
+    /*
+     * Fiabilité faible
+     */
+
+    if (reliability < 0.50)
+        confidence -= 18;
+
+    else if (reliability < 0.60)
         confidence -= 10;
 
-
-    if (played < 5)
-        confidence -= 12;
-
-    else if (played < 8)
+    else if (reliability < 0.70)
         confidence -= 5;
 
 
-    /* =========================
-       HARD CAPS
-    ========================= */
+    /*
+     * Peu de données
+     */
 
-    let cap = 85;
+    if (played < 5)
+        confidence -= 20;
 
-    if (favorite < 45)
-        cap = 35;
+    else if (played < 8)
+        confidence -= 8;
 
-    else if (favorite < 50)
+
+    /* =================================
+       9. CAPS STRICTS
+       
+       Même si le calcul produit 80+,
+       le moteur ne doit pas mentir.
+    ================================= */
+
+    let cap = 80;
+
+
+    if (favorite < 50)
         cap = 45;
 
     else if (favorite < 55)
-        cap = 55;
+        cap = 52;
 
     else if (favorite < 60)
-        cap = 65;
+        cap = 60;
 
     else if (favorite < 65)
-        cap = 72;
+        cap = 68;
 
     else if (favorite < 70)
+        cap = 74;
+
+    else if (favorite < 75)
         cap = 78;
 
+
+    /*
+     * Séparation faible
+     */
 
     if (separation < 5)
         cap = Math.min(cap, 45);
 
+    else if (separation < 8)
+        cap = Math.min(cap, 55);
+
+    else if (separation < 12)
+        cap = Math.min(cap, 65);
+
+
+    /*
+     * Incertitude élevée
+     */
+
     if (uncertainty >= 60)
         cap = Math.min(cap, 40);
 
-    if (reliability < 0.60)
-        cap = Math.min(cap, 60);
+    else if (uncertainty >= 50)
+        cap = Math.min(cap, 52);
 
+
+    /*
+     * Fiabilité faible
+     */
+
+    if (reliability < 0.50)
+        cap = Math.min(cap, 45);
+
+    else if (reliability < 0.60)
+        cap = Math.min(cap, 55);
+
+
+    /* =================================
+       10. CONFIANCE FINALE
+    ================================= */
 
     confidence =
         clamp(
@@ -208,16 +299,16 @@ function calculateConfidence({
                 Math.min(confidence, cap)
             ),
             5,
-            85
+            80
         );
 
 
-    /* =========================
-       DEBUG
-    ========================= */
+    /* =================================
+       11. DEBUG
+    ================================= */
 
     console.log(
-        "===== CONFIDENCE V23 =====",
+        "===== CONFIDENCE ENGINE V24 =====",
         {
             favorite,
             second,
@@ -226,6 +317,7 @@ function calculateConfidence({
             dataQuality,
             reliability,
             strengthGap,
+            eloHome,
             eloAgreement,
             dominance,
             uncertainty,
