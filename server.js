@@ -20,7 +20,8 @@ const PORT = process.env.PORT || 3000;
 
 
 /* =====================================================
-   CACHE GLOBAL
+   KING PREDICTIONS AI — SERVER V2
+   SÉLECTION STRICTE / ANTI-DOUBLON / ANTI-HIGH
 ===================================================== */
 
 let cache = [];
@@ -28,9 +29,7 @@ let cacheTime = 0;
 let building = null;
 let dailyDate = "";
 
-const CACHE_TTL =
-    24 * 60 * 60 * 1000;
-
+const CACHE_TTL = 24 * 60 * 60 * 1000;
 const MAX_ANALYSES = 30;
 
 
@@ -68,24 +67,16 @@ function getAIScore(a) {
 
 function isUsable(a) {
 
-    if (!a?.match)
-        return false;
+    return !!(
+        a?.match &&
+        Number(a.teamStats?.home?.played || 0) >= 5 &&
+        Number(a.teamStats?.away?.played || 0) >= 5
+    );
 
-    if (
-        Number(a.teamStats?.home?.played || 0) < 5 ||
-        Number(a.teamStats?.away?.played || 0) < 5
-    ) {
-        return false;
-    }
-
-    return true;
 }
 
 
-function riskValue(a) {
-
-    const risk =
-        getRisk(a);
+function riskValue(risk) {
 
     if (risk === "LOW")
         return 3;
@@ -93,10 +84,18 @@ function riskValue(a) {
     if (risk === "MEDIUM")
         return 2;
 
-    if (risk === "HIGH")
-        return 1;
-
     return 0;
+
+}
+
+
+function matchKey(a) {
+
+    return String(
+        a?.match?.id ??
+        `${a?.match?.homeTeam?.id}_${a?.match?.awayTeam?.id}`
+    );
+
 }
 
 
@@ -133,9 +132,7 @@ function format(a) {
         },
 
         vipScore:
-            a.vipScore ??
-            a.predictions?.aiRating ??
-            0
+            getAIScore(a)
 
     };
 
@@ -143,49 +140,64 @@ function format(a) {
 
 
 /* =====================================================
-   SCORE 1X2 — PRIORITÉ AI + RISQUE + DIVERSITÉ
+   SCORE 1X2
 ===================================================== */
 
 function score1X2(a) {
 
-    const p = a.predictions || {};
-
-    const confidence =
-        Number(p.winnerConfidence || 0);
-
-    const ai =
-        getAIScore(a);
-
-    const risk =
-        riskValue(a);
+    const p =
+        a.predictions || {};
 
     const probabilities =
         p.probabilities || {};
 
     const values = [
-        Number(probabilities.homeWin || 0),
-        Number(probabilities.draw || 0),
-        Number(probabilities.awayWin || 0)
-    ].sort((x, y) => y - x);
+
+        Number(
+            probabilities.homeWin || 0
+        ),
+
+        Number(
+            probabilities.draw || 0
+        ),
+
+        Number(
+            probabilities.awayWin || 0
+        )
+
+    ].sort(
+        (x, y) => y - x
+    );
+
+
+    const favorite =
+        values[0] || 0;
+
+    const second =
+        values[1] || 0;
 
     const separation =
-        values[0] - values[1];
+        favorite - second;
 
-    /*
-     * On privilégie :
-     * 1. faible risque
-     * 2. AI Score
-     * 3. confiance
-     * 4. séparation
-     */
 
     return (
-        risk * 10000 +
-        ai * 100 +
-        confidence * 10 +
+
+        riskValue(
+            getRisk(a)
+        ) * 10000 +
+
+        Number(
+            p.winnerConfidence || 0
+        ) * 10 +
+
+        getAIScore(a) * 5 +
+
         separation * 5
+
     );
+
 }
+
 
 /* =====================================================
    SCORE OVER 2.5
@@ -193,32 +205,34 @@ function score1X2(a) {
 
 function scoreOver(a) {
 
-    const p = a.predictions || {};
-
-    const confidence =
-        Number(p.over25Confidence || 0);
-
-    const ai =
-        getAIScore(a);
-
-    const risk =
-        riskValue(a);
+    const p =
+        a.predictions || {};
 
     const xg =
-        Number(a.model?.expectedGoals || 0);
+        Number(
+            a.model?.expectedGoals || 0
+        );
 
-    const market =
-        p.over25 === "OVER 2.5"
-            ? 1
-            : 0;
 
     return (
-        risk * 10000 +
-        market * 5000 +
-        ai * 100 +
-        confidence * 10 +
-        Math.min(xg, 5) * 20
+
+        riskValue(
+            getRisk(a)
+        ) * 10000 +
+
+        Number(
+            p.over25Confidence || 0
+        ) * 10 +
+
+        getAIScore(a) * 5 +
+
+        Math.min(
+            xg,
+            5
+        ) * 20
+
     );
+
 }
 
 
@@ -228,37 +242,130 @@ function scoreOver(a) {
 
 function scoreBTTS(a) {
 
-    const p = a.predictions || {};
-
-    const confidence =
-        Number(p.bttsConfidence || 0);
-
-    const ai =
-        getAIScore(a);
-
-    const risk =
-        riskValue(a);
+    const p =
+        a.predictions || {};
 
     const xg =
-        Number(a.model?.expectedGoals || 0);
+        Number(
+            a.model?.expectedGoals || 0
+        );
 
-    const market =
-        p.btts === "OUI"
-            ? 1
-            : 0;
 
     return (
-        risk * 10000 +
-        market * 5000 +
-        ai * 100 +
-        confidence * 10 +
-        Math.min(xg, 5) * 20
+
+        riskValue(
+            getRisk(a)
+        ) * 10000 +
+
+        Number(
+            p.bttsConfidence || 0
+        ) * 10 +
+
+        getAIScore(a) * 5 +
+
+        Math.min(
+            xg,
+            5
+        ) * 15
+
     );
+
 }
 
 
 /* =====================================================
-   ANALYSE QUOTIDIENNE — PROCHAINES 24H
+   FILTRES STRICTS
+===================================================== */
+
+function valid1X2(a) {
+
+    const p =
+        a.predictions || {};
+
+    const risk =
+        getRisk(a);
+
+
+    return (
+
+        isUsable(a) &&
+
+        (
+            risk === "LOW" ||
+            risk === "MEDIUM"
+        ) &&
+
+        p.winner &&
+
+        Number(
+            p.winnerConfidence || 0
+        ) >= 65
+
+    );
+
+}
+
+
+function validOver(a) {
+
+    const p =
+        a.predictions || {};
+
+    const risk =
+        getRisk(a);
+
+
+    return (
+
+        isUsable(a) &&
+
+        (
+            risk === "LOW" ||
+            risk === "MEDIUM"
+        ) &&
+
+        p.over25 &&
+
+        Number(
+            p.over25Confidence || 0
+        ) >= 65
+
+    );
+
+}
+
+
+function validBTTS(a) {
+
+    const p =
+        a.predictions || {};
+
+    const risk =
+        getRisk(a);
+
+
+    return (
+
+        isUsable(a) &&
+
+        (
+            risk === "LOW" ||
+            risk === "MEDIUM"
+        ) &&
+
+        p.btts &&
+
+        Number(
+            p.bttsConfidence || 0
+        ) >= 60
+
+    );
+
+}
+
+
+/* =====================================================
+   ANALYSE QUOTIDIENNE
 ===================================================== */
 
 async function getDaily() {
@@ -266,35 +373,34 @@ async function getDaily() {
     const today =
         getToday();
 
-    /*
-     * Nouveau jour :
-     * on vide uniquement le cache des analyses.
-     */
 
-    if (dailyDate !== today) {
+    if (
+        dailyDate !== today
+    ) {
+
+        cache = [];
+
+        cacheTime = 0;
+
+        dailyDate =
+            today;
 
         console.log(
             "📅 NEW DAY:",
             today
         );
 
-        cache = [];
-        cacheTime = 0;
-
-        dailyDate = today;
     }
 
 
-    /*
-     * CACHE
-     */
-
     if (
         cache.length &&
-        Date.now() - cacheTime < CACHE_TTL
+        Date.now() - cacheTime <
+        CACHE_TTL
     ) {
 
         return cache;
+
     }
 
 
@@ -320,6 +426,7 @@ async function getDaily() {
                 );
 
                 return [];
+
             }
 
 
@@ -336,180 +443,48 @@ async function getDaily() {
 
 
             const matches24h =
-                matches.filter(match => {
+                matches
 
-                    const time =
-                        new Date(
-                            match.utcDate
-                        ).getTime();
+                    .filter(match => {
 
-                    return (
-                        Number.isFinite(time) &&
-                        time >= now &&
-                        time <= next24h
+                        const time =
+                            new Date(
+                                match.utcDate
+                            ).getTime();
+
+
+                        return (
+
+                            Number.isFinite(time) &&
+
+                            time >= now &&
+
+                            time <= next24h
+
+                        );
+
+                    })
+
+                    .sort(
+                        (a, b) =>
+                            new Date(
+                                a.utcDate
+                            ) -
+                            new Date(
+                                b.utcDate
+                            )
                     );
 
-                });
 
-
-            if (!matches24h.length) {
+            if (
+                !matches24h.length
+            ) {
 
                 console.log(
                     "⚠️ NO MATCHES NEXT 24H"
                 );
 
                 return [];
-            }
-
-
-            console.log(
-                "🔥 MATCHES NEXT 24H:",
-                matches24h.length
-            );
-
-
-            /*
-             * ==========================================
-             * ANALYSE
-             *
-             * On analyse jusqu'à 30 matchs.
-             * Les sections feront ensuite leur
-             * propre sélection.
-             * ==========================================
-             */
-
-            const results = [];
-
-
-            for (
-                const match of matches24h
-                    .slice(0, MAX_ANALYSES)
-            ) {
-
-                try {
-
-                    console.log(
-                        "🔎 ANALYZING:",
-                        `${match.homeTeam.name} vs ${match.awayTeam.name}`
-                    );
-
-
-                    const a =
-                        await analyzeMatch(match);
-
-
-                    if (!isUsable(a))
-                        continue;
-
-
-                    results.push(a);
-
-
-                } catch (err) {
-
-                    console.log(
-                        "❌ AI:",
-                        err.message
-                    );
-
-                }
-
-            }
-
-
-            /*
-             * IMPORTANT :
-             * On ne trie plus globalement par AI Score.
-             *
-             * Chaque marché fera maintenant
-             * son propre classement.
-             */
-
-            cache =
-                results;
-
-            cacheTime =
-                Date.now();
-
-
-            console.log(
-                "👑 AI READY:",
-                results.length
-            );
-
-
-            return results;
-
-
-        } catch (err) {
-
-            console.error(
-                "❌ DAILY:",
-                err.stack
-            );
-
-            return [];
-
-        }
-
-    })();
-
-
-    try {
-
-        return await building;
-
-    } finally {
-
-        building = null;
-
-    }
-
-}
-
-            /*
-             * =================================================
-             * PROCHAINES 24 HEURES
-             * =================================================
-             */
-
-            const now =
-                Date.now();
-
-            const next24h =
-                now +
-                24 * 60 * 60 * 1000;
-
-
-            const matches24h =
-                matches.filter(match => {
-
-                    const time =
-                        new Date(
-                            match.utcDate
-                        ).getTime();
-
-                    return (
-                        Number.isFinite(time) &&
-                        time >= now &&
-                        time <= next24h
-                    );
-
-                });
-
-
-            /*
-             * Si l'API fournit peu de matchs
-             * dans les 24h, on ne fabrique rien.
-             */
-
-            if (!matches24h.length) {
-
-                console.log(
-                    "⚠️ NO MATCHES IN NEXT 24H"
-                );
-
-                return [];
 
             }
 
@@ -520,36 +495,38 @@ async function getDaily() {
             );
 
 
-            /*
-             * =================================================
-             * ANALYSE
-             * =================================================
-             *
-             * On analyse suffisamment de matchs.
-             * Les marchés feront ensuite leur propre sélection.
-             */
+            /* ==========================================
+               ANALYSE
+            ========================================== */
 
             const results = [];
 
 
             for (
-                const match of matches24h
-                    .slice(0, MAX_ANALYSES)
+                const match of
+                matches24h.slice(
+                    0,
+                    MAX_ANALYSES
+                )
             ) {
 
                 try {
 
                     console.log(
                         "🔎 ANALYZING:",
-                        `${match.homeTeam.name} vs ${match.awayTeam.name}`
+                        `${match.homeTeam?.name} vs ${match.awayTeam?.name}`
                     );
 
 
                     const a =
-                        await analyzeMatch(match);
+                        await analyzeMatch(
+                            match
+                        );
 
 
-                    if (!isUsable(a))
+                    if (
+                        !isUsable(a)
+                    )
                         continue;
 
 
@@ -560,24 +537,13 @@ async function getDaily() {
 
                     console.log(
                         "❌ AI:",
+                        `${match.homeTeam?.name} vs ${match.awayTeam?.name}`,
                         err.message
                     );
 
                 }
 
             }
-
-
-            /*
-             * Tri général uniquement pour
-             * garder les résultats stables.
-             */
-
-            results.sort(
-                (a, b) =>
-                    getAIScore(b) -
-                    getAIScore(a)
-            );
 
 
             cache =
@@ -624,7 +590,41 @@ async function getDaily() {
 
 
 /* =====================================================
-   1X2 — 2 MEILLEURS MATCHS
+   SÉLECTION SANS DOUBLONS
+===================================================== */
+
+function selectUnique(
+    candidates,
+    scorer,
+    limit,
+    used = new Set()
+) {
+
+    return candidates
+
+        .filter(
+            a =>
+                !used.has(
+                    matchKey(a)
+                )
+        )
+
+        .sort(
+            (a, b) =>
+                scorer(b) -
+                scorer(a)
+        )
+
+        .slice(
+            0,
+            limit
+        );
+
+}
+
+
+/* =====================================================
+   1X2
 ===================================================== */
 
 app.get(
@@ -638,40 +638,31 @@ app.get(
 
 
             const selected =
-                data
-                    .filter(a => {
+                selectUnique(
 
-                        const p =
-                            a.predictions || {};
+                    data.filter(
+                        valid1X2
+                    ),
 
-                        return (
-                            p.winner &&
-                            Number(
-                                p.winnerConfidence || 0
-                            ) >= 60 &&
-                            getRisk(a) !== "VERY HIGH"
-                        );
+                    score1X2,
 
-                    })
-                    .sort(
-                        (a, b) =>
-                            score1X2(b) -
-                            score1X2(a)
-                    )
-                    .slice(0, 2);
+                    2
+
+                );
 
 
             console.log(
                 "🎯 1X2:",
                 selected.map(
-                    a =>
-                        `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`
+                    matchKey
                 )
             );
 
 
             res.json(
-                selected.map(format)
+                selected.map(
+                    format
+                )
             );
 
 
@@ -683,7 +674,8 @@ app.get(
             );
 
             res.status(500).json({
-                error: err.message
+                error:
+                    err.message
             });
 
         }
@@ -691,8 +683,9 @@ app.get(
     }
 );
 
+
 /* =====================================================
-   OVER 2.5 — 2 MEILLEURS MATCHS
+   OVER 2.5
 ===================================================== */
 
 app.get(
@@ -706,40 +699,31 @@ app.get(
 
 
             const selected =
-                data
-                    .filter(a => {
+                selectUnique(
 
-                        const p =
-                            a.predictions || {};
+                    data.filter(
+                        validOver
+                    ),
 
-                        return (
-                            p.over25 &&
-                            Number(
-                                p.over25Confidence || 0
-                            ) >= 60 &&
-                            getRisk(a) !== "VERY HIGH"
-                        );
+                    scoreOver,
 
-                    })
-                    .sort(
-                        (a, b) =>
-                            scoreOver(b) -
-                            scoreOver(a)
-                    )
-                    .slice(0, 2);
+                    2
+
+                );
 
 
             console.log(
                 "🎯 OVER 2.5:",
                 selected.map(
-                    a =>
-                        `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`
+                    matchKey
                 )
             );
 
 
             res.json(
-                selected.map(format)
+                selected.map(
+                    format
+                )
             );
 
 
@@ -751,7 +735,8 @@ app.get(
             );
 
             res.status(500).json({
-                error: err.message
+                error:
+                    err.message
             });
 
         }
@@ -759,8 +744,9 @@ app.get(
     }
 );
 
+
 /* =====================================================
-   BTTS — 2 MEILLEURS MATCHS
+   BTTS
 ===================================================== */
 
 app.get(
@@ -774,40 +760,31 @@ app.get(
 
 
             const selected =
-                data
-                    .filter(a => {
+                selectUnique(
 
-                        const p =
-                            a.predictions || {};
+                    data.filter(
+                        validBTTS
+                    ),
 
-                        return (
-                            p.btts &&
-                            Number(
-                                p.bttsConfidence || 0
-                            ) >= 55 &&
-                            getRisk(a) !== "VERY HIGH"
-                        );
+                    scoreBTTS,
 
-                    })
-                    .sort(
-                        (a, b) =>
-                            scoreBTTS(b) -
-                            scoreBTTS(a)
-                    )
-                    .slice(0, 2);
+                    2
+
+                );
 
 
             console.log(
                 "🎯 BTTS:",
                 selected.map(
-                    a =>
-                        `${a.match.homeTeam.name} vs ${a.match.awayTeam.name}`
+                    matchKey
                 )
             );
 
 
             res.json(
-                selected.map(format)
+                selected.map(
+                    format
+                )
             );
 
 
@@ -819,7 +796,8 @@ app.get(
             );
 
             res.status(500).json({
-                error: err.message
+                error:
+                    err.message
             });
 
         }
@@ -827,9 +805,10 @@ app.get(
     }
 );
 
-                 
+
 /* =====================================================
    PARI LE PLUS SÛR
+   JAMAIS HIGH
 ===================================================== */
 
 app.get(
@@ -853,15 +832,12 @@ app.get(
                     a.predictions || {};
 
 
-                /*
-                 * 1X2
-                 */
+                /* ==============================
+                   1X2
+                ============================== */
 
                 if (
-                    p.winner &&
-                    Number(
-                        p.winnerConfidence || 0
-                    ) >= 70
+                    valid1X2(a)
                 ) {
 
                     choices.push({
@@ -876,7 +852,8 @@ app.get(
 
                         confidence:
                             Number(
-                                p.winnerConfidence
+                                p.winnerConfidence ||
+                                0
                             ),
 
                         aiScore:
@@ -890,15 +867,12 @@ app.get(
                 }
 
 
-                /*
-                 * OVER 2.5
-                 */
+                /* ==============================
+                   OVER 2.5
+                ============================== */
 
                 if (
-                    p.over25 &&
-                    Number(
-                        p.over25Confidence || 0
-                    ) >= 65
+                    validOver(a)
                 ) {
 
                     choices.push({
@@ -913,7 +887,8 @@ app.get(
 
                         confidence:
                             Number(
-                                p.over25Confidence
+                                p.over25Confidence ||
+                                0
                             ),
 
                         aiScore:
@@ -927,15 +902,12 @@ app.get(
                 }
 
 
-                /*
-                 * BTTS
-                 */
+                /* ==============================
+                   BTTS
+                ============================== */
 
                 if (
-                    p.btts &&
-                    Number(
-                        p.bttsConfidence || 0
-                    ) >= 60
+                    validBTTS(a)
                 ) {
 
                     choices.push({
@@ -950,7 +922,8 @@ app.get(
 
                         confidence:
                             Number(
-                                p.bttsConfidence
+                                p.bttsConfidence ||
+                                0
                             ),
 
                         aiScore:
@@ -967,98 +940,85 @@ app.get(
 
 
             /*
-             * ==========================================
-             * ON NE VEUT PAS DE HIGH SI UNE OPTION
-             * LOW/MEDIUM EXISTE.
-             * ==========================================
-             */
-
-            const safe =
-                choices.filter(
-                    c =>
-                        c.risk === "LOW" ||
-                        c.risk === "MEDIUM"
-                );
-
-
-            const pool =
-                safe.length
-                    ? safe
-                    : choices;
-
-
-            /*
-             * ==========================================
-             * CLASSEMENT
+             * AUCUN PARI SÛR
              *
-             * LOW > MEDIUM > HIGH > VERY HIGH
-             * puis AI Score
-             * puis confiance
-             * ==========================================
+             * On préfère ne rien afficher
+             * plutôt que de mentir à l'utilisateur.
              */
 
-            pool.sort((a, b) => {
+            if (
+                !choices.length
+            ) {
 
-                const riskA =
-                    a.risk === "LOW"
-                        ? 3
-                        : a.risk === "MEDIUM"
-                            ? 2
-                            : a.risk === "HIGH"
-                                ? 1
-                                : 0;
-
-
-                const riskB =
-                    b.risk === "LOW"
-                        ? 3
-                        : b.risk === "MEDIUM"
-                            ? 2
-                            : b.risk === "HIGH"
-                                ? 1
-                                : 0;
-
-
-                return (
-                    riskB * 10000 +
-                    b.aiScore * 100 +
-                    b.confidence * 10
-                ) -
-                (
-                    riskA * 10000 +
-                    a.aiScore * 100 +
-                    a.confidence * 10
+                console.log(
+                    "🛑 SAFEST: NO SAFE BET"
                 );
 
-            });
+                return res.json(
+                    null
+                );
+
+            }
 
 
-            /*
-             * ==========================================
-             * SI POSSIBLE :
-             * on refuse un VERY HIGH.
-             * ==========================================
-             */
+            /* ==========================================
+               CLASSEMENT
+            ========================================== */
 
-            const final =
-                pool.find(
-                    c =>
-                        c.risk === "LOW" ||
-                        c.risk === "MEDIUM"
-                ) ||
-                pool[0] ||
-                null;
+            choices.sort(
+                (a, b) => {
+
+                    const riskA =
+                        riskValue(
+                            a.risk
+                        );
+
+                    const riskB =
+                        riskValue(
+                            b.risk
+                        );
 
 
-            console.log(
-                "💎 SAFEST:",
-                final
-                    ? `${final.market} | ${final.match.homeTeam.name} vs ${final.match.awayTeam.name} | ${final.risk} | AI ${final.aiScore}`
-                    : "NONE"
+                    return (
+
+                        riskB -
+                        riskA ||
+
+                        b.confidence -
+                        a.confidence ||
+
+                        b.aiScore -
+                        a.aiScore
+
+                    );
+
+                }
             );
 
 
-            res.json(final);
+            const safest =
+                choices[0];
+
+
+            console.log(
+                "🏆 SAFEST:",
+                safest.match?.homeTeam?.name,
+                "vs",
+                safest.match?.awayTeam?.name,
+                "|",
+                safest.market,
+                "|",
+                safest.pick,
+                "|",
+                safest.confidence + "%",
+                "|",
+                safest.risk
+            );
+
+
+            res.json(
+                safest
+            );
 
 
         } catch (err) {
@@ -1069,7 +1029,8 @@ app.get(
             );
 
             res.status(500).json({
-                error: err.message
+                error:
+                    err.message
             });
 
         }
@@ -1088,11 +1049,14 @@ app.get(
 
         res.json({
 
-            status: "ok",
+            status:
+                "ok",
 
-            ai: "ACTIVE",
+            ai:
+                "ACTIVE",
 
-            version: "V1",
+            version:
+                "V2",
 
             analyses:
                 cache.length,
@@ -1135,8 +1099,9 @@ app.listen(
     async () => {
 
         console.log(
-            "👑 KING PREDICTIONS AI ONLINE"
+            "👑 KING PREDICTIONS AI V2 ONLINE"
         );
+
 
         try {
 
