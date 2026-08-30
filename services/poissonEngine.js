@@ -1,21 +1,34 @@
 /*
 =========================================
  KING PREDICTIONS AI
- POISSON ENGINE V21
- CALIBRATED & STABLE
+ POISSON ENGINE V24
+ CALIBRATED / STABLE / ANTI-OVERCONFIDENCE
 =========================================
 */
 
 const MAX_GOALS = 10;
 
 
-/* =========================
+/* =====================================================
+   UTILITIES
+===================================================== */
+
+function clamp(value, min, max) {
+    return Math.max(
+        min,
+        Math.min(max, Number(value) || 0)
+    );
+}
+
+
+/* =====================================================
    FACTORIAL
-========================= */
+===================================================== */
 
 function factorial(n) {
 
-    if (n <= 1) return 1;
+    if (n <= 1)
+        return 1;
 
     let result = 1;
 
@@ -27,13 +40,18 @@ function factorial(n) {
 }
 
 
-/* =========================
-   POISSON
-========================= */
+/* =====================================================
+   POISSON PROBABILITY
+===================================================== */
 
 function poissonProbability(lambda, goals) {
 
-    if (!Number.isFinite(lambda) || lambda < 0) {
+    lambda = Number(lambda);
+
+    if (
+        !Number.isFinite(lambda) ||
+        lambda < 0
+    ) {
         return 0;
     }
 
@@ -44,15 +62,19 @@ function poissonProbability(lambda, goals) {
 }
 
 
-/* =========================
-   DISTRIBUTION
-========================= */
+/* =====================================================
+   GOAL DISTRIBUTION
+===================================================== */
 
 function buildGoalDistribution(expectedGoals) {
 
     const distribution = [];
 
-    for (let goals = 0; goals <= MAX_GOALS; goals++) {
+    for (
+        let goals = 0;
+        goals <= MAX_GOALS;
+        goals++
+    ) {
 
         distribution.push(
             poissonProbability(
@@ -67,32 +89,75 @@ function buildGoalDistribution(expectedGoals) {
 }
 
 
-/* =========================
-   MAIN
-========================= */
+/* =====================================================
+   MAIN POISSON ENGINE
+===================================================== */
 
-function buildPoissonMatrix(homeXG, awayXG) {
+function buildPoissonMatrix(
+    homeXG,
+    awayXG
+) {
 
     homeXG = Number(homeXG);
     awayXG = Number(awayXG);
 
-    if (!Number.isFinite(homeXG) || homeXG < 0) {
+
+    /*
+     * ==========================================
+     * VALIDATION
+     * ==========================================
+     */
+
+    if (
+        !Number.isFinite(homeXG) ||
+        homeXG < 0
+    ) {
         homeXG = 0;
     }
 
-    if (!Number.isFinite(awayXG) || awayXG < 0) {
+    if (
+        !Number.isFinite(awayXG) ||
+        awayXG < 0
+    ) {
         awayXG = 0;
     }
 
+
     /*
-    Évite des XG absurdes
-    */
+     * ==========================================
+     * SAFETY LIMIT
+     *
+     * On ne laisse jamais un XG complètement
+     * absurde détruire les probabilités.
+     * ==========================================
+     */
 
-    homeXG = Math.min(homeXG, 5);
-    awayXG = Math.min(awayXG, 5);
+    homeXG =
+        clamp(homeXG, 0.05, 4.50);
 
-    console.log("HOME XG =", homeXG);
-    console.log("AWAY XG =", awayXG);
+    awayXG =
+        clamp(awayXG, 0.05, 4.50);
+
+
+    console.log(
+        "🎯 POISSON INPUT:",
+        {
+            homeXG,
+            awayXG,
+            totalXG:
+                Number(
+                    (homeXG + awayXG)
+                    .toFixed(2)
+                )
+        }
+    );
+
+
+    /*
+     * ==========================================
+     * DISTRIBUTIONS
+     * ==========================================
+     */
 
     const homeDistribution =
         buildGoalDistribution(homeXG);
@@ -100,13 +165,29 @@ function buildPoissonMatrix(homeXG, awayXG) {
     const awayDistribution =
         buildGoalDistribution(awayXG);
 
+
+    /*
+     * ==========================================
+     * MATRIX
+     * ==========================================
+     */
+
     const matrix = [];
 
-    for (let h = 0; h <= MAX_GOALS; h++) {
+
+    for (
+        let h = 0;
+        h <= MAX_GOALS;
+        h++
+    ) {
 
         matrix[h] = [];
 
-        for (let a = 0; a <= MAX_GOALS; a++) {
+        for (
+            let a = 0;
+            a <= MAX_GOALS;
+            a++
+        ) {
 
             matrix[h][a] =
                 homeDistribution[h] *
@@ -116,6 +197,15 @@ function buildPoissonMatrix(homeXG, awayXG) {
 
     }
 
+
+    const analysis =
+        analyzeMatrix(
+            matrix,
+            homeXG,
+            awayXG
+        );
+
+
     return {
 
         matrix,
@@ -124,18 +214,22 @@ function buildPoissonMatrix(homeXG, awayXG) {
 
         awayDistribution,
 
-        ...analyzeMatrix(matrix)
+        ...analysis
 
     };
 
 }
 
 
-/* =========================
-   ANALYSE
-========================= */
+/* =====================================================
+   ANALYZE MATRIX
+===================================================== */
 
-function analyzeMatrix(matrix) {
+function analyzeMatrix(
+    matrix,
+    homeXG,
+    awayXG
+) {
 
     let homeWin = 0;
     let draw = 0;
@@ -152,16 +246,15 @@ function analyzeMatrix(matrix) {
 
     let total = 0;
 
-    let homeGoalsExpectation = 0;
-    let awayGoalsExpectation = 0;
-
     let bestProbability = 0;
     let exactScore = "0-0";
 
 
-    /* =========================
-       MATRIX
-    ========================= */
+    /*
+     * ==========================================
+     * MATRIX SCAN
+     * ==========================================
+     */
 
     for (
         let h = 0;
@@ -176,18 +269,14 @@ function analyzeMatrix(matrix) {
         ) {
 
             const probability =
-                matrix[h][a];
+                Number(matrix[h][a] || 0);
 
             total += probability;
 
-            homeGoalsExpectation +=
-                h * probability;
 
-            awayGoalsExpectation +=
-                a * probability;
-
-
-            /* WINNER */
+            /*
+             * 1X2
+             */
 
             if (h > a) {
 
@@ -208,46 +297,57 @@ function analyzeMatrix(matrix) {
             }
 
 
-            /* BTTS */
+            /*
+             * BTTS
+             */
 
-            if (h > 0 && a > 0) {
+            if (
+                h > 0 &&
+                a > 0
+            ) {
 
                 btts += probability;
 
             }
 
 
-            /* TOTAL GOALS */
+            /*
+             * TOTAL GOALS
+             */
 
-            const totalGoals = h + a;
+            const goals =
+                h + a;
 
-            if (totalGoals >= 2) {
+
+            if (goals >= 2)
                 over15 += probability;
-            }
 
-            if (totalGoals >= 3) {
+            if (goals >= 3)
                 over25 += probability;
-            }
 
-            if (totalGoals >= 4) {
+            if (goals >= 4)
                 over35 += probability;
-            }
 
 
-            /* CLEAN SHEET */
+            /*
+             * CLEAN SHEETS
+             */
 
-            if (a === 0) {
+            if (a === 0)
                 cleanSheetHome += probability;
-            }
 
-            if (h === 0) {
+            if (h === 0)
                 cleanSheetAway += probability;
-            }
 
 
-            /* EXACT SCORE */
+            /*
+             * EXACT SCORE
+             */
 
-            if (probability > bestProbability) {
+            if (
+                probability >
+                bestProbability
+            ) {
 
                 bestProbability =
                     probability;
@@ -265,15 +365,17 @@ function analyzeMatrix(matrix) {
     if (total <= 0) {
 
         throw new Error(
-            "Poisson matrix has invalid total probability"
+            "Invalid Poisson probability"
         );
 
     }
 
 
-    /* =========================
-       NORMALISATION
-    ========================= */
+    /*
+     * ==========================================
+     * NORMALISATION
+     * ==========================================
+     */
 
     homeWin /= total;
     draw /= total;
@@ -285,23 +387,22 @@ function analyzeMatrix(matrix) {
     over25 /= total;
     over35 /= total;
 
-    homeGoalsExpectation /= total;
-    awayGoalsExpectation /= total;
-
     cleanSheetHome /= total;
     cleanSheetAway /= total;
 
+    bestProbability /= total;
 
-    /* =========================
-       PROBABILITIES
-    ========================= */
+
+    /*
+     * ==========================================
+     * FAVORITE
+     * ==========================================
+     */
 
     const probabilities = [
-
         homeWin,
         draw,
         awayWin
-
     ].sort(
         (a, b) => b - a
     );
@@ -315,49 +416,61 @@ function analyzeMatrix(matrix) {
 
 
     /*
-    Écart réel entre le favori
-    et le deuxième scénario.
-    */
+     * ==========================================
+     * SEPARATION
+     * ==========================================
+     */
 
     const predictionGap =
         favoriteProbability -
         secondProbability;
 
 
-    /*
-    DOMINANCE
-
-    0 = match totalement équilibré
-    20+ = avantage important
-    35+ = très fort avantage
-    */
-
     const dominance =
-        Number(
-            (
-                predictionGap * 100
-            ).toFixed(2)
+        clamp(
+            predictionGap * 100,
+            0,
+            100
         );
 
 
     /*
-    INCERTITUDE
+     * ==========================================
+     * UNCERTAINTY
+     * ==========================================
+     *
+     * Plus le favori est faible,
+     * plus l'incertitude augmente.
+     *
+     * On ajoute également une petite pénalité
+     * quand les trois scénarios sont proches.
+     * ==========================================
+     */
 
-    Plus le favori est faible,
-    plus le match est incertain.
-    */
+    let uncertainty =
+        (1 - favoriteProbability) * 100;
 
-    const uncertainty =
-        Number(
-            (
-                (1 - favoriteProbability) * 100
-            ).toFixed(2)
+
+    if (predictionGap < 0.05)
+        uncertainty += 10;
+
+    else if (predictionGap < 0.08)
+        uncertainty += 5;
+
+
+    uncertainty =
+        clamp(
+            uncertainty,
+            0,
+            100
         );
 
 
-    /* =========================
-       DOUBLE CHANCE
-    ========================= */
+    /*
+     * ==========================================
+     * DOUBLE CHANCE
+     * ==========================================
+     */
 
     const doubleChance = {
 
@@ -385,49 +498,134 @@ function analyzeMatrix(matrix) {
     };
 
 
-    /* =========================
-       EXPECTED GOALS
-    ========================= */
+    /*
+     * ==========================================
+     * EXPECTED GOALS
+     *
+     * IMPORTANT :
+     * on utilise les XG réellement fournis
+     * au moteur.
+     * ==========================================
+     */
+
+    const expectedHomeGoals =
+        homeXG;
+
+    const expectedAwayGoals =
+        awayXG;
 
     const expectedGoals =
-        homeGoalsExpectation +
-        awayGoalsExpectation;
+        expectedHomeGoals +
+        expectedAwayGoals;
 
 
-    /* =========================
-       MATCH SCORE
-    =========================
+    /*
+     * ==========================================
+     * MARKET STRENGTH
+     * ==========================================
+     */
 
-       IMPORTANT :
+    const over25Probability =
+        over25 * 100;
 
-       Ce score ne doit PAS
-       transformer un match équilibré
-       en bon pari.
-
-    */
-
-    const matchScore = Math.max(
-        0,
-        Math.min(
-            100,
-
-            favoriteProbability * 70 +
-
-            dominance * 0.30
-
-        )
-    );
+    const bttsProbability =
+        btts * 100;
 
 
-    /* =========================
-       RISK
-    ========================= */
+    /*
+     * ==========================================
+     * OVER 2.5 CONFIDENCE
+     *
+     * La confiance du marché est indépendante
+     * de la confiance 1X2.
+     * ==========================================
+     */
+
+    const over25Confidence =
+        Math.round(
+            Math.max(
+                over25Probability,
+                100 - over25Probability
+            )
+        );
+
+
+    /*
+     * ==========================================
+     * BTTS CONFIDENCE
+     * ==========================================
+     */
+
+    const bttsConfidence =
+        Math.round(
+            Math.max(
+                bttsProbability,
+                100 - bttsProbability
+            )
+        );
+
+
+    /*
+     * ==========================================
+     * MATCH SCORE
+     *
+     * STRICT :
+     * un favori à 55 % ne doit pas recevoir
+     * automatiquement un score de 70+.
+     * ==========================================
+     */
+
+    let matchScore =
+        favoriteProbability * 100;
+
+
+    /*
+     * Bonus seulement si la séparation
+     * est réellement importante.
+     */
+
+    if (predictionGap >= 0.20)
+        matchScore += 10;
+
+    else if (predictionGap >= 0.15)
+        matchScore += 6;
+
+    else if (predictionGap >= 0.10)
+        matchScore += 3;
+
+
+    /*
+     * Pénalité match équilibré.
+     */
+
+    if (predictionGap < 0.05)
+        matchScore -= 15;
+
+    else if (predictionGap < 0.08)
+        matchScore -= 8;
+
+
+    matchScore =
+        clamp(
+            Math.round(matchScore),
+            0,
+            100
+        );
+
+
+    /*
+     * ==========================================
+     * RISK
+     * ==========================================
+     */
 
     let risk = "VERY HIGH";
 
+
     if (
-        favoriteProbability >= 0.70 &&
-        dominance >= 20
+        favoriteProbability >= 0.72 &&
+        predictionGap >= 0.20 &&
+        uncertainty < 40
     ) {
 
         risk = "LOW";
@@ -435,8 +633,9 @@ function analyzeMatrix(matrix) {
     }
 
     else if (
-        favoriteProbability >= 0.60 &&
-        dominance >= 12
+        favoriteProbability >= 0.62 &&
+        predictionGap >= 0.12 &&
+        uncertainty < 50
     ) {
 
         risk = "MEDIUM";
@@ -452,44 +651,64 @@ function analyzeMatrix(matrix) {
     }
 
 
-    /* =========================
-       DEBUG
-    ========================= */
+    /*
+     * ==========================================
+     * DEBUG
+     * ==========================================
+     */
 
     console.log(
-        "===== POISSON V21 ====="
+        "===== POISSON ENGINE V24 ====="
     );
 
     console.log({
 
         homeWin:
             Number(
-                (homeWin * 100).toFixed(2)
+                (homeWin * 100)
+                .toFixed(2)
             ),
 
         draw:
             Number(
-                (draw * 100).toFixed(2)
+                (draw * 100)
+                .toFixed(2)
             ),
 
         awayWin:
             Number(
-                (awayWin * 100).toFixed(2)
+                (awayWin * 100)
+                .toFixed(2)
             ),
 
-        favoriteProbability:
+        dominance:
             Number(
-                (favoriteProbability * 100).toFixed(2)
+                dominance.toFixed(2)
             ),
 
-        predictionGap:
-            dominance,
-
-        uncertainty,
-
-        matchScore:
+        uncertainty:
             Number(
-                matchScore.toFixed(2)
+                uncertainty.toFixed(2)
+            ),
+
+        over25:
+            Number(
+                over25Probability.toFixed(2)
+            ),
+
+        btts:
+            Number(
+                bttsProbability.toFixed(2)
+            ),
+
+        expectedHomeGoals:
+            Number(
+                expectedHomeGoals.toFixed(2)
+            ),
+
+        expectedAwayGoals:
+            Number(
+                expectedAwayGoals.toFixed(2)
             ),
 
         expectedGoals:
@@ -497,106 +716,139 @@ function analyzeMatrix(matrix) {
                 expectedGoals.toFixed(2)
             ),
 
-        exactScore,
+        matchScore,
 
-        risk
+        risk,
+
+        exactScore
 
     });
 
 
-    /* =========================
-       RETURN
-    ========================= */
+    /*
+     * ==========================================
+     * RETURN
+     * ==========================================
+     */
 
     return {
-
-        matrix,
-
-        homeDistribution: null,
-
-        awayDistribution: null,
 
         probabilities: {
 
             homeWin:
                 Number(
-                    (homeWin * 100).toFixed(2)
+                    (homeWin * 100)
+                    .toFixed(2)
                 ),
 
             draw:
                 Number(
-                    (draw * 100).toFixed(2)
+                    (draw * 100)
+                    .toFixed(2)
                 ),
 
             awayWin:
                 Number(
-                    (awayWin * 100).toFixed(2)
+                    (awayWin * 100)
+                    .toFixed(2)
                 )
 
         },
 
+
         doubleChance,
+
 
         btts:
             Number(
-                (btts * 100).toFixed(2)
+                (btts * 100)
+                .toFixed(2)
             ),
+
+
+        bttsConfidence,
+
 
         over15:
             Number(
-                (over15 * 100).toFixed(2)
+                (over15 * 100)
+                .toFixed(2)
             ),
+
 
         over25:
             Number(
-                (over25 * 100).toFixed(2)
+                (over25 * 100)
+                .toFixed(2)
             ),
+
+
+        over25Confidence,
+
 
         over35:
             Number(
-                (over35 * 100).toFixed(2)
+                (over35 * 100)
+                .toFixed(2)
             ),
+
 
         under25:
             Number(
-                ((1 - over25) * 100).toFixed(2)
+                ((1 - over25) * 100)
+                .toFixed(2)
             ),
+
 
         expectedGoals:
             Number(
                 expectedGoals.toFixed(2)
             ),
 
+
         expectedHomeGoals:
             Number(
-                homeGoalsExpectation.toFixed(2)
+                expectedHomeGoals.toFixed(2)
             ),
+
 
         expectedAwayGoals:
             Number(
-                awayGoalsExpectation.toFixed(2)
+                expectedAwayGoals.toFixed(2)
             ),
+
 
         cleanSheetHome:
             Number(
-                (cleanSheetHome * 100).toFixed(2)
+                (cleanSheetHome * 100)
+                .toFixed(2)
             ),
+
 
         cleanSheetAway:
             Number(
-                (cleanSheetAway * 100).toFixed(2)
+                (cleanSheetAway * 100)
+                .toFixed(2)
             ),
 
-        matchScore:
+
+        matchScore,
+
+
+        uncertainty:
             Number(
-                matchScore.toFixed(2)
+                uncertainty.toFixed(2)
             ),
 
-        uncertainty,
 
-        dominance,
+        dominance:
+            Number(
+                dominance.toFixed(2)
+            ),
+
 
         risk,
+
 
         exactScore: {
 
@@ -606,8 +858,7 @@ function analyzeMatrix(matrix) {
             probability:
                 Number(
                     (
-                        (bestProbability / total) *
-                        100
+                        bestProbability * 100
                     ).toFixed(2)
                 )
 
@@ -619,7 +870,5 @@ function analyzeMatrix(matrix) {
 
 
 module.exports = {
-
     buildPoissonMatrix
-
 };
