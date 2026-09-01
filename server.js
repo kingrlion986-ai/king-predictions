@@ -157,78 +157,34 @@ function score1X2(a) {
     const p = a?.predictions || {};
     const probabilities = p.probabilities || {};
 
-    const home = Number(probabilities.homeWin || 0);
-    const draw = Number(probabilities.draw || 0);
-    const away = Number(probabilities.awayWin || 0);
-
-    const values = [home, draw, away]
-        .sort((x, y) => y - x);
+    const values = [
+        Number(probabilities.homeWin || 0),
+        Number(probabilities.draw || 0),
+        Number(probabilities.awayWin || 0)
+    ].sort((x, y) => y - x);
 
     const favorite = values[0] || 0;
     const second = values[1] || 0;
 
-    const separation =
-        favorite - second;
-
-    const confidence =
-        Number(p.winnerConfidence || 0);
-
-    const ai =
-        getAIScore(a);
-
-    const risk =
-        getRisk(a);
-
-    /*
-     * ==========================================
-     * SÉCURITÉ ABSOLUE
-     * ==========================================
-     */
+    const separation = favorite - second;
+    const confidence = Number(p.winnerConfidence || 0);
+    const ai = getAIScore(a);
+    const risk = getRisk(a);
 
     if (!isPublishable(a))
         return -999999;
 
-
-    /*
-     * ==========================================
-     * SCORE DE SÉLECTION
-     *
-     * On privilégie :
-     * 1. faible risque
-     * 2. vraie probabilité de victoire
-     * 3. séparation
-     * 4. confiance
-     * 5. AI Score
-     * ==========================================
-     */
-
     let score = 0;
 
     score += favorite * 100;
-
     score += separation * 80;
-
     score += confidence * 2;
-
     score += ai * 1.5;
-
-
-    /*
-     * BONUS RISQUE
-     */
 
     if (risk === "LOW")
         score += 300;
-
     else if (risk === "MEDIUM")
         score += 100;
-
-
-    /*
-     * ==========================================
-     * PÉNALITÉS
-     * ==========================================
-     */
 
     if (favorite < 60)
         score -= 300;
@@ -239,47 +195,33 @@ function score1X2(a) {
     if (confidence < 60)
         score -= 200;
 
-
     return score;
 }
 
 /* =====================================================
    SCORE OVER 2.5
 ===================================================== */
-
 function scoreOver(a) {
 
     const p = a?.predictions || {};
+    const xg = Number(a?.model?.expectedGoals || 0);
+
+    const confidence =
+        Number(p.over25Confidence || 0);
+
+    const ai =
+        getAIScore(a);
+
+    const risk =
+        getRisk(a);
 
     if (!isPublishable(a))
         return -999999;
 
     const probability =
-        Number(p.over25Probability ?? 0);
-
-    const confidence =
-        Number(p.over25Confidence ?? 0);
-
-    const ai =
-        getAIScore(a);
-
-    const xg =
-        Number(a.model?.expectedGoals ?? 0);
-
-    const risk =
-        getRisk(a);
-
-    /*
-     * OVER doit être réellement probable.
-     */
-
-    if (
-        p.over25 !== "OVER 2.5" ||
-        confidence < 60 ||
-        probability < 60
-    ) {
-        return -999999;
-    }
+        p.over25 === "OVER 2.5"
+            ? confidence
+            : 100 - confidence;
 
     let score = 0;
 
@@ -287,27 +229,23 @@ function scoreOver(a) {
     score += confidence * 2;
     score += ai * 1.5;
 
-    /*
-     * XG utile, mais jamais suffisant seul.
-     */
-
-    if (xg >= 2.8)
-        score += 150;
-
-    else if (xg >= 2.5)
-        score += 80;
-
-    else if (xg < 2.3)
-        score -= 200;
-
     if (risk === "LOW")
         score += 300;
-
     else if (risk === "MEDIUM")
         score += 100;
 
+    if (probability < 65)
+        score -= 300;
+
+    if (xg < 2.30)
+        score -= 250;
+
+    if (confidence < 65)
+        score -= 200;
+
     return score;
 }
+
 
 /* =====================================================
    SCORE BTTS
@@ -316,36 +254,24 @@ function scoreOver(a) {
 function scoreBTTS(a) {
 
     const p = a?.predictions || {};
+    const xg = Number(a?.model?.expectedGoals || 0);
+
+    const confidence =
+        Number(p.bttsConfidence || 0);
+
+    const ai =
+        getAIScore(a);
+
+    const risk =
+        getRisk(a);
 
     if (!isPublishable(a))
         return -999999;
 
     const probability =
-        Number(p.bttsProbability ?? 0);
-
-    const confidence =
-        Number(p.bttsConfidence ?? 0);
-
-    const ai =
-        getAIScore(a);
-
-    const xg =
-        Number(a.model?.expectedGoals ?? 0);
-
-    const risk =
-        getRisk(a);
-
-    /*
-     * BTTS doit être réellement probable.
-     */
-
-    if (
-        p.btts !== "OUI" ||
-        confidence < 60 ||
-        probability < 60
-    ) {
-        return -999999;
-    }
+        p.btts === "OUI"
+            ? confidence
+            : 100 - confidence;
 
     let score = 0;
 
@@ -353,25 +279,19 @@ function scoreBTTS(a) {
     score += confidence * 2;
     score += ai * 1.5;
 
-    /*
-     * Les deux équipes doivent avoir
-     * suffisamment de potentiel offensif.
-     */
-
-    if (xg >= 2.8)
-        score += 150;
-
-    else if (xg >= 2.4)
-        score += 80;
-
-    else if (xg < 2.1)
-        score -= 200;
-
     if (risk === "LOW")
         score += 300;
-
     else if (risk === "MEDIUM")
         score += 100;
+
+    if (probability < 65)
+        score -= 300;
+
+    if (xg < 2.30)
+        score -= 250;
+
+    if (confidence < 65)
+        score -= 200;
 
     return score;
 }
@@ -381,116 +301,55 @@ function scoreBTTS(a) {
 ===================================================== */
 
 function strict1X2(a) {
-
     const p = a?.predictions || {};
-    const probabilities = p.probabilities || {};
+    const probs = p.probabilities || {};
 
-    const home = Number(probabilities.homeWin || 0);
-    const draw = Number(probabilities.draw || 0);
-    const away = Number(probabilities.awayWin || 0);
-
-    const values = [home, draw, away]
-        .sort((x, y) => y - x);
+    const values = [
+        Number(probs.homeWin || 0),
+        Number(probs.draw || 0),
+        Number(probs.awayWin || 0)
+    ].sort((x, y) => y - x);
 
     const favorite = values[0] || 0;
     const second = values[1] || 0;
 
-    const separation =
-        favorite - second;
-
-    const confidence =
-        Number(p.winnerConfidence || 0);
-
-    const risk =
-        getRisk(a);
-
-    const ai =
-        getAIScore(a);
-
     return (
         isPublishable(a) &&
-        risk !== "HIGH" &&
-        risk !== "VERY HIGH" &&
-        favorite >= 60 &&
-        separation >= 8 &&
-        confidence >= 60 &&
-        ai >= 58
+        getRisk(a) === "LOW" &&
+        favorite >= 65 &&
+        favorite - second >= 10 &&
+        Number(p.winnerConfidence || 0) >= 65 &&
+        getAIScore(a) >= 65
     );
 }
 
 
 function strictOver(a) {
-
     const p = a?.predictions || {};
-
-    const confidence =
-        Number(p.over25Confidence || 0);
-
-    const probability =
-        Number(
-            p.over25Probability ??
-            p.over25Prob ??
-            0
-        );
-
-    const xg =
-        Number(
-            a.model?.expectedGoals || 0
-        );
-
-    const risk =
-        getRisk(a);
-
-    const ai =
-        getAIScore(a);
+    const xg = Number(a?.model?.expectedGoals || 0);
 
     return (
         isPublishable(a) &&
-        risk !== "HIGH" &&
-        risk !== "VERY HIGH" &&
+        getRisk(a) === "LOW" &&
         p.over25 === "OVER 2.5" &&
-        probability >= 60 &&
-        confidence >= 60 &&
-        ai >= 58 &&
-        xg >= 2.40
+        Number(p.over25Confidence || 0) >= 70 &&
+        getAIScore(a) >= 65 &&
+        xg >= 2.50
     );
 }
 
 
 function strictBTTS(a) {
-
     const p = a?.predictions || {};
-
-    const confidence =
-        Number(p.bttsConfidence || 0);
-
-    const probability =
-        Number(
-            p.bttsProbability ??
-            p.bttsProb ??
-            0
-        );
-
-    const xg =
-        Number(
-            a.model?.expectedGoals || 0
-        );
-
-    const risk =
-        getRisk(a);
-
-    const ai =
-        getAIScore(a);
+    const xg = Number(a?.model?.expectedGoals || 0);
 
     return (
         isPublishable(a) &&
-        risk !== "HIGH" &&
-        risk !== "VERY HIGH" &&
+        getRisk(a) === "LOW" &&
         p.btts === "OUI" &&
-        probability >= 60 &&
-        confidence >= 60 &&
-        ai >= 58 &&
-        xg >= 2.40
+        Number(p.bttsConfidence || 0) >= 70 &&
+        getAIScore(a) >= 65 &&
+        xg >= 2.50
     );
 }
 
