@@ -353,12 +353,12 @@ const eloProbabilities = {
         const confidence =
             clamp(
                 calculateConfidence({
-                    probabilities,
-                    homeStats,
-                    awayStats,
-                    eloProbability,
-                    poisson
-                }),
+    probabilities,
+    homeStats,
+    awayStats,
+    eloProbability: eloFavoriteProbability,
+    poisson
+}),
                 0,
                 100
             );
@@ -438,13 +438,13 @@ const eloProbabilities = {
                 : "NON";
 
 
-        const overConfidence =
-            Math.round(
-                Math.max(
-                    overRaw,
-                    100 - overRaw
-                )
-            );
+        const over25Confidence =
+    Math.round(
+        Math.max(
+            overRaw,
+            100 - overRaw
+        )
+    );
 
 
         const bttsConfidence =
