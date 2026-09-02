@@ -3,7 +3,9 @@ const { getTeamElo } = require("./eloEngine");
 
 const CACHE = new Map();
 const RUNNING = new Map();
+
 const TTL = 6 * 60 * 60 * 1000;
+const EMPTY_CACHE_TTL = 2 * 60 * 1000;
 
 const COMP_WEIGHT = {
   CL: 1.25,
@@ -20,222 +22,534 @@ const COMP_WEIGHT = {
 };
 
 const clamp = (v, a, b) =>
-  Math.max(a, Math.min(b, v));
+  Math.max(a, Math.min(b, Number(v) || 0));
 
 const avg = (a, b) =>
-  b ? a / b : 0;
+  b > 0 ? a / b : 0;
+
+
+/* =========================
+   ANALYSE STATISTIQUE
+========================= */
 
 function analyzeStats(matches, teamId) {
 
   let w = 0;
+
   let gf = 0;
   let ga = 0;
+
   let wins = 0;
   let draws = 0;
   let losses = 0;
+
   let over25 = 0;
   let btts = 0;
+
   let clean = 0;
   let failed = 0;
+
   let opponentStrength = 0;
+
 
   matches.forEach((m, i) => {
 
-    const home = m.homeTeam.id === teamId;
+    const home =
+      Number(m.homeTeam.id) === Number(teamId);
+
 
     const scored = home
-      ? m.score.fullTime.home
-      : m.score.fullTime.away;
+      ? Number(m.score.fullTime.home)
+      : Number(m.score.fullTime.away);
+
 
     const conceded = home
-      ? m.score.fullTime.away
-      : m.score.fullTime.home;
+      ? Number(m.score.fullTime.away)
+      : Number(m.score.fullTime.home);
+
 
     const opponent =
-      home ? m.awayTeam : m.homeTeam;
+      home
+        ? m.awayTeam
+        : m.homeTeam;
 
-    const elo = getTeamElo(opponent.id);
 
-    const oppStrength = clamp(
-      ((elo - 1200) / 800) * 100,
-      20,
-      95
-    );
+    const elo =
+      Number(getTeamElo(opponent.id)) || 1500;
 
-    const recency = 1.25 - i * 0.04;
+
+    /*
+     * FORCE DE L'ADVERSAIRE
+     */
+
+    const oppStrength =
+      clamp(
+        ((elo - 1200) / 800) * 100,
+        20,
+        95
+      );
+
+
+    /*
+     * RÉCENCE
+     *
+     * Les matchs récents comptent
+     * légèrement davantage.
+     */
+
+    const recency =
+      Math.max(
+        0.85,
+        1.25 - i * 0.04
+      );
+
+
+    const competitionWeight =
+      COMP_WEIGHT[
+        m.competition?.code
+      ] || COMP_WEIGHT.DEFAULT;
+
 
     const weight =
       recency *
-      (COMP_WEIGHT[m.competition?.code] || 1) *
+      competitionWeight *
       (0.8 + oppStrength / 250);
 
+
     w += weight;
+
     gf += scored * weight;
     ga += conceded * weight;
-    opponentStrength += oppStrength * weight;
 
-    if (scored > conceded) wins++;
-    else if (scored === conceded) draws++;
-    else losses++;
+    opponentStrength +=
+      oppStrength * weight;
 
-    if (scored + conceded >= 3) over25++;
-    if (scored > 0 && conceded > 0) btts++;
-    if (conceded === 0) clean++;
-    if (scored === 0) failed++;
+
+    /*
+     * RÉSULTAT
+     */
+
+    if (scored > conceded)
+      wins++;
+
+    else if (scored === conceded)
+      draws++;
+
+    else
+      losses++;
+
+
+    /*
+     * MARCHÉS
+     */
+
+    if (scored + conceded >= 3)
+      over25++;
+
+    if (scored > 0 && conceded > 0)
+      btts++;
+
+    if (conceded === 0)
+      clean++;
+
+    if (scored === 0)
+      failed++;
   });
 
-  const played = matches.length;
 
-  const avgScored = avg(gf, w);
-  const avgConceded = avg(ga, w);
+  const played =
+    matches.length;
+
+
+  if (played === 0 || w <= 0)
+    return null;
+
+
+  /*
+   * MOYENNES
+   */
+
+  const avgScored =
+    avg(gf, w);
+
+
+  const avgConceded =
+    avg(ga, w);
+
+
+  /*
+   * POINTS
+   */
+
+  const points =
+    wins * 3 + draws;
+
 
   const pointsRate =
-    (wins * 3 + draws) /
-    Math.max(played * 3, 1);
+    points /
+    Math.max(
+      played * 3,
+      1
+    );
+
+
+  /*
+   * DIFFÉRENCE DE BUTS
+   */
 
   const goalBalance =
-    avgScored - avgConceded;
+    avgScored -
+    avgConceded;
 
-  const strength = Math.round(
-    clamp(
-      50 +
-      (avg(opponentStrength, w) - 50) * 0.12 +
-      (avgScored - 1) * 7 +
-      goalBalance * 5 +
-      (1.8 - avgConceded) * 4 +
-      (pointsRate - 0.5) * 20 +
-      (clean / played) * 4 -
-      (failed / played) * 4,
-      25,
-      90
-    )
-  );
 
-  const stability = Math.round(
-    clamp(
-      50 +
-      (avgScored - 1) * 8 -
-      (avgConceded - 1.2) * 8,
-      25,
-      90
-    )
-  );
+  /*
+   * FORCE
+   */
 
-  const reliability = Number(
-    clamp(
-      0.35 +
-      Math.min(played / 10, 1) * 0.2 +
-      pointsRate * 0.25 +
-      (stability / 100) * 0.2,
-      0.3,
-      0.85
-    ).toFixed(2)
-  );
+  const strength =
+    Math.round(
+      clamp(
+        50 +
+
+        (avg(opponentStrength, w) - 50)
+          * 0.12 +
+
+        (avgScored - 1)
+          * 7 +
+
+        goalBalance
+          * 5 +
+
+        (1.8 - avgConceded)
+          * 4 +
+
+        (pointsRate - 0.5)
+          * 20 +
+
+        (clean / played)
+          * 4 -
+
+        (failed / played)
+          * 4,
+
+        25,
+        90
+      )
+    );
+
+
+  /*
+   * STABILITÉ
+   */
+
+  const stability =
+    Math.round(
+      clamp(
+        50 +
+
+        (avgScored - 1)
+          * 8 -
+
+        (avgConceded - 1.2)
+          * 8,
+
+        25,
+        90
+      )
+    );
+
+
+  /*
+   * FIABILITÉ
+   */
+
+  const reliability =
+    Number(
+      clamp(
+
+        0.35 +
+
+        Math.min(
+          played / 10,
+          1
+        ) * 0.20 +
+
+        pointsRate * 0.25 +
+
+        (stability / 100)
+          * 0.20,
+
+        0.30,
+        0.85
+
+      ).toFixed(2)
+    );
+
+
+  /*
+   * QUALITÉ DES DONNÉES
+   */
+
+  let dataQuality = "HIGH";
+
+  if (played < 3)
+    dataQuality = "LOW";
+
+  else if (played < 5)
+    dataQuality = "LIMITED";
+
 
   return {
+
     teamId,
+
     played,
+
     wins,
     draws,
     losses,
 
     strength,
+
     stability,
+
     reliability,
 
-    avgScored: +avgScored.toFixed(2),
-    avgConceded: +avgConceded.toFixed(2),
-    goalBalance: +goalBalance.toFixed(2),
+    avgScored:
+      +avgScored.toFixed(2),
 
-    over25Rate: Math.round(over25 / played * 100),
-    bttsRate: Math.round(btts / played * 100),
+    avgConceded:
+      +avgConceded.toFixed(2),
 
-    cleanSheets: clean,
-    failedToScore: failed,
+    goalBalance:
+      +goalBalance.toFixed(2),
+
+    over25Rate:
+      Math.round(
+        over25 / played * 100
+      ),
+
+    bttsRate:
+      Math.round(
+        btts / played * 100
+      ),
+
+    cleanSheets:
+      clean,
+
+    failedToScore:
+      failed,
 
     averageOpponentStrength:
-      Math.round(avg(opponentStrength, w)),
+      Math.round(
+        avg(opponentStrength, w)
+      ),
 
     formPoints:
-      +((wins * 3 + draws) / played).toFixed(2),
+      +(
+        points / played
+      ).toFixed(2),
 
-    dataAvailable: true
+    dataAvailable: true,
+
+    dataQuality,
+
+    matchesUsed: played
   };
 }
 
+
+/* =========================
+   ANALYSE ÉQUIPE
+========================= */
+
 async function analyzeTeam(team) {
 
-  if (CACHE.has(team.id)) {
-    const c = CACHE.get(team.id);
+  if (!team?.id)
+    return null;
 
-    if (Date.now() - c.time < TTL)
-      return c.data;
 
-    CACHE.delete(team.id);
+  const teamId =
+    Number(team.id);
+
+
+  /*
+   * CACHE
+   */
+
+  if (CACHE.has(teamId)) {
+
+    const cached =
+      CACHE.get(teamId);
+
+    const age =
+      Date.now() - cached.time;
+
+
+    const cacheTTL =
+      cached.data === null
+        ? EMPTY_CACHE_TTL
+        : TTL;
+
+
+    if (age < cacheTTL)
+      return cached.data;
+
+
+    CACHE.delete(teamId);
   }
 
-  if (RUNNING.has(team.id))
-    return RUNNING.get(team.id);
 
-  const promise = (async () => {
+  /*
+   * ÉVITER DE LANCER
+   * DEUX ANALYSES IDENTIQUES
+   */
 
-    const all =
-      await getTeamMatches(team.id);
+  if (RUNNING.has(teamId))
+    return RUNNING.get(teamId);
 
-    const matches = (all || [])
-      .filter(m =>
-        m.status === "FINISHED" &&
-        m.score?.fullTime &&
-        Number.isFinite(m.score.fullTime.home) &&
-        Number.isFinite(m.score.fullTime.away)
-      )
-      .sort(
-        (a, b) =>
-          new Date(b.utcDate) -
-          new Date(a.utcDate)
-      )
-      .slice(0, 8);
 
-    /*
-     * RÈGLE ABSOLUE :
-     * moins de 5 matchs = pas d'analyse.
-     */
+  const promise =
+    (async () => {
 
-    if (matches.length < 5) {
+      try {
 
-      console.warn(
-        `🚫 SKIP ${team.name}: ${matches.length}/5 matchs`
-      );
+        const all =
+          await getTeamMatches(teamId);
 
-      return null;
-    }
 
-    const result =
-      analyzeStats(matches, team.id);
+        const matches =
+          (all || [])
+            .filter(m =>
 
-    result.teamName = team.name;
+              m.status === "FINISHED" &&
 
-    CACHE.set(team.id, {
-      time: Date.now(),
-      data: result
-    });
+              m.score?.fullTime &&
 
-    console.log(
-      `✅ ${team.name} | STR ${result.strength} | REL ${result.reliability} | DATA ${result.played}`
-    );
+              Number.isFinite(
+                Number(
+                  m.score.fullTime.home
+                )
+              ) &&
 
-    return result;
+              Number.isFinite(
+                Number(
+                  m.score.fullTime.away
+                )
+              )
 
-  })();
+            )
+            .sort(
+              (a, b) =>
+                new Date(b.utcDate) -
+                new Date(a.utcDate)
+            )
+            .slice(0, 8);
 
-  RUNNING.set(team.id, promise);
+
+        /*
+         * AUCUNE DONNÉE
+         */
+
+        if (matches.length === 0) {
+
+          console.warn(
+            `🚫 NO DATA → ${team.name}`
+          );
+
+
+          CACHE.set(teamId, {
+            time: Date.now(),
+            data: null
+          });
+
+
+          return null;
+        }
+
+
+        /*
+         * ANALYSE
+         */
+
+        const result =
+          analyzeStats(
+            matches,
+            teamId
+          );
+
+
+        if (!result) {
+
+          CACHE.set(teamId, {
+            time: Date.now(),
+            data: null
+          });
+
+          return null;
+        }
+
+
+        result.teamName =
+          team.name;
+
+
+        CACHE.set(teamId, {
+          time: Date.now(),
+          data: result
+        });
+
+
+        console.log(
+          `✅ ${team.name}` +
+          ` | STR ${result.strength}` +
+          ` | REL ${result.reliability}` +
+          ` | DATA ${result.played}` +
+          ` | QUALITY ${result.dataQuality}`
+        );
+
+
+        return result;
+
+
+      } catch (error) {
+
+        console.error(
+          `❌ TEAM ANALYSIS ERROR → ${team.name}:`,
+          error.message
+        );
+
+
+        CACHE.set(teamId, {
+          time: Date.now(),
+          data: null
+        });
+
+
+        return null;
+      }
+
+    })();
+
+
+  RUNNING.set(
+    teamId,
+    promise
+  );
+
 
   try {
+
     return await promise;
+
   } finally {
-    RUNNING.delete(team.id);
+
+    RUNNING.delete(
+      teamId
+    );
   }
 }
+
 
 module.exports = {
   analyzeTeam
