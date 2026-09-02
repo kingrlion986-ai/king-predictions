@@ -11,17 +11,14 @@ const { analyzeMatch } =
     require("./services/predictionEngine");
 
 const app = express();
+const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-const PORT = process.env.PORT || 3000;
-
-
 /* =====================================================
-   KING PREDICTIONS AI — SERVER V2
-   SÉLECTION STRICTE / ANTI-DOUBLON / ANTI-HIGH
+   KING PREDICTIONS AI — SERVER V3
 ===================================================== */
 
 let cache = [];
@@ -32,17 +29,13 @@ let dailyDate = "";
 const CACHE_TTL = 24 * 60 * 60 * 1000;
 const MAX_ANALYSES = 30;
 
-
 /* =====================================================
    OUTILS
 ===================================================== */
 
 function getToday() {
-    return new Date()
-        .toISOString()
-        .slice(0, 10);
+    return new Date().toISOString().slice(0, 10);
 }
-
 
 function getRisk(a) {
     const p = a?.predictions || {};
@@ -66,55 +59,27 @@ function getAIScore(a) {
     );
 }
 
-
 function isUsable(a) {
-
     return !!(
         a?.match &&
         Number(a.teamStats?.home?.played || 0) >= 5 &&
         Number(a.teamStats?.away?.played || 0) >= 5
     );
-
 }
 
 function isPublishable(a) {
-    const p = a?.predictions || {};
-    const risk = getRisk(a);
-
-    return !!p && risk === "LOW";
+    return getRisk(a) === "LOW";
 }
-
-function riskValue(risk) {
-
-    if (risk === "LOW")
-        return 3;
-
-    if (risk === "MEDIUM")
-        return 2;
-
-    return 0;
-
-}
-
 
 function matchKey(a) {
-
     return String(
         a?.match?.id ??
-        `${a?.match?.homeTeam?.id}_${a?.match?.awayTeam?.id}`
+        `${a?.match?.homeTeam?.id}_${a?.match?.awayTeam?.id}_${a?.match?.utcDate}`
     );
-
 }
 
-
-/* =====================================================
-   FORMAT
-===================================================== */
-
 function format(a) {
-
     return {
-
         match: {
             id: a.match?.id,
             utcDate: a.match?.utcDate,
@@ -122,181 +87,18 @@ function format(a) {
             homeTeam: a.match?.homeTeam,
             awayTeam: a.match?.awayTeam
         },
-
-        predictions:
-            a.predictions,
-
+        predictions: a.predictions,
         model: {
-
-            expectedGoals:
-                a.model?.expectedGoals,
-
-            expectedHomeGoals:
-                a.model?.expectedHomeGoals,
-
-            expectedAwayGoals:
-                a.model?.expectedAwayGoals
-
+            expectedGoals: a.model?.expectedGoals,
+            expectedHomeGoals: a.model?.expectedHomeGoals,
+            expectedAwayGoals: a.model?.expectedAwayGoals
         },
-
-        vipScore:
-            getAIScore(a)
-
+        vipScore: getAIScore(a)
     };
-
-}
-
-
-/* =====================================================
-   SCORE 1X2
-===================================================== */
-
-function score1X2(a) {
-
-    const p = a?.predictions || {};
-    const probabilities = p.probabilities || {};
-
-    const values = [
-        Number(probabilities.homeWin || 0),
-        Number(probabilities.draw || 0),
-        Number(probabilities.awayWin || 0)
-    ].sort((x, y) => y - x);
-
-    const favorite = values[0] || 0;
-    const second = values[1] || 0;
-
-    const separation = favorite - second;
-    const confidence = Number(p.winnerConfidence || 0);
-    const ai = getAIScore(a);
-    const risk = getRisk(a);
-
-    if (!isPublishable(a))
-        return -999999;
-
-    let score = 0;
-
-    score += favorite * 100;
-    score += separation * 80;
-    score += confidence * 2;
-    score += ai * 1.5;
-
-    if (risk === "LOW")
-        score += 300;
-    else if (risk === "MEDIUM")
-        score += 100;
-
-    if (favorite < 60)
-        score -= 300;
-
-    if (separation < 8)
-        score -= 250;
-
-    if (confidence < 60)
-        score -= 200;
-
-    return score;
 }
 
 /* =====================================================
-   SCORE OVER 2.5
-===================================================== */
-function scoreOver(a) {
-
-    const p = a?.predictions || {};
-    const xg = Number(a?.model?.expectedGoals || 0);
-
-    const confidence =
-        Number(p.over25Confidence || 0);
-
-    const ai =
-        getAIScore(a);
-
-    const risk =
-        getRisk(a);
-
-    if (!isPublishable(a))
-        return -999999;
-
-    const probability =
-        p.over25 === "OVER 2.5"
-            ? confidence
-            : 100 - confidence;
-
-    let score = 0;
-
-    score += probability * 100;
-    score += confidence * 2;
-    score += ai * 1.5;
-
-    if (risk === "LOW")
-        score += 300;
-    else if (risk === "MEDIUM")
-        score += 100;
-
-    if (probability < 65)
-        score -= 300;
-
-    if (xg < 2.30)
-        score -= 250;
-
-    if (confidence < 65)
-        score -= 200;
-
-    return score;
-}
-
-
-/* =====================================================
-   SCORE BTTS
-===================================================== */
-
-function scoreBTTS(a) {
-
-    const p = a?.predictions || {};
-    const xg = Number(a?.model?.expectedGoals || 0);
-
-    const confidence =
-        Number(p.bttsConfidence || 0);
-
-    const ai =
-        getAIScore(a);
-
-    const risk =
-        getRisk(a);
-
-    if (!isPublishable(a))
-        return -999999;
-
-    const probability =
-        p.btts === "OUI"
-            ? confidence
-            : 100 - confidence;
-
-    let score = 0;
-
-    score += probability * 100;
-    score += confidence * 2;
-    score += ai * 1.5;
-
-    if (risk === "LOW")
-        score += 300;
-    else if (risk === "MEDIUM")
-        score += 100;
-
-    if (probability < 65)
-        score -= 300;
-
-    if (xg < 2.30)
-        score -= 250;
-
-    if (confidence < 65)
-        score -= 200;
-
-    return score;
-}
-
-/* =====================================================
-   FILTRES STRICTS V2
+   FILTRES STRICTS
 ===================================================== */
 
 function strict1X2(a) {
@@ -313,8 +115,10 @@ function strict1X2(a) {
     const second = values[1] || 0;
 
     return (
+        isUsable(a) &&
         isPublishable(a) &&
-        getRisk(a) === "LOW" &&
+        p.winner &&
+        p.winner !== "DRAW" &&
         favorite >= 65 &&
         favorite - second >= 10 &&
         Number(p.winnerConfidence || 0) >= 65 &&
@@ -322,14 +126,13 @@ function strict1X2(a) {
     );
 }
 
-
 function strictOver(a) {
     const p = a?.predictions || {};
     const xg = Number(a?.model?.expectedGoals || 0);
 
     return (
+        isUsable(a) &&
         isPublishable(a) &&
-        getRisk(a) === "LOW" &&
         p.over25 === "OVER 2.5" &&
         Number(p.over25Confidence || 0) >= 70 &&
         getAIScore(a) >= 65 &&
@@ -337,14 +140,13 @@ function strictOver(a) {
     );
 }
 
-
 function strictBTTS(a) {
     const p = a?.predictions || {};
     const xg = Number(a?.model?.expectedGoals || 0);
 
     return (
+        isUsable(a) &&
         isPublishable(a) &&
-        getRisk(a) === "LOW" &&
         p.btts === "OUI" &&
         Number(p.bttsConfidence || 0) >= 70 &&
         getAIScore(a) >= 65 &&
@@ -352,244 +154,213 @@ function strictBTTS(a) {
     );
 }
 
+/* =====================================================
+   SCORES
+===================================================== */
+
+function score1X2(a) {
+    const p = a?.predictions || {};
+    const probs = p.probabilities || {};
+
+    const values = [
+        Number(probs.homeWin || 0),
+        Number(probs.draw || 0),
+        Number(probs.awayWin || 0)
+    ].sort((x, y) => y - x);
+
+    const favorite = values[0] || 0;
+    const second = values[1] || 0;
+    const separation = favorite - second;
+
+    return (
+        favorite * 100 +
+        separation * 80 +
+        Number(p.winnerConfidence || 0) * 2 +
+        getAIScore(a) * 1.5 +
+        300
+    );
+}
+
+function scoreOver(a) {
+    const p = a?.predictions || {};
+    const xg = Number(a?.model?.expectedGoals || 0);
+    const confidence = Number(p.over25Confidence || 0);
+
+    return (
+        confidence * 100 +
+        confidence * 2 +
+        getAIScore(a) * 1.5 +
+        xg * 100 +
+        300
+    );
+}
+
+function scoreBTTS(a) {
+    const p = a?.predictions || {};
+    const xg = Number(a?.model?.expectedGoals || 0);
+    const confidence = Number(p.bttsConfidence || 0);
+
+    return (
+        confidence * 100 +
+        confidence * 2 +
+        getAIScore(a) * 1.5 +
+        xg * 100 +
+        300
+    );
+}
 
 /* =====================================================
    ANALYSE QUOTIDIENNE
 ===================================================== */
 
 async function getDaily() {
+    const today = getToday();
 
-    const today =
-        getToday();
-
-
-    if (
-        dailyDate !== today
-    ) {
-
+    if (dailyDate !== today) {
         cache = [];
-
         cacheTime = 0;
-
-        dailyDate =
-            today;
-
-        console.log(
-            "📅 NEW DAY:",
-            today
-        );
-
+        dailyDate = today;
+        console.log("📅 NEW DAY:", today);
     }
-
 
     if (
         cache.length &&
-        Date.now() - cacheTime <
-        CACHE_TTL
+        Date.now() - cacheTime < CACHE_TTL
     ) {
-
         return cache;
-
     }
 
-
-    if (building)
-        return building;
-
+    if (building) return building;
 
     building = (async () => {
-
         try {
+            const matches = await getMatches();
 
-            const matches =
-                await getMatches();
-
-
-            if (
-                !Array.isArray(matches) ||
-                !matches.length
-            ) {
-
-                console.log(
-                    "⚠️ NO MATCHES"
-                );
-
+            if (!Array.isArray(matches) || !matches.length) {
+                console.log("⚠️ NO MATCHES");
                 return [];
-
             }
 
+            const now = Date.now();
+            const next48h = now + 48 * 60 * 60 * 1000;
 
-            /* ==========================================
-               PROCHAINES 24 HEURES
-            ========================================== */
+            let upcoming = matches
+                .filter(match => {
+                    const time =
+                        new Date(match.utcDate).getTime();
 
-            const now =
-                Date.now();
+                    return (
+                        Number.isFinite(time) &&
+                        time >= now &&
+                        time <= next48h
+                    );
+                })
+                .sort(
+                    (a, b) =>
+                        new Date(a.utcDate) -
+                        new Date(b.utcDate)
+                );
 
-            const next24h =
-                now +
-                24 * 60 * 60 * 1000;
+            /*
+             * Si aucun match dans 48h,
+             * on regarde les 7 prochains jours.
+             */
+            if (!upcoming.length) {
+                const next7d =
+                    now + 7 * 24 * 60 * 60 * 1000;
 
+                upcoming = matches
+                    .filter(match => {
+                        const time =
+                            new Date(match.utcDate).getTime();
 
-            /* ==========================================
-   PROCHAINS MATCHS DISPONIBLES
-   MAX 48H
-========================================== */
-
-const now = Date.now();
-const next48h = now + 48 * 60 * 60 * 1000;
-
-const matches24h = matches
-    .filter(match => {
-        const time = new Date(match.utcDate).getTime();
-
-        return (
-            Number.isFinite(time) &&
-            time >= now &&
-            time <= next48h
-        );
-    })
-    .sort(
-        (a, b) =>
-            new Date(a.utcDate) -
-            new Date(b.utcDate)
-    );
-
-if (!matches24h.length) {
-    console.log("⚠️ NO MATCHES NEXT 48H");
-    return [];
-}
-
-console.log(
-    "🔥 MATCHES NEXT 48H:",
-    matches24h.length
-);
+                        return (
+                            Number.isFinite(time) &&
+                            time >= now &&
+                            time <= next7d
+                        );
+                    })
                     .sort(
                         (a, b) =>
-                            new Date(
-                                a.utcDate
-                            ) -
-                            new Date(
-                                b.utcDate
-                            )
+                            new Date(a.utcDate) -
+                            new Date(b.utcDate)
                     );
 
-
-            if (
-                !matches24h.length
-            ) {
-
                 console.log(
-                    "⚠️ NO MATCHES NEXT 24H"
+                    "⚠️ NO MATCHES 48H → FALLBACK 7 DAYS"
                 );
-
-                return [];
-
             }
 
+            if (!upcoming.length) {
+                console.log("⚠️ NO UPCOMING MATCHES");
+                return [];
+            }
 
             console.log(
-                "🔥 MATCHES NEXT 24H:",
-                matches24h.length
+                "🔥 MATCHES TO ANALYZE:",
+                upcoming.length
             );
-
-
-            /* ==========================================
-               ANALYSE
-            ========================================== */
 
             const results = [];
 
-
             for (
-                const match of
-                matches24h.slice(
+                const match of upcoming.slice(
                     0,
                     MAX_ANALYSES
                 )
             ) {
-
                 try {
-
                     console.log(
                         "🔎 ANALYZING:",
                         `${match.homeTeam?.name} vs ${match.awayTeam?.name}`
                     );
 
+                    const analysis =
+                        await analyzeMatch(match);
 
-                    const a =
-                        await analyzeMatch(
-                            match
-                        );
-
-
-                    if (
-                        !isUsable(a)
-                    )
+                    if (!isUsable(analysis))
                         continue;
 
-
-                    results.push(a);
-
+                    results.push(analysis);
 
                 } catch (err) {
-
                     console.log(
                         "❌ AI:",
                         `${match.homeTeam?.name} vs ${match.awayTeam?.name}`,
                         err.message
                     );
-
                 }
-
             }
 
-
-            cache =
-                results;
-
-            cacheTime =
-                Date.now();
-
+            cache = results;
+            cacheTime = Date.now();
 
             console.log(
                 "👑 AI READY:",
                 results.length
             );
 
-
             return results;
 
-
         } catch (err) {
-
             console.error(
                 "❌ DAILY:",
                 err.stack
             );
 
             return [];
-
         }
-
     })();
 
-
     try {
-
         return await building;
-
     } finally {
-
         building = null;
-
     }
-
 }
 
-
 /* =====================================================
-   SÉLECTION SANS DOUBLONS
+   SÉLECTION ANTI-DOUBLON
 ===================================================== */
 
 function selectUnique(
@@ -598,469 +369,210 @@ function selectUnique(
     limit,
     used = new Set()
 ) {
-
     return candidates
-
-        .filter(
-            a =>
-                !used.has(
-                    matchKey(a)
-                )
-        )
-
+        .filter(a => !used.has(matchKey(a)))
         .sort(
             (a, b) =>
-                scorer(b) -
-                scorer(a)
+                scorer(b) - scorer(a)
         )
-
-        .slice(
-            0,
-            limit
-        );
-
+        .slice(0, limit);
 }
-
 
 /* =====================================================
    1X2
 ===================================================== */
 
-app.get(
-    "/vip/1x2",
-    async (req, res) => {
+app.get("/vip/1x2", async (req, res) => {
+    try {
+        const data = await getDaily();
 
-        try {
+        const selected = selectUnique(
+            data.filter(strict1X2),
+            score1X2,
+            2
+        );
 
-            const data =
-                await getDaily();
+        console.log(
+            "🎯 1X2:",
+            selected.map(matchKey)
+        );
 
+        res.json(selected.map(format));
 
-            const selected = selectUnique(
-    data.filter(strict1X2),
-    score1X2,
-    2
-);
-
-
-            console.log(
-                "🎯 1X2:",
-                selected.map(
-                    matchKey
-                )
-            );
-
-
-            res.json(
-                selected.map(
-                    format
-                )
-            );
-
-
-        } catch (err) {
-
-            console.error(
-                "1X2:",
-                err
-            );
-
-            res.status(500).json({
-                error:
-                    err.message
-            });
-
-        }
-
+    } catch (err) {
+        console.error("1X2:", err);
+        res.status(500).json({
+            error: err.message
+        });
     }
-);
-
+});
 
 /* =====================================================
    OVER 2.5
 ===================================================== */
 
-app.get(
-    "/vip/over25",
-    async (req, res) => {
+app.get("/vip/over25", async (req, res) => {
+    try {
+        const data = await getDaily();
 
-        try {
+        const selected = selectUnique(
+            data.filter(strictOver),
+            scoreOver,
+            2
+        );
 
-            const data =
-                await getDaily();
+        console.log(
+            "🎯 OVER 2.5:",
+            selected.map(matchKey)
+        );
 
+        res.json(selected.map(format));
 
-            const selected = selectUnique(
-    data.filter(strictOver),
-    scoreOver,
-    2
-);
-
-
-            console.log(
-                "🎯 OVER 2.5:",
-                selected.map(
-                    matchKey
-                )
-            );
-
-
-            res.json(
-                selected.map(
-                    format
-                )
-            );
-
-
-        } catch (err) {
-
-            console.error(
-                "OVER:",
-                err
-            );
-
-            res.status(500).json({
-                error:
-                    err.message
-            });
-
-        }
-
+    } catch (err) {
+        console.error("OVER:", err);
+        res.status(500).json({
+            error: err.message
+        });
     }
-);
-
+});
 
 /* =====================================================
    BTTS
 ===================================================== */
 
-app.get(
-    "/vip/btts",
-    async (req, res) => {
+app.get("/vip/btts", async (req, res) => {
+    try {
+        const data = await getDaily();
 
-        try {
+        const selected = selectUnique(
+            data.filter(strictBTTS),
+            scoreBTTS,
+            2
+        );
 
-            const data =
-                await getDaily();
+        console.log(
+            "🎯 BTTS:",
+            selected.map(matchKey)
+        );
 
+        res.json(selected.map(format));
 
-            const selected = selectUnique(
-    data.filter(strictBTTS),
-    scoreBTTS,
-    2
-);
-
-
-            console.log(
-                "🎯 BTTS:",
-                selected.map(
-                    matchKey
-                )
-            );
-
-
-            res.json(
-                selected.map(
-                    format
-                )
-            );
-
-
-        } catch (err) {
-
-            console.error(
-                "BTTS:",
-                err
-            );
-
-            res.status(500).json({
-                error:
-                    err.message
-            });
-
-        }
-
+    } catch (err) {
+        console.error("BTTS:", err);
+        res.status(500).json({
+            error: err.message
+        });
     }
-);
-
+});
 
 /* =====================================================
    PARI LE PLUS SÛR
-   JAMAIS HIGH
 ===================================================== */
 
-app.get(
-    "/safest",
-    async (req, res) => {
+app.get("/safest", async (req, res) => {
+    try {
+        const data = await getDaily();
+        const choices = [];
 
-        try {
+        for (const a of data) {
+            const p = a?.predictions || {};
 
-            const data =
-                await getDaily();
-
-
-            const choices = [];
-
-
-            for (
-                const a of data
-            ) {
-
-                const p =
-                    a.predictions || {};
-
-
-                /* ==============================
-                   1X2
-                ============================== */
-
-                if (strict1X2(a)){
-
-                    choices.push({
-
-                        ...format(a),
-
-                        market:
-                            "1X2",
-
-                        pick:
-                            p.winner,
-
-                        confidence:
-                            Number(
-                                p.winnerConfidence ||
-                                0
-                            ),
-
-                        aiScore:
-                            getAIScore(a),
-
-                        risk:
-                            getRisk(a)
-
-                    });
-
-                }
-
-
-                /* ==============================
-                   OVER 2.5
-                ============================== */
-
-
-                 if (strictOver(a)){
-                
-                    choices.push({
-
-                        ...format(a),
-
-                        market:
-                            "OVER 2.5",
-
-                        pick:
-                            p.over25,
-
-                        confidence:
-                            Number(
-                                p.over25Confidence ||
-                                0
-                            ),
-
-                        aiScore:
-                            getAIScore(a),
-
-                        risk:
-                            getRisk(a)
-
-                    });
-
-                }
-
-
-                /* ==============================
-                   BTTS
-                ============================== */
-
-                if (strictBTTS(a)){
-
-                    choices.push({
-
-                        ...format(a),
-
-                        market:
-                            "BTTS",
-
-                        pick:
-                            p.btts,
-
-                        confidence:
-                            Number(
-                                p.bttsConfidence ||
-                                0
-                            ),
-
-                        aiScore:
-                            getAIScore(a),
-
-                        risk:
-                            getRisk(a)
-
-                    });
-
-                }
-
+            if (strict1X2(a)) {
+                choices.push({
+                    ...format(a),
+                    market: "1X2",
+                    pick: p.winner,
+                    confidence:
+                        Number(p.winnerConfidence || 0),
+                    aiScore: getAIScore(a),
+                    risk: getRisk(a)
+                });
             }
 
-
-            /*
-             * AUCUN PARI SÛR
-             *
-             * On préfère ne rien afficher
-             * plutôt que de mentir à l'utilisateur.
-             */
-
-            if (
-                !choices.length
-            ) {
-
-                console.log(
-                    "🛑 SAFEST: NO SAFE BET"
-                );
-
-                return res.json(
-                    null
-                );
-
+            if (strictOver(a)) {
+                choices.push({
+                    ...format(a),
+                    market: "OVER 2.5",
+                    pick: p.over25,
+                    confidence:
+                        Number(p.over25Confidence || 0),
+                    aiScore: getAIScore(a),
+                    risk: getRisk(a)
+                });
             }
 
-
-            /* ==========================================
-               CLASSEMENT
-            ========================================== */
-
-            choices.sort(
-                (a, b) => {
-
-                    const riskA =
-                        riskValue(
-                            a.risk
-                        );
-
-                    const riskB =
-                        riskValue(
-                            b.risk
-                        );
-
-
-                    return (
-
-                        riskB -
-                        riskA ||
-
-                        b.confidence -
-                        a.confidence ||
-
-                        b.aiScore -
-                        a.aiScore
-
-                    );
-
-                }
-            );
-
-
-            const safest =
-                choices[0];
-
-
-            console.log(
-                "🏆 SAFEST:",
-                safest.match?.homeTeam?.name,
-                "vs",
-                safest.match?.awayTeam?.name,
-                "|",
-                safest.market,
-                "|",
-                safest.pick,
-                "|",
-                safest.confidence + "%",
-                "|",
-                safest.risk
-            );
-
-
-            res.json(
-                safest
-            );
-
-
-        } catch (err) {
-
-            console.error(
-                "SAFEST:",
-                err
-            );
-
-            res.status(500).json({
-                error:
-                    err.message
-            });
-
+            if (strictBTTS(a)) {
+                choices.push({
+                    ...format(a),
+                    market: "BTTS",
+                    pick: p.btts,
+                    confidence:
+                        Number(p.bttsConfidence || 0),
+                    aiScore: getAIScore(a),
+                    risk: getRisk(a)
+                });
+            }
         }
 
-    }
-);
+        if (!choices.length) {
+            console.log("🛑 SAFEST: NO SAFE BET");
+            return res.json(null);
+        }
 
+        choices.sort(
+            (a, b) =>
+                b.confidence - a.confidence ||
+                b.aiScore - a.aiScore
+        );
+
+        const safest = choices[0];
+
+        console.log(
+            "🏆 SAFEST:",
+            safest.market,
+            safest.pick,
+            safest.confidence + "%",
+            safest.risk
+        );
+
+        res.json(safest);
+
+    } catch (err) {
+        console.error("SAFEST:", err);
+
+        res.status(500).json({
+            error: err.message
+        });
+    }
+});
 
 /* =====================================================
    HEALTH
 ===================================================== */
 
-app.get(
-    "/health",
-    (req, res) => {
-
-        res.json({
-
-            status:
-                "ok",
-
-            ai:
-                "ACTIVE",
-
-            version:
-                "V2",
-
-            analyses:
-                cache.length,
-
-            dailyDate
-
-        });
-
-    }
-);
-
+app.get("/health", (req, res) => {
+    res.json({
+        status: "ok",
+        ai: "ACTIVE",
+        version: "V3",
+        analyses: cache.length,
+        dailyDate
+    });
+});
 
 /* =====================================================
    HOME
 ===================================================== */
 
-app.get(
-    "/",
-    (req, res) => {
-
-        res.sendFile(
-            path.join(
-                __dirname,
-                "public",
-                "index.html"
-            )
-        );
-
-    }
-);
-
+app.get("/", (req, res) => {
+    res.sendFile(
+        path.join(
+            __dirname,
+            "public",
+            "index.html"
+        )
+    );
+});
 
 /* =====================================================
    START
@@ -1070,13 +582,11 @@ app.listen(
     PORT,
     "0.0.0.0",
     async () => {
-
         console.log(
-            "👑 KING PREDICTIONS AI V2 ONLINE"
+            "👑 KING PREDICTIONS AI V3 ONLINE"
         );
 
         try {
-
             await initializeDatabase();
 
             console.log(
@@ -1090,13 +600,10 @@ app.listen(
             );
 
         } catch (err) {
-
             console.error(
                 "❌ STARTUP:",
                 err.stack
             );
-
         }
-
     }
 );
