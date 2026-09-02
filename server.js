@@ -45,23 +45,25 @@ function getToday() {
 
 
 function getRisk(a) {
+    const p = a?.predictions || {};
 
     return (
-        a?.predictions?.aiDecision?.risk ||
+        p.winnerRisk ||
+        p.risk ||
+        p.aiDecision?.risk ||
         "HIGH"
     );
-
 }
 
-
 function getAIScore(a) {
+    const p = a?.predictions || {};
 
     return Number(
-        a?.predictions?.aiRating ??
+        p.winnerAIScore ??
+        p.aiRating ??
         a?.vipScore ??
         0
     );
-
 }
 
 
@@ -76,13 +78,10 @@ function isUsable(a) {
 }
 
 function isPublishable(a) {
+    const p = a?.predictions || {};
+    const risk = getRisk(a);
 
-    return (
-        a?.predictions?.aiDecision?.publish === true &&
-        a?.predictions?.aiDecision?.risk !== "HIGH" &&
-        a?.predictions?.aiDecision?.risk !== "VERY HIGH"
-    );
-
+    return !!p && risk === "LOW";
 }
 
 function riskValue(risk) {
@@ -1092,7 +1091,6 @@ app.listen(
             "👑 KING PREDICTIONS AI V2 ONLINE"
         );
 
-
         try {
 
             await initializeDatabase();
@@ -1101,13 +1099,11 @@ app.listen(
                 "✅ DATABASE READY"
             );
 
-
             await getDaily();
 
             console.log(
                 "✅ AI PRELOAD READY"
             );
-
 
         } catch (err) {
 
