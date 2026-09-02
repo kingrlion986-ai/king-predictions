@@ -227,8 +227,7 @@ async function analyzeMatch(match) {
                     ? aiRating
                     : 0,
 
-            over25,
-            over25Confidence,
+            over25Confidence: overConfidence,
 
             btts,
             bttsConfidence,
