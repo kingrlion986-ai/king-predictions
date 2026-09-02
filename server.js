@@ -626,16 +626,11 @@ app.get(
                 await getDaily();
 
 
-            const selected =
-                selectUnique(
-
-                    data.filter(strict1X2)
-
-                    score1X2,
-
-                    2
-
-                );
+            const selected = selectUnique(
+    data.filter(strict1X2),
+    score1X2,
+    2
+);
 
 
             console.log(
@@ -685,16 +680,11 @@ app.get(
                 await getDaily();
 
 
-            const selected =
-                selectUnique(
-
-                    data.filter(strictOver)
-
-                    scoreOver,
-
-                    2
-
-                );
+            const selected = selectUnique(
+    data.filter(strictOver),
+    scoreOver,
+    2
+);
 
 
             console.log(
@@ -744,16 +734,11 @@ app.get(
                 await getDaily();
 
 
-            const selected =
-                selectUnique(
-
-                    data.filter(strictBTTS)
-
-                    scoreBTTS,
-
-                    2
-
-                );
+            const selected = selectUnique(
+    data.filter(strictBTTS),
+    scoreBTTS,
+    2
+);
 
 
             console.log(
