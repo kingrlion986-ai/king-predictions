@@ -1,8 +1,8 @@
 /*
 =========================================
  KING PREDICTIONS AI
- POISSON ENGINE V24
- CALIBRATED / STABLE / ANTI-OVERCONFIDENCE
+ POISSON ENGINE V25
+ CALIBRATED / STABLE
 =========================================
 */
 
@@ -14,6 +14,7 @@ const MAX_GOALS = 10;
 ===================================================== */
 
 function clamp(value, min, max) {
+
     return Math.max(
         min,
         Math.min(max, Number(value) || 0)
@@ -32,9 +33,8 @@ function factorial(n) {
 
     let result = 1;
 
-    for (let i = 2; i <= n; i++) {
+    for (let i = 2; i <= n; i++)
         result *= i;
-    }
 
     return result;
 }
@@ -68,7 +68,21 @@ function poissonProbability(lambda, goals) {
 
 function buildGoalDistribution(expectedGoals) {
 
+    expectedGoals =
+        clamp(
+            expectedGoals,
+            0.05,
+            4.50
+        );
+
     const distribution = [];
+
+    let total = 0;
+
+
+    /*
+     * Distribution 0 → MAX_GOALS
+     */
 
     for (
         let goals = 0;
@@ -76,16 +90,36 @@ function buildGoalDistribution(expectedGoals) {
         goals++
     ) {
 
-        distribution.push(
+        const probability =
             poissonProbability(
                 expectedGoals,
                 goals
-            )
-        );
+            );
 
+        distribution.push(probability);
+
+        total += probability;
     }
 
-    return distribution;
+
+    /*
+     * IMPORTANT :
+     *
+     * On normalise ici.
+     *
+     * La distribution est limitée
+     * à MAX_GOALS et doit donc
+     * représenter 100 % de sa masse
+     * utilisée par la matrice.
+     */
+
+    if (total <= 0)
+        return distribution.map(() => 0);
+
+    return distribution.map(
+        probability =>
+            probability / total
+    );
 }
 
 
@@ -112,31 +146,36 @@ function buildPoissonMatrix(
         !Number.isFinite(homeXG) ||
         homeXG < 0
     ) {
-        homeXG = 0;
+        homeXG = 0.05;
     }
 
     if (
         !Number.isFinite(awayXG) ||
         awayXG < 0
     ) {
-        awayXG = 0;
+        awayXG = 0.05;
     }
 
 
     /*
      * ==========================================
      * SAFETY LIMIT
-     *
-     * On ne laisse jamais un XG complètement
-     * absurde détruire les probabilités.
      * ==========================================
      */
 
     homeXG =
-        clamp(homeXG, 0.05, 4.50);
+        clamp(
+            homeXG,
+            0.05,
+            4.50
+        );
 
     awayXG =
-        clamp(awayXG, 0.05, 4.50);
+        clamp(
+            awayXG,
+            0.05,
+            4.50
+        );
 
 
     console.log(
@@ -146,8 +185,10 @@ function buildPoissonMatrix(
             awayXG,
             totalXG:
                 Number(
-                    (homeXG + awayXG)
-                    .toFixed(2)
+                    (
+                        homeXG +
+                        awayXG
+                    ).toFixed(2)
                 )
         }
     );
@@ -160,10 +201,14 @@ function buildPoissonMatrix(
      */
 
     const homeDistribution =
-        buildGoalDistribution(homeXG);
+        buildGoalDistribution(
+            homeXG
+        );
 
     const awayDistribution =
-        buildGoalDistribution(awayXG);
+        buildGoalDistribution(
+            awayXG
+        );
 
 
     /*
@@ -173,7 +218,6 @@ function buildPoissonMatrix(
      */
 
     const matrix = [];
-
 
     for (
         let h = 0;
@@ -194,9 +238,14 @@ function buildPoissonMatrix(
                 awayDistribution[a];
 
         }
-
     }
 
+
+    /*
+     * ==========================================
+     * ANALYSE
+     * ==========================================
+     */
 
     const analysis =
         analyzeMatrix(
@@ -215,9 +264,7 @@ function buildPoissonMatrix(
         awayDistribution,
 
         ...analysis
-
     };
-
 }
 
 
@@ -269,7 +316,18 @@ function analyzeMatrix(
         ) {
 
             const probability =
-                Number(matrix[h][a] || 0);
+                Number(
+                    matrix[h]?.[a] || 0
+                );
+
+
+            if (
+                !Number.isFinite(probability) ||
+                probability < 0
+            ) {
+                continue;
+            }
+
 
             total += probability;
 
@@ -278,23 +336,14 @@ function analyzeMatrix(
              * 1X2
              */
 
-            if (h > a) {
-
+            if (h > a)
                 homeWin += probability;
 
-            }
-
-            else if (h === a) {
-
+            else if (h === a)
                 draw += probability;
 
-            }
-
-            else {
-
+            else
                 awayWin += probability;
-
-            }
 
 
             /*
@@ -305,9 +354,7 @@ function analyzeMatrix(
                 h > 0 &&
                 a > 0
             ) {
-
                 btts += probability;
-
             }
 
 
@@ -315,9 +362,7 @@ function analyzeMatrix(
              * TOTAL GOALS
              */
 
-            const goals =
-                h + a;
-
+            const goals = h + a;
 
             if (goals >= 2)
                 over15 += probability;
@@ -354,20 +399,25 @@ function analyzeMatrix(
 
                 exactScore =
                     `${h}-${a}`;
-
             }
-
         }
-
     }
 
 
-    if (total <= 0) {
+    /*
+     * ==========================================
+     * VALIDATION
+     * ==========================================
+     */
+
+    if (
+        !Number.isFinite(total) ||
+        total <= 0
+    ) {
 
         throw new Error(
             "Invalid Poisson probability"
         );
-
     }
 
 
@@ -399,20 +449,42 @@ function analyzeMatrix(
      * ==========================================
      */
 
-    const probabilities = [
-        homeWin,
-        draw,
-        awayWin
+    const outcomes = [
+
+        {
+            name: "HOME",
+            probability: homeWin
+        },
+
+        {
+            name: "DRAW",
+            probability: draw
+        },
+
+        {
+            name: "AWAY",
+            probability: awayWin
+        }
+
     ].sort(
-        (a, b) => b - a
+        (a, b) =>
+            b.probability -
+            a.probability
     );
 
 
+    const favorite =
+        outcomes[0];
+
+    const second =
+        outcomes[1];
+
+
     const favoriteProbability =
-        probabilities[0];
+        favorite.probability;
 
     const secondProbability =
-        probabilities[1];
+        second.probability;
 
 
     /*
@@ -422,8 +494,11 @@ function analyzeMatrix(
      */
 
     const predictionGap =
-        favoriteProbability -
-        secondProbability;
+        Math.max(
+            0,
+            favoriteProbability -
+            secondProbability
+        );
 
 
     const dominance =
@@ -437,13 +512,6 @@ function analyzeMatrix(
     /*
      * ==========================================
      * UNCERTAINTY
-     * ==========================================
-     *
-     * Plus le favori est faible,
-     * plus l'incertitude augmente.
-     *
-     * On ajoute également une petite pénalité
-     * quand les trois scénarios sont proches.
      * ==========================================
      */
 
@@ -477,34 +545,32 @@ function analyzeMatrix(
         homeOrDraw:
             Number(
                 (
-                    (homeWin + draw) * 100
+                    (homeWin + draw) *
+                    100
                 ).toFixed(2)
             ),
 
         awayOrDraw:
             Number(
                 (
-                    (awayWin + draw) * 100
+                    (awayWin + draw) *
+                    100
                 ).toFixed(2)
             ),
 
         homeOrAway:
             Number(
                 (
-                    (homeWin + awayWin) * 100
+                    (homeWin + awayWin) *
+                    100
                 ).toFixed(2)
             )
-
     };
 
 
     /*
      * ==========================================
      * EXPECTED GOALS
-     *
-     * IMPORTANT :
-     * on utilise les XG réellement fournis
-     * au moteur.
      * ==========================================
      */
 
@@ -521,7 +587,7 @@ function analyzeMatrix(
 
     /*
      * ==========================================
-     * MARKET STRENGTH
+     * MARKET PROBABILITIES
      * ==========================================
      */
 
@@ -532,15 +598,6 @@ function analyzeMatrix(
         btts * 100;
 
 
-    /*
-     * ==========================================
-     * OVER 2.5 CONFIDENCE
-     *
-     * La confiance du marché est indépendante
-     * de la confiance 1X2.
-     * ==========================================
-     */
-
     const over25Confidence =
         Math.round(
             Math.max(
@@ -549,12 +606,6 @@ function analyzeMatrix(
             )
         );
 
-
-    /*
-     * ==========================================
-     * BTTS CONFIDENCE
-     * ==========================================
-     */
 
     const bttsConfidence =
         Math.round(
@@ -568,21 +619,12 @@ function analyzeMatrix(
     /*
      * ==========================================
      * MATCH SCORE
-     *
-     * STRICT :
-     * un favori à 55 % ne doit pas recevoir
-     * automatiquement un score de 70+.
      * ==========================================
      */
 
     let matchScore =
         favoriteProbability * 100;
 
-
-    /*
-     * Bonus seulement si la séparation
-     * est réellement importante.
-     */
 
     if (predictionGap >= 0.20)
         matchScore += 10;
@@ -593,10 +635,6 @@ function analyzeMatrix(
     else if (predictionGap >= 0.10)
         matchScore += 3;
 
-
-    /*
-     * Pénalité match équilibré.
-     */
 
     if (predictionGap < 0.05)
         matchScore -= 15;
@@ -616,6 +654,12 @@ function analyzeMatrix(
     /*
      * ==========================================
      * RISK
+     *
+     * Ce risque reste une information
+     * statistique du moteur Poisson.
+     *
+     * Le predictionEngine peut appliquer
+     * un filtre final différent.
      * ==========================================
      */
 
@@ -647,7 +691,6 @@ function analyzeMatrix(
     ) {
 
         risk = "HIGH";
-
     }
 
 
@@ -658,7 +701,7 @@ function analyzeMatrix(
      */
 
     console.log(
-        "===== POISSON ENGINE V24 ====="
+        "===== POISSON ENGINE V25 ====="
     );
 
     console.log({
@@ -679,6 +722,28 @@ function analyzeMatrix(
             Number(
                 (awayWin * 100)
                 .toFixed(2)
+            ),
+
+        sum1X2:
+            Number(
+                (
+                    (
+                        homeWin +
+                        draw +
+                        awayWin
+                    ) * 100
+                ).toFixed(2)
+            ),
+
+        favorite:
+            favorite.name,
+
+        favoriteProbability:
+            Number(
+                (
+                    favoriteProbability *
+                    100
+                ).toFixed(2)
             ),
 
         dominance:
@@ -721,7 +786,6 @@ function analyzeMatrix(
         risk,
 
         exactScore
-
     });
 
 
@@ -737,23 +801,48 @@ function analyzeMatrix(
 
             homeWin:
                 Number(
-                    (homeWin * 100)
-                    .toFixed(2)
+                    (
+                        homeWin * 100
+                    ).toFixed(2)
                 ),
 
             draw:
                 Number(
-                    (draw * 100)
-                    .toFixed(2)
+                    (
+                        draw * 100
+                    ).toFixed(2)
                 ),
 
             awayWin:
                 Number(
-                    (awayWin * 100)
-                    .toFixed(2)
+                    (
+                        awayWin * 100
+                    ).toFixed(2)
                 )
-
         },
+
+
+        favorite: {
+
+            outcome:
+                favorite.name,
+
+            probability:
+                Number(
+                    (
+                        favoriteProbability *
+                        100
+                    ).toFixed(2)
+                )
+        },
+
+
+        predictionGap:
+            Number(
+                (
+                    predictionGap * 100
+                ).toFixed(2)
+            ),
 
 
         doubleChance,
@@ -761,8 +850,9 @@ function analyzeMatrix(
 
         btts:
             Number(
-                (btts * 100)
-                .toFixed(2)
+                (
+                    btts * 100
+                ).toFixed(2)
             ),
 
 
@@ -771,15 +861,17 @@ function analyzeMatrix(
 
         over15:
             Number(
-                (over15 * 100)
-                .toFixed(2)
+                (
+                    over15 * 100
+                ).toFixed(2)
             ),
 
 
         over25:
             Number(
-                (over25 * 100)
-                .toFixed(2)
+                (
+                    over25 * 100
+                ).toFixed(2)
             ),
 
 
@@ -788,15 +880,17 @@ function analyzeMatrix(
 
         over35:
             Number(
-                (over35 * 100)
-                .toFixed(2)
+                (
+                    over35 * 100
+                ).toFixed(2)
             ),
 
 
         under25:
             Number(
-                ((1 - over25) * 100)
-                .toFixed(2)
+                (
+                    (1 - over25) * 100
+                ).toFixed(2)
             ),
 
 
@@ -820,15 +914,17 @@ function analyzeMatrix(
 
         cleanSheetHome:
             Number(
-                (cleanSheetHome * 100)
-                .toFixed(2)
+                (
+                    cleanSheetHome * 100
+                ).toFixed(2)
             ),
 
 
         cleanSheetAway:
             Number(
-                (cleanSheetAway * 100)
-                .toFixed(2)
+                (
+                    cleanSheetAway * 100
+                ).toFixed(2)
             ),
 
 
@@ -861,11 +957,8 @@ function analyzeMatrix(
                         bestProbability * 100
                     ).toFixed(2)
                 )
-
         }
-
     };
-
 }
 
 
