@@ -629,9 +629,7 @@ app.get(
             const selected =
                 selectUnique(
 
-                    data.filter(
-                        valid1X2
-                    ),
+                    data.filter(strict1X2)
 
                     score1X2,
 
@@ -690,9 +688,7 @@ app.get(
             const selected =
                 selectUnique(
 
-                    data.filter(
-                        validOver
-                    ),
+                    data.filter(strictOver)
 
                     scoreOver,
 
@@ -751,9 +747,7 @@ app.get(
             const selected =
                 selectUnique(
 
-                    data.filter(
-                        validBTTS
-                    ),
+                    data.filter(strictBTTS)
 
                     scoreBTTS,
 
@@ -825,9 +819,7 @@ app.get(
                    1X2
                 ============================== */
 
-                if (
-                    valid1X2(a)
-                ) {
+                if (strict1X2(a)){
 
                     choices.push({
 
@@ -860,10 +852,9 @@ app.get(
                    OVER 2.5
                 ============================== */
 
-                if (
-                    validOver(a)
-                ) {
 
+                 if (strictOver(a)){
+                
                     choices.push({
 
                         ...format(a),
@@ -895,9 +886,7 @@ app.get(
                    BTTS
                 ============================== */
 
-                if (
-                    validBTTS(a)
-                ) {
+                if (strictBTTS(a)){
 
                     choices.push({
 
