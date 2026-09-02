@@ -431,29 +431,39 @@ async function getDaily() {
                 24 * 60 * 60 * 1000;
 
 
-            const matches24h =
-                matches
+            /* ==========================================
+   PROCHAINS MATCHS DISPONIBLES
+   MAX 48H
+========================================== */
 
-                    .filter(match => {
+const now = Date.now();
+const next48h = now + 48 * 60 * 60 * 1000;
 
-                        const time =
-                            new Date(
-                                match.utcDate
-                            ).getTime();
+const matches24h = matches
+    .filter(match => {
+        const time = new Date(match.utcDate).getTime();
 
+        return (
+            Number.isFinite(time) &&
+            time >= now &&
+            time <= next48h
+        );
+    })
+    .sort(
+        (a, b) =>
+            new Date(a.utcDate) -
+            new Date(b.utcDate)
+    );
 
-                        return (
+if (!matches24h.length) {
+    console.log("⚠️ NO MATCHES NEXT 48H");
+    return [];
+}
 
-                            Number.isFinite(time) &&
-
-                            time >= now &&
-
-                            time <= next24h
-
-                        );
-
-                    })
-
+console.log(
+    "🔥 MATCHES NEXT 48H:",
+    matches24h.length
+);
                     .sort(
                         (a, b) =>
                             new Date(
