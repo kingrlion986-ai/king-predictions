@@ -1,13 +1,16 @@
 /*
 =========================================
  KING PREDICTIONS AI
- CONFIDENCE ENGINE V24
+ CONFIDENCE ENGINE V25
  CALIBRATED / STRICT / ANTI-OVERCONFIDENCE
 =========================================
 */
 
 function clamp(value, min, max) {
-    return Math.max(min, Math.min(max, Number(value) || 0));
+    return Math.max(
+        min,
+        Math.min(max, Number(value) || 0)
+    );
 }
 
 function num(value, fallback = 0) {
@@ -25,21 +28,71 @@ function calculateConfidence({
 }) {
 
     /* =================================
-       1. PROBABILITÉS
+       1. PROBABILITÉS POISSON
     ================================= */
 
-    const home = clamp(num(probabilities.homeWin), 0, 100);
-    const draw = clamp(num(probabilities.draw), 0, 100);
-    const away = clamp(num(probabilities.awayWin), 0, 100);
+    const home =
+        clamp(
+            num(probabilities.homeWin),
+            0,
+            100
+        );
 
-    const probs = [home, draw, away]
-        .sort((a, b) => b - a);
+    const draw =
+        clamp(
+            num(probabilities.draw),
+            0,
+            100
+        );
 
-    const favorite = probs[0];
-    const second = probs[1];
+    const away =
+        clamp(
+            num(probabilities.awayWin),
+            0,
+            100
+        );
+
+
+    /*
+     * On conserve l'identité du résultat.
+     * Important pour comparer correctement
+     * le favori avec l'ELO.
+     */
+
+    const outcomes = [
+        {
+            name: "HOME",
+            probability: home
+        },
+        {
+            name: "DRAW",
+            probability: draw
+        },
+        {
+            name: "AWAY",
+            probability: away
+        }
+    ].sort(
+        (a, b) =>
+            b.probability -
+            a.probability
+    );
+
+
+    const favorite =
+        outcomes[0].probability;
+
+    const second =
+        outcomes[1].probability;
+
+    const favoriteOutcome =
+        outcomes[0].name;
 
     const separation =
-        favorite - second;
+        Math.max(
+            0,
+            favorite - second
+        );
 
 
     /* =================================
@@ -52,17 +105,18 @@ function calculateConfidence({
             num(awayStats.played)
         );
 
+
     /*
-     * 8 matchs = données correctes,
-     * mais on ne transforme jamais cela
-     * directement en grosse confiance.
+     * La qualité des données progresse
+     * progressivement sans dépasser 80
+     * avec les 8 derniers matchs.
      */
 
     const dataQuality =
         clamp(
             played / 10 * 100,
             0,
-            100
+            80
         );
 
 
@@ -73,8 +127,14 @@ function calculateConfidence({
     const reliability =
         clamp(
             (
-                num(homeStats.reliability, 0.5) +
-                num(awayStats.reliability, 0.5)
+                num(
+                    homeStats.reliability,
+                    0.5
+                ) +
+                num(
+                    awayStats.reliability,
+                    0.5
+                )
             ) / 2,
             0,
             1
@@ -90,8 +150,14 @@ function calculateConfidence({
 
     const strengthGap =
         Math.abs(
-            num(homeStats.strength, 50) -
-            num(awayStats.strength, 50)
+            num(
+                homeStats.strength,
+                50
+            ) -
+            num(
+                awayStats.strength,
+                50
+            )
         );
 
 
@@ -99,23 +165,74 @@ function calculateConfidence({
        5. ELO
     ================================= */
 
+    /*
+     * calculateEloProbability() renvoie :
+     *
+     * HOME = 0 → 1
+     * AWAY = 1 - HOME
+     *
+     * L'ELO actuel ne possède pas
+     * de véritable probabilité de nul.
+     */
+
     const eloHome =
         clamp(
-            num(eloProbability, 0.5) * 100,
+            num(
+                eloProbability,
+                0.5
+            ),
             0,
-            100
+            1
         );
 
+    const eloAway =
+        1 -
+        eloHome;
+
+
     /*
-     * IMPORTANT :
-     * on compare uniquement l'orientation
-     * du modèle à l'ELO.
+     * On compare maintenant le favori
+     * Poisson avec le côté correspondant
+     * de l'ELO.
+     *
+     * Pour DRAW :
+     * l'ELO est considéré neutre,
+     * car ce moteur ELO ne modélise pas
+     * le nul.
+     */
+
+    let eloFavorite =
+        0.50;
+
+    if (favoriteOutcome === "HOME") {
+
+        eloFavorite =
+            eloHome;
+
+    }
+    else if (favoriteOutcome === "AWAY") {
+
+        eloFavorite =
+            eloAway;
+
+    }
+
+
+    const eloFavoritePercent =
+        eloFavorite * 100;
+
+
+    /*
+     * Accord entre les deux modèles.
      */
 
     const eloAgreement =
         clamp(
             100 -
-            Math.abs(favorite - eloHome) * 1.5,
+            Math.abs(
+                favorite -
+                eloFavoritePercent
+            ) * 1.5,
             0,
             100
         );
@@ -127,14 +244,28 @@ function calculateConfidence({
 
     const uncertainty =
         clamp(
-            num(poisson?.uncertainty, 50),
+            num(
+                poisson?.uncertainty,
+                50
+            ),
             0,
             100
         );
 
+
+    /*
+     * Si dominance existe dans Poisson,
+     * on l'utilise.
+     *
+     * Sinon, on utilise la séparation.
+     */
+
     const dominance =
         clamp(
-            num(poisson?.dominance, separation),
+            num(
+                poisson?.dominance,
+                separation
+            ),
             0,
             100
         );
@@ -142,9 +273,6 @@ function calculateConfidence({
 
     /* =================================
        7. SCORE DE BASE
-       
-       La probabilité favorite n'a plus
-       autant de poids.
     ================================= */
 
     let confidence =
@@ -165,12 +293,15 @@ function calculateConfidence({
      */
 
     if (separation < 5)
+
         confidence -= 20;
 
     else if (separation < 8)
+
         confidence -= 12;
 
     else if (separation < 12)
+
         confidence -= 5;
 
 
@@ -179,12 +310,15 @@ function calculateConfidence({
      */
 
     if (uncertainty >= 60)
+
         confidence -= 25;
 
     else if (uncertainty >= 50)
+
         confidence -= 15;
 
     else if (uncertainty >= 40)
+
         confidence -= 8;
 
 
@@ -193,9 +327,11 @@ function calculateConfidence({
      */
 
     if (strengthGap <= 4)
+
         confidence -= 15;
 
     else if (strengthGap <= 8)
+
         confidence -= 8;
 
 
@@ -204,12 +340,15 @@ function calculateConfidence({
      */
 
     if (reliability < 0.50)
+
         confidence -= 18;
 
     else if (reliability < 0.60)
+
         confidence -= 10;
 
     else if (reliability < 0.70)
+
         confidence -= 5;
 
 
@@ -218,38 +357,43 @@ function calculateConfidence({
      */
 
     if (played < 5)
+
         confidence -= 20;
 
     else if (played < 8)
+
         confidence -= 8;
 
 
     /* =================================
        9. CAPS STRICTS
-       
-       Même si le calcul produit 80+,
-       le moteur ne doit pas mentir.
     ================================= */
 
     let cap = 80;
 
 
     if (favorite < 50)
+
         cap = 45;
 
     else if (favorite < 55)
+
         cap = 52;
 
     else if (favorite < 60)
+
         cap = 60;
 
     else if (favorite < 65)
+
         cap = 68;
 
     else if (favorite < 70)
+
         cap = 74;
 
     else if (favorite < 75)
+
         cap = 78;
 
 
@@ -258,13 +402,25 @@ function calculateConfidence({
      */
 
     if (separation < 5)
-        cap = Math.min(cap, 45);
+
+        cap = Math.min(
+            cap,
+            45
+        );
 
     else if (separation < 8)
-        cap = Math.min(cap, 55);
+
+        cap = Math.min(
+            cap,
+            55
+        );
 
     else if (separation < 12)
-        cap = Math.min(cap, 65);
+
+        cap = Math.min(
+            cap,
+            65
+        );
 
 
     /*
@@ -272,10 +428,18 @@ function calculateConfidence({
      */
 
     if (uncertainty >= 60)
-        cap = Math.min(cap, 40);
+
+        cap = Math.min(
+            cap,
+            40
+        );
 
     else if (uncertainty >= 50)
-        cap = Math.min(cap, 52);
+
+        cap = Math.min(
+            cap,
+            52
+        );
 
 
     /*
@@ -283,10 +447,18 @@ function calculateConfidence({
      */
 
     if (reliability < 0.50)
-        cap = Math.min(cap, 45);
+
+        cap = Math.min(
+            cap,
+            45
+        );
 
     else if (reliability < 0.60)
-        cap = Math.min(cap, 55);
+
+        cap = Math.min(
+            cap,
+            55
+        );
 
 
     /* =================================
@@ -296,7 +468,10 @@ function calculateConfidence({
     confidence =
         clamp(
             Math.round(
-                Math.min(confidence, cap)
+                Math.min(
+                    confidence,
+                    cap
+                )
             ),
             5,
             80
@@ -308,16 +483,28 @@ function calculateConfidence({
     ================================= */
 
     console.log(
-        "===== CONFIDENCE ENGINE V24 =====",
+        "===== CONFIDENCE ENGINE V25 =====",
         {
             favorite,
+            favoriteOutcome,
             second,
             separation,
             played,
             dataQuality,
             reliability,
             strengthGap,
-            eloHome,
+            eloHome:
+                Math.round(
+                    eloHome * 100
+                ),
+            eloAway:
+                Math.round(
+                    eloAway * 100
+                ),
+            eloFavorite:
+                Math.round(
+                    eloFavoritePercent
+                ),
             eloAgreement,
             dominance,
             uncertainty,
