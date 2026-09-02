@@ -224,25 +224,37 @@ async function analyzeMatch(match) {
 
 
         /* =========================
-           ELO
-        ========================= */
+   ELO
+========================= */
 
-        const homeElo =
-            Number(getTeamElo(match.homeTeam.id)) || 1500;
+const homeElo =
+    Number(getTeamElo(match.homeTeam.id)) || 1500;
 
-        const awayElo =
-            Number(getTeamElo(match.awayTeam.id)) || 1500;
+const awayElo =
+    Number(getTeamElo(match.awayTeam.id)) || 1500;
 
-        const eloProbability =
-            clamp(
-                calculateEloProbability(
-                    homeElo,
-                    awayElo
-                ),
-                0,
-                1
-            );
+const eloProbability =
+    clamp(
+        calculateEloProbability(
+            homeElo,
+            awayElo
+        ),
+        0,
+        1
+    );
 
+/*
+ * ELO produit actuellement une probabilité
+ * HOME entre 0 et 1.
+ *
+ * Pour la confiance, on conserve également
+ * l'orientation AWAY.
+ */
+const eloProbabilities = {
+    home: eloProbability,
+    draw: 0.50,
+    away: 1 - eloProbability
+};
 
         /* =========================
            EXPECTED GOALS
@@ -306,6 +318,32 @@ async function analyzeMatch(match) {
 
         const probabilities =
             poisson.probabilities;
+
+        const eloFavoriteProbability =
+    (() => {
+
+        const home =
+            Number(probabilities.homeWin || 0);
+
+        const draw =
+            Number(probabilities.draw || 0);
+
+        const away =
+            Number(probabilities.awayWin || 0);
+
+        if (
+            home >= draw &&
+            home >= away
+        ) {
+            return eloProbabilities.home;
+        }
+
+        if (away >= home && away >= draw) {
+            return eloProbabilities.away;
+        }
+
+        return eloProbabilities.draw;
+    })();
 
 
         /* =========================
@@ -558,18 +596,22 @@ async function analyzeMatch(match) {
 
 
             model: {
+    elo: {
+        home: homeElo,
+        away: awayElo,
 
-                elo: {
+        homeProbability:
+            Math.round(
+                eloProbability * 100
+            ),
 
-                    home: homeElo,
+        awayProbability:
+            Math.round(
+                (1 - eloProbability) * 100
+            )
+    },
 
-                    away: awayElo,
-
-                    homeProbability:
-                        Math.round(
-                            eloProbability * 100
-                        )
-                },
+                
 
                 expectedGoals:
                     xg.totalExpectedGoals,
