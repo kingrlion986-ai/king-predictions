@@ -108,9 +108,9 @@ function show(data, mode) {
                 }
 
                 <p>
-                    🧠 AI Score :
-                    ${num(p.aiRating)}/100
-                </p>
+    🧠 AI Score :
+    ${num(a.vipScore ?? p.aiRating)}/100
+</p>
 
                 ${
                     a.vipScore !== undefined
