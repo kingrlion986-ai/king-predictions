@@ -1,83 +1,31 @@
-<!DOCTYPE html>
-<html lang="fr">
-
+<!DOCTYPE html><html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>KING PREDICTIONS AI — V1</title>
-
-    <!-- V1 : empêche le navigateur de garder l'ancien CSS -->
-    <link rel="stylesheet" href="/style.css?v=V1">
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>KING PREDICTIONS AI</title>
+<link rel="stylesheet" href="/style.css">
 </head>
-
 <body>
-
 <header>
-
-    <h1>👑 KING PREDICTIONS AI</h1>
-
-    <p>Football Prediction Engine</p>
-
-    <div class="status">
-        🔥 IA <strong>ACTIVE</strong>
-        <span>V1</span>
-    </div>
-
+<h1>👑 KING PREDICTIONS AI</h1>
+<p>Football Analysis Engine</p>
+<div class="status">🔥 IA <strong>ACTIVE</strong> <span>V1</span></div>
 </header>
-
 <nav>
-
-    <button onclick="loadPredictions('/vip/1x2')">
-        💎 1X2
-    </button>
-
-    <button onclick="loadPredictions('/vip/over25')">
-        🟣 OVER 2.5
-    </button>
-
-    <button onclick="loadPredictions('/vip/btts')">
-        🟠 BTTS
-    </button>
-
-    <button onclick="loadPredictions('/safest')">
-        🏆 PARI LE PLUS SÛR
-    </button>
-
+<button onclick="loadAnalysis()">📊 ANALYSES DU JOUR</button>
+<button onclick="refreshAnalysis()">🔄 ACTUALISER</button>
 </nav>
-
 <section class="stats">
-
-    <div>
-        ⚽ Matchs
-        <strong id="matches">0</strong>
-    </div>
-
-    <div>
-        🎯 Pronostics
-        <strong id="predictions">0</strong>
-    </div>
-
+<div>⚽ Matchs<strong id="matches">0</strong></div>
+<div>📊 Analyses<strong id="predictions">0</strong></div>
 </section>
-
 <main>
-
-    <h2>📊 Résultats</h2>
-
-    <div id="results">
-
-        <div class="loading">
-            ⏳ Chargement...
-        </div>
-
-    </div>
-
+<h2>📊 Analyses football</h2>
+<div id="lastUpdate">⏳ Chargement...</div>
+<div id="results">
+<div class="loading">⏳ Chargement des analyses...</div>
+</div>
 </main>
-
-<!-- V1 : nouvelle version du JavaScript -->
-<script src="/app.js?v=V1"></script>
-
+<script src="/app.js"></script>
 </body>
-
 </html>
