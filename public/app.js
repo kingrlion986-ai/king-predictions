@@ -174,10 +174,3 @@ async function loadPredictions(url) {
         `;
     }
 }
-
-
-/* =========================
-   START
-========================= */
-
-loadPredictions("/safest");
