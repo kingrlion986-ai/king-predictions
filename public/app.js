@@ -1,103 +1,172 @@
-console.log("👑 KING PREDICTIONS AI V1");
+console.log("👑 KING PREDICTIONS AI — APP V1 LOADED");
+
 const API="/analysis";
 
-function num(v){
-const n=Number(v);
+const $=id=>document.getElementById(id);
+
+function safe(value,fallback="-"){
+return value===undefined||value===null||value===""?fallback:value;
+}
+
+function number(value){
+const n=Number(value);
 return Number.isFinite(n)?n:0;
 }
 
-function teamName(team){
-return team?.name||"Équipe inconnue";
+function percent(value){
+return "${Math.round(number(value))}%";
 }
 
-function formatDate(date){
-if(!date)return "Date inconnue";
-const d=new Date(date);
+function team(team){
+return safe(team?.name,"Équipe inconnue");
+}
+
+function date(value){
+if(!value)return "Date inconnue";
+const d=new Date(value);
 if(Number.isNaN(d.getTime()))return "Date inconnue";
 return d.toLocaleString("fr-FR",{dateStyle:"medium",timeStyle:"short"});
 }
 
-function probability(v){
-return "${Math.round(num(v))}%";
-}
+function render(data){
+console.log("📦 DATA FRONTEND:",data);
 
-function show(data){
-const results=document.getElementById("results");
-const list=Array.isArray(data?.analyses)?data.analyses:[];
-document.getElementById("matches").textContent=list.length;
-document.getElementById("predictions").textContent=list.length;
-
-if(data?.date){
-document.getElementById("lastUpdate").textContent="📅 ${data.date} • ${list.length} analyse(s)";
-}
-
-if(!list.length){
-results.innerHTML="<div class="empty-card">🔍 Aucune analyse disponible pour le moment.</div>";
+const results=$("results");
+if(!results){
+console.error("❌ Élément #results introuvable");
 return;
 }
 
-results.innerHTML=list.map(a=>{
-const m=a.match||{};
-const p=a.predictions||{};
-const model=a.model||{};
-const stats=a.teamStats||{};
-const probs=p.probabilities||{};
-const home=teamName(m.homeTeam);
-const away=teamName(m.awayTeam);
+const analyses=Array.isArray(data?.analyses)?data.analyses:[];
+
+$("matches").textContent=analyses.length;
+$("predictions").textContent=analyses.length;
+
+if($("lastUpdate")){
+$("lastUpdate").textContent="📅 ${safe(data?.date)} • ${analyses.length} analyse(s)";
+}
+
+if(!analyses.length){
+results.innerHTML="<div class="empty-card">🔍 Aucune analyse disponible.</div>";
+return;
+}
+
+results.innerHTML=analyses.map((item,index)=>{
+const match=item?.match||{};
+const predictions=item?.predictions||{};
+const model=item?.model||{};
+const probabilities=predictions?.probabilities||{};
+
+const home=team(match.homeTeam);
+const away=team(match.awayTeam);
 
 return `
 
 <article class="prediction-card">
-<h2>⚽ ${home} <span>vs</span> ${away}</h2>
-<p class="date">🕐 ${formatDate(m.utcDate)}</p>
-<p>🏆 <strong>${m.competition?.name||m.competition?.code||"Compétition inconnue"}</strong></p><div class="section">
-<h3>🎯 Modèle 1X2</h3>
+<div class="card-number">MATCH ${index+1}</div><h2>⚽ ${home}</h2>
+<div class="vs">VS</div>
+<h2>${away}</h2><p class="date">🕐 ${date(match.utcDate)}</p>
+<p>🏆 ${safe(match.competition?.name,"Compétition inconnue")}</p><div class="section">
+<h3>📊 Probabilités du modèle</h3>
 <div class="probabilities">
-<div>🏠 Domicile<strong>${probability(probs.homeWin)}</strong></div>
-<div>🤝 Nul<strong>${probability(probs.draw)}</strong></div>
-<div>✈️ Extérieur<strong>${probability(probs.awayWin)}</strong></div>
+<div>
+<span>🏠 Domicile</span>
+<strong>${percent(probabilities.homeWin)}</strong>
 </div>
-<p>📌 Tendance du modèle : <strong>${p.winner||"-"}</strong></p>
+<div>
+<span>🤝 Nul</span>
+<strong>${percent(probabilities.draw)}</strong>
+</div>
+<div>
+<span>✈️ Extérieur</span>
+<strong>${percent(probabilities.awayWin)}</strong>
+</div>
+</div>
 </div><div class="section">
-<h3>⚽ Expected Goals</h3>
-<p>🏠 ${home} : <strong>${num(model.expectedHomeGoals).toFixed(2)}</strong></p>
-<p>✈️ ${away} : <strong>${num(model.expectedAwayGoals).toFixed(2)}</strong></p>
-<p>📊 Total xG : <strong>${num(model.expectedGoals).toFixed(2)}</strong></p>
+<h3>⚽ Buts attendus</h3>
+<p>🏠 ${home} : <strong>${number(model.expectedHomeGoals).toFixed(2)}</strong></p>
+<p>✈️ ${away} : <strong>${number(model.expectedAwayGoals).toFixed(2)}</strong></p>
+<p>📈 Total : <strong>${number(model.expectedGoals).toFixed(2)}</strong></p>
 </div><div class="section">
-<h3>📈 Autres probabilités</h3>
-<p>⚽ Over 2.5 : <strong>${probability(p.over25Confidence)}</strong></p>
-<p>🟠 BTTS : <strong>${p.btts||"-"} (${probability(p.bttsConfidence)})</strong></p>
-<p>🎯 Score le plus probable : <strong>${p.correctScore||"-"}</strong></p>
+<h3>🔎 Analyse complémentaire</h3>
+<p>🎯 Tendance : <strong>${safe(predictions.winner)}</strong></p>
+<p>⚽ Plus de 2,5 : <strong>${percent(predictions.over25Confidence)}</strong></p>
+<p>🟠 BTTS : <strong>${safe(predictions.btts)}</strong> (${percent(predictions.bttsConfidence)})</p>
+<p>🎯 Score théorique : <strong>${safe(predictions.correctScore)}</strong></p>
 </div><div class="quality">
-<p>🧠 Qualité des données : <strong>${p.dataQuality||"UNKNOWN"}</strong></p>
-<p>📚 Matchs utilisés : <strong>${num(p.matchesUsed)}</strong></p>
-<p>📊 Fiabilité du modèle : <strong>${probability(p.confidence)}</strong></p>
+<p>🧠 Confiance du modèle : <strong>${percent(predictions.confidence)}</strong></p>
+<p>📚 Données utilisées : <strong>${number(predictions.matchesUsed)}</strong> matchs</p>
+<p>✅ Qualité : <strong>${safe(predictions.dataQuality)}</strong></p>
 </div>
 </article>
 `;
 }).join("");
 }async function loadAnalysis(){
-const results=document.getElementById("results");
-results.innerHTML="<div class="loading">⏳ Analyse en cours...</div>";
+const results=$("results");
+
+if(!results){
+console.error("❌ #results absent");
+return;
+}
+
+results.innerHTML="<div class="loading">⏳ Chargement des analyses...</div>";
 
 try{
-const response=await fetch("${API}?t=${Date.now()}",{cache:"no-store"});
-if(!response.ok)throw new Error("HTTP ${response.status}");
-const data=await response.json();
-show(data);
+console.log("📡 REQUEST:",API);
+
+const response=await fetch("${API}?v=${Date.now()}",{
+method:"GET",
+cache:"no-store",
+headers:{
+"Accept":"application/json"
+}
+});
+
+console.log("🌐 HTTP:",response.status,response.statusText);
+
+if(!response.ok){
+throw new Error("HTTP ${response.status}");
+}
+
+const text=await response.text();
+
+console.log("📄 RESPONSE LENGTH:",text.length);
+
+if(!text){
+throw new Error("Réponse vide du serveur");
+}
+
+let data;
+
+try{
+data=JSON.parse(text);
 }catch(error){
-console.error("❌ API:",error);
+console.error("❌ JSON INVALIDE:",text.slice(0,500));
+throw new Error("Réponse JSON invalide");
+}
+
+render(data);
+
+}catch(error){
+console.error("❌ FRONTEND ERROR:",error);
+
 results.innerHTML=`
 
 <div class="error-card">
-❌ Impossible de charger les analyses.
-<br><small>${error.message}</small>
-<br><br>
+<h3>❌ Erreur de chargement</h3>
+<p>${safe(error?.message,"Erreur inconnue")}</p>
 <button onclick="loadAnalysis()">🔄 Réessayer</button>
-</div>`;
+</div>
+`;
 }
 }async function refreshAnalysis(){
 await loadAnalysis();
 }
 
-document.addEventListener("DOMContentLoaded",loadAnalysis);
+window.loadAnalysis=loadAnalysis;
+window.refreshAnalysis=refreshAnalysis;
+
+document.addEventListener("DOMContentLoaded",()=>{
+console.log("🚀 DOM READY");
+loadAnalysis();
+});
