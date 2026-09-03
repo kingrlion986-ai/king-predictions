@@ -15,26 +15,20 @@ const app = express();
 
 const PORT = process.env.PORT || 3000;
 
+const VERSION = "KING-V1-CLEAN";
+
 /* =====================================================
-   KING PREDICTIONS AI — SERVER V1
+   KING PREDICTIONS AI — V1 CLEAN
    =====================================================
 
-   INTERFACE :
-   🔥 IA ACTIVE
+   INTERFACE UNIQUE :
+
    💎 1X2
    🟣 OVER 2.5
    🟠 BTTS
    🏆 PARI LE PLUS SÛR
 
-   ROUTES PUBLIQUES :
-   /vip/1x2
-   /vip/over25
-   /vip/btts
-   /safest
-
-   ROUTES TECHNIQUES :
-   /status
-   /health
+   AUCUNE SECTION FREE
 
    ===================================================== */
 
@@ -47,30 +41,85 @@ app.use(cors());
 
 app.use(express.json());
 
+
+/* =====================================================
+   CACHE FRONTEND — IMPORTANT
+=====================================================
+
+   Empêche le navigateur / proxy de conserver
+   une ancienne version de l'interface.
+===================================================== */
+
+app.use((req, res, next) => {
+
+    const file = req.path.toLowerCase();
+
+    if (
+        file === "/" ||
+        file.endsWith(".html") ||
+        file.endsWith(".js") ||
+        file.endsWith(".css")
+    ) {
+
+        res.setHeader(
+            "Cache-Control",
+            "no-store, no-cache, must-revalidate, proxy-revalidate"
+        );
+
+        res.setHeader(
+            "Pragma",
+            "no-cache"
+        );
+
+        res.setHeader(
+            "Expires",
+            "0"
+        );
+    }
+
+    res.setHeader(
+        "X-KING-VERSION",
+        VERSION
+    );
+
+    next();
+});
+
+
+/* =====================================================
+   FICHIERS PUBLICS
+===================================================== */
+
 app.use(
     express.static(
-        path.join(__dirname, "public")
+        path.join(__dirname, "public"),
+        {
+            etag: false,
+            maxAge: 0
+        }
     )
 );
 
 
 /* =====================================================
-   CONFIGURATION
+   CONFIGURATION IA
 ===================================================== */
 
 const CACHE_TTL =
-    30 * 60 * 1000; // 30 minutes
+    30 * 60 * 1000;
 
 const EMPTY_CACHE_TTL =
-    2 * 60 * 1000; // 2 minutes
+    2 * 60 * 1000;
 
-const MAX_ANALYSES = 30;
+const MAX_ANALYSES =
+    30;
 
-const UPCOMING_DAYS = 7;
+const UPCOMING_DAYS =
+    7;
 
 
 /* =====================================================
-   CACHE
+   CACHE IA
 ===================================================== */
 
 let cache = [];
@@ -105,11 +154,8 @@ function getToday() {
         "en-CA",
         {
             timeZone: "Africa/Brazzaville",
-
             year: "numeric",
-
             month: "2-digit",
-
             day: "2-digit"
         }
     ).format(new Date());
@@ -193,15 +239,14 @@ function isUsable(a) {
 
 function isPublishable(a) {
 
-    const risk =
-        getRisk(a);
-
     return [
         "LOW",
         "FAIBLE",
         "MEDIUM",
         "MOYEN"
-    ].includes(risk);
+    ].includes(
+        getRisk(a)
+    );
 }
 
 
@@ -530,6 +575,7 @@ function removeDuplicates(matches) {
             if (
                 seen.has(key)
             ) {
+
                 return false;
             }
 
@@ -573,6 +619,7 @@ function selectUnique(
         if (
             used.has(key)
         ) {
+
             continue;
         }
 
@@ -585,6 +632,7 @@ function selectUnique(
         if (
             selected.length >= limit
         ) {
+
             break;
         }
     }
@@ -657,7 +705,7 @@ async function getDaily() {
 
 
     /* -------------------------------------------------
-       ÉVITER DOUBLE CONSTRUCTION
+       PAS DE DOUBLE ANALYSE
     ------------------------------------------------- */
 
     if (
@@ -691,10 +739,8 @@ async function getDaily() {
                     "📡 FETCHING MATCHES..."
                 );
 
-
                 const matches =
                     await getMatches();
-
 
                 if (
                     !Array.isArray(matches)
@@ -704,7 +750,6 @@ async function getDaily() {
                         "getMatches() ne retourne pas un tableau"
                     );
                 }
-
 
                 console.log(
                     "📦 MATCHES RECEIVED:",
@@ -721,7 +766,6 @@ async function getDaily() {
                 const now =
                     Date.now();
 
-
                 const limit =
                     now +
                     UPCOMING_DAYS *
@@ -730,10 +774,6 @@ async function getDaily() {
                     60 *
                     1000;
 
-
-                /* -------------------------------------
-                   MATCHS À VENIR
-                ------------------------------------- */
 
                 const upcoming =
                     uniqueMatches
@@ -776,10 +816,6 @@ async function getDaily() {
                 );
 
 
-                /* -------------------------------------
-                   AUCUN MATCH
-                ------------------------------------- */
-
                 if (
                     !upcoming.length
                 ) {
@@ -807,13 +843,7 @@ async function getDaily() {
                 }
 
 
-                /* -------------------------------------
-                   ANALYSES
-                ------------------------------------- */
-
-                const results =
-                    [];
-
+                const results = [];
 
                 const toAnalyze =
                     upcoming.slice(
@@ -881,10 +911,6 @@ async function getDaily() {
                 }
 
 
-                /* -------------------------------------
-                   CACHE
-                ------------------------------------- */
-
                 cache =
                     results;
 
@@ -894,12 +920,10 @@ async function getDaily() {
                 cacheValid =
                     true;
 
-
                 lastStatus =
                     results.length
                         ? "READY"
                         : "NO_VALID_ANALYSES";
-
 
                 lastUpdate =
                     new Date()
@@ -936,15 +960,9 @@ async function getDaily() {
                 );
 
 
-                if (
-                    cacheValid
-                ) {
-
-                    return cache;
-                }
-
-
-                return [];
+                return cacheValid
+                    ? cache
+                    : [];
 
 
             } finally {
@@ -966,29 +984,21 @@ async function getDaily() {
 
 app.get(
     "/vip/1x2",
-    async (
-        req,
-        res
-    ) => {
+    async (req, res) => {
 
         try {
 
             const data =
                 await getDaily();
 
-
             const selected =
                 selectUnique(
-
                     data.filter(
                         strict1X2
                     ),
-
                     score1X2,
-
                     2
                 );
-
 
             console.log(
                 "🎯 1X2:",
@@ -997,17 +1007,13 @@ app.get(
                 )
             );
 
-
             res.json(
                 selected.map(
                     format
                 )
             );
 
-
-        } catch (
-            err
-        ) {
+        } catch (err) {
 
             console.error(
                 "1X2:",
@@ -1029,29 +1035,21 @@ app.get(
 
 app.get(
     "/vip/over25",
-    async (
-        req,
-        res
-    ) => {
+    async (req, res) => {
 
         try {
 
             const data =
                 await getDaily();
 
-
             const selected =
                 selectUnique(
-
                     data.filter(
                         strictOver
                     ),
-
                     scoreOver,
-
                     2
                 );
-
 
             console.log(
                 "🎯 OVER 2.5:",
@@ -1060,17 +1058,13 @@ app.get(
                 )
             );
 
-
             res.json(
                 selected.map(
                     format
                 )
             );
 
-
-        } catch (
-            err
-        ) {
+        } catch (err) {
 
             console.error(
                 "OVER 2.5:",
@@ -1092,29 +1086,21 @@ app.get(
 
 app.get(
     "/vip/btts",
-    async (
-        req,
-        res
-    ) => {
+    async (req, res) => {
 
         try {
 
             const data =
                 await getDaily();
 
-
             const selected =
                 selectUnique(
-
                     data.filter(
                         strictBTTS
                     ),
-
                     scoreBTTS,
-
                     2
                 );
-
 
             console.log(
                 "🎯 BTTS:",
@@ -1123,17 +1109,13 @@ app.get(
                 )
             );
 
-
             res.json(
                 selected.map(
                     format
                 )
             );
 
-
-        } catch (
-            err
-        ) {
+        } catch (err) {
 
             console.error(
                 "BTTS:",
@@ -1155,19 +1137,14 @@ app.get(
 
 app.get(
     "/safest",
-    async (
-        req,
-        res
-    ) => {
+    async (req, res) => {
 
         try {
 
             const data =
                 await getDaily();
 
-
-            const choices =
-                [];
+            const choices = [];
 
 
             for (
@@ -1177,10 +1154,6 @@ app.get(
                 const p =
                     a?.predictions || {};
 
-
-                /* -------------------------------------
-                   1X2
-                ------------------------------------- */
 
                 if (
                     strict1X2(a)
@@ -1198,8 +1171,7 @@ app.get(
 
                         confidence:
                             Number(
-                                p.winnerConfidence ||
-                                0
+                                p.winnerConfidence || 0
                             ),
 
                         aiScore:
@@ -1210,10 +1182,6 @@ app.get(
                     });
                 }
 
-
-                /* -------------------------------------
-                   OVER 2.5
-                ------------------------------------- */
 
                 if (
                     strictOver(a)
@@ -1231,8 +1199,7 @@ app.get(
 
                         confidence:
                             Number(
-                                p.over25Confidence ||
-                                0
+                                p.over25Confidence || 0
                             ),
 
                         aiScore:
@@ -1243,10 +1210,6 @@ app.get(
                     });
                 }
 
-
-                /* -------------------------------------
-                   BTTS
-                ------------------------------------- */
 
                 if (
                     strictBTTS(a)
@@ -1264,8 +1227,7 @@ app.get(
 
                         confidence:
                             Number(
-                                p.bttsConfidence ||
-                                0
+                                p.bttsConfidence || 0
                             ),
 
                         aiScore:
@@ -1277,10 +1239,6 @@ app.get(
                 }
             }
 
-
-            /* -----------------------------------------
-               AUCUNE ANALYSE
-            ----------------------------------------- */
 
             if (
                 !choices.length
@@ -1295,10 +1253,6 @@ app.get(
                 );
             }
 
-
-            /* -----------------------------------------
-               CLASSEMENT
-            ----------------------------------------- */
 
             choices.sort(
                 (a, b) =>
@@ -1328,9 +1282,7 @@ app.get(
             );
 
 
-        } catch (
-            err
-        ) {
+        } catch (err) {
 
             console.error(
                 "SAFEST:",
@@ -1347,15 +1299,17 @@ app.get(
 
 
 /* =====================================================
-   STATUS — TECHNIQUE
+   STATUS
 ===================================================== */
 
 app.get(
     "/status",
-    (
-        req,
-        res
-    ) => {
+    (req, res) => {
+
+        res.setHeader(
+            "Cache-Control",
+            "no-store"
+        );
 
         res.json({
 
@@ -1366,7 +1320,7 @@ app.get(
                 "ACTIVE",
 
             version:
-                "V1",
+                VERSION,
 
             matches:
                 cache.length,
@@ -1391,15 +1345,17 @@ app.get(
 
 
 /* =====================================================
-   HEALTH — RENDER
+   HEALTH
 ===================================================== */
 
 app.get(
     "/health",
-    (
-        req,
-        res
-    ) => {
+    (req, res) => {
+
+        res.setHeader(
+            "Cache-Control",
+            "no-store"
+        );
 
         res.json({
 
@@ -1410,7 +1366,7 @@ app.get(
                 "ACTIVE",
 
             version:
-                "V1",
+                VERSION,
 
             analyses:
                 cache.length,
@@ -1431,22 +1387,63 @@ app.get(
 
 
 /* =====================================================
+   VERSION
+===================================================== */
+
+app.get(
+    "/__king_version",
+    (req, res) => {
+
+        res.setHeader(
+            "Cache-Control",
+            "no-store"
+        );
+
+        res.json({
+
+            project:
+                "KING PREDICTIONS AI",
+
+            version:
+                VERSION,
+
+            freeRoute:
+                false,
+
+            frontend:
+                "V1",
+
+            timestamp:
+                new Date()
+                    .toISOString()
+        });
+    }
+);
+
+
+/* =====================================================
    HOME
 ===================================================== */
 
 app.get(
     "/",
-    (
-        req,
-        res
-    ) => {
+    (req, res) => {
+
+        res.setHeader(
+            "Cache-Control",
+            "no-store, no-cache, must-revalidate"
+        );
 
         res.sendFile(
             path.join(
                 __dirname,
                 "public",
                 "index.html"
-            )
+            ),
+            {
+                cacheControl: false,
+                etag: false
+            }
         );
     }
 );
@@ -1462,7 +1459,24 @@ app.listen(
     async () => {
 
         console.log(
-            "👑 KING PREDICTIONS AI V1 ONLINE"
+            "👑 ======================================="
+        );
+
+        console.log(
+            "👑 KING PREDICTIONS AI"
+        );
+
+        console.log(
+            "🔥 VERSION:",
+            VERSION
+        );
+
+        console.log(
+            "🚫 FREE ROUTE: DISABLED"
+        );
+
+        console.log(
+            "💎 1X2 | 🟣 OVER 2.5 | 🟠 BTTS | 🏆 SAFEST"
         );
 
         console.log(
@@ -1470,15 +1484,14 @@ app.listen(
             PORT
         );
 
+        console.log(
+            "👑 ======================================="
+        );
+
 
         try {
 
-            /* -----------------------------------------
-               DATABASE
-            ----------------------------------------- */
-
             await initializeDatabase();
-
 
             console.log(
                 "✅ DATABASE READY"
@@ -1486,7 +1499,7 @@ app.listen(
 
 
             /* -----------------------------------------
-               PRÉCHARGEMENT UNIQUE
+               UN SEUL PRÉCHARGEMENT
             ----------------------------------------- */
 
             await getDaily();
@@ -1496,10 +1509,12 @@ app.listen(
                 "✅ AI PRELOAD FINISHED"
             );
 
+            console.log(
+                "🚀 V1 READY"
+            );
 
-        } catch (
-            err
-        ) {
+
+        } catch (err) {
 
             console.error(
                 "❌ STARTUP:",
