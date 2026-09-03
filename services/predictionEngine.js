@@ -631,21 +631,21 @@ const eloProbabilities = {
 
             marketScores: {
 
-                oneXtwo:
-                    winnerAllowed
-                        ? aiRating
-                        : 0,
+    oneXtwo:
+        winnerAllowed
+            ? aiRating
+            : 0,
 
-                over25:
-                    overConfidence >= 65
-                        ? overConfidence
-                        : 0,
+    over25:
+        over25Confidence >= 65
+            ? over25Confidence
+            : 0,
 
-                btts:
-                    bttsConfidence >= 65
-                        ? bttsConfidence
-                        : 0
-            },
+    btts:
+        bttsConfidence >= 65
+            ? bttsConfidence
+            : 0
+},
 
 
             vipAllowed:
