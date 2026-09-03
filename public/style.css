@@ -55,10 +55,12 @@ button {
     color: #fff;
     font-size: 15px;
     cursor: pointer;
+    transition: 0.2s ease;
 }
 
 button:hover {
     background: #242c3d;
+    transform: translateY(-1px);
 }
 
 .stats {
@@ -73,6 +75,7 @@ button:hover {
     padding: 15px 25px;
     border-radius: 12px;
     text-align: center;
+    min-width: 120px;
 }
 
 .stats strong {
@@ -146,5 +149,10 @@ main > h2 {
 
     .stats div {
         padding: 12px 18px;
+        min-width: 100px;
+    }
+
+    .prediction-card {
+        padding: 16px;
     }
 }
