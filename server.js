@@ -11,23 +11,40 @@ const {
     analyzeMatch
 } = require("./services/predictionEngine");
 
+
+/* =========================================================
+   CONFIGURATION
+========================================================= */
+
 const app = express();
 
 const PORT = process.env.PORT || 3000;
+
 const VERSION = "KING-V1";
 
 const TIMEZONE = "Africa/Brazzaville";
 
 const CACHE_TTL = 30 * 60 * 1000;
+
 const MAX_PICKS = 4;
 
+
+/* =========================================================
+   ÉTAT
+========================================================= */
+
 let cache = [];
+
 let cacheTime = 0;
+
 let dailyDate = "";
+
 let building = null;
 
 let lastStatus = "STARTING";
+
 let lastError = null;
+
 let lastUpdate = null;
 
 
@@ -36,12 +53,23 @@ let lastUpdate = null;
 ========================================================= */
 
 app.use(cors());
+
 app.use(express.json());
 
 app.use((req, res, next) => {
-    res.setHeader("Cache-Control", "no-store");
-    res.setHeader("X-KING-VERSION", VERSION);
+
+    res.setHeader(
+        "Cache-Control",
+        "no-store"
+    );
+
+    res.setHeader(
+        "X-KING-VERSION",
+        VERSION
+    );
+
     next();
+
 });
 
 
@@ -50,19 +78,31 @@ app.use((req, res, next) => {
 ========================================================= */
 
 app.get("/", (req, res) => {
+
     res.sendFile(
-        path.join(__dirname, "public", "index.html")
+        path.join(
+            __dirname,
+            "public",
+            "index.html"
+        )
     );
+
 });
 
-app.use(express.static(
-    path.join(__dirname, "public"),
-    {
-        etag: false,
-        maxAge: 0,
-        index: false
-    }
-));
+
+app.use(
+    express.static(
+        path.join(
+            __dirname,
+            "public"
+        ),
+        {
+            etag: false,
+            maxAge: 0,
+            index: false
+        }
+    )
+);
 
 
 /* =========================================================
@@ -70,372 +110,124 @@ app.use(express.static(
 ========================================================= */
 
 function getToday() {
-    return new Intl.DateTimeFormat("en-CA", {
-        timeZone: TIMEZONE,
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit"
-    }).format(new Date());
+
+    return new Intl.DateTimeFormat(
+        "en-CA",
+        {
+            timeZone: TIMEZONE,
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit"
+        }
+    ).format(new Date());
+
 }
+
 
 function getMatchDate(utcDate) {
-    if (!utcDate) return null;
 
-    const date = new Date(utcDate);
-
-    if (Number.isNaN(date.getTime())) {
+    if (!utcDate)
         return null;
-    }
 
-    return new Intl.DateTimeFormat("en-CA", {
-        timeZone: TIMEZONE,
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit"
-    }).format(date);
-}
+    const date =
+        new Date(utcDate);
 
-
-/* =========================================================
-   HELPERS
-========================================================= */
-
-function num(value) {
-    const n = Number(value);
-    return Number.isFinite(n) ? n : null;
-}
-
-function clamp(value) {
-    const n = num(value);
-    if (n === null) return null;
-
-    return Math.max(0, Math.min(100, n));
-}
-
-function getWinnerProbabilities(a) {
-    const p = a?.predictions || {};
-    const m = a?.model || {};
-
-    return {
-        home: clamp(
-            p.homeWin ??
-            p.home ??
-            p.homeProbability ??
-            m.homeWin ??
-            m.homeProbability
-        ),
-
-        draw: clamp(
-            p.draw ??
-            p.drawProbability ??
-            m.draw ??
-            m.drawProbability
-        ),
-
-        away: clamp(
-            p.awayWin ??
-            p.away ??
-            p.awayProbability ??
-            m.awayWin ??
-            m.awayProbability
+    if (
+        Number.isNaN(
+            date.getTime()
         )
-    };
-}
-
-function getOver25(a) {
-    const p = a?.predictions || {};
-    const m = a?.model || {};
-
-    return clamp(
-        p.over25 ??
-        p.over2_5 ??
-        p.over25Probability ??
-        m.over25 ??
-        m.over2_5
-    );
-}
-
-function getBTTS(a) {
-    const p = a?.predictions || {};
-    const m = a?.model || {};
-
-    return clamp(
-        p.btts ??
-        p.bttsProbability ??
-        m.btts ??
-        m.bttsProbability
-    );
-}
-
-
-/* =========================================================
-   CHOIX DU MEILLEUR PARI
-========================================================= */
-
-function selectBestBet(a) {
-
-    const p = getWinnerProbabilities(a);
-    const over25 = getOver25(a);
-    const btts = getBTTS(a);
-
-    const candidates = [];
-
-
-    /* 1X2 */
-
-    if (p.home !== null) {
-        candidates.push({
-            type: "1X2",
-            option: `Victoire ${a.match.homeTeam.name}`,
-            probability: p.home
-        });
-    }
-
-    if (p.draw !== null) {
-        candidates.push({
-            type: "1X2",
-            option: "Match nul",
-            probability: p.draw
-        });
-    }
-
-    if (p.away !== null) {
-        candidates.push({
-            type: "1X2",
-            option: `Victoire ${a.match.awayTeam.name}`,
-            probability: p.away
-        });
-    }
-
-
-    /* DOUBLE CHANCE */
-
-    if (p.home !== null && p.draw !== null) {
-        candidates.push({
-            type: "DOUBLE_CHANCE",
-            option: "1X",
-            probability: p.home + p.draw
-        });
-    }
-
-    if (p.away !== null && p.draw !== null) {
-        candidates.push({
-            type: "DOUBLE_CHANCE",
-            option: "X2",
-            probability: p.away + p.draw
-        });
-    }
-
-    if (p.home !== null && p.away !== null) {
-        candidates.push({
-            type: "DOUBLE_CHANCE",
-            option: "12",
-            probability: p.home + p.away
-        });
-    }
-
-
-    /* OVER / UNDER */
-
-    if (over25 !== null) {
-
-        candidates.push({
-            type: "TOTAL_GOALS",
-            option: "Over 2.5",
-            probability: over25
-        });
-
-        candidates.push({
-            type: "TOTAL_GOALS",
-            option: "Under 2.5",
-            probability: 100 - over25
-        });
-    }
-
-
-    /* BTTS */
-
-    if (btts !== null) {
-
-        candidates.push({
-            type: "BTTS",
-            option: "BTTS — OUI",
-            probability: btts
-        });
-
-        candidates.push({
-            type: "BTTS",
-            option: "BTTS — NON",
-            probability: 100 - btts
-        });
-    }
-
-
-    /* Aucun marché */
-
-    if (!candidates.length) {
+    ) {
         return null;
     }
 
+    return new Intl.DateTimeFormat(
+        "en-CA",
+        {
+            timeZone: TIMEZONE,
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit"
+        }
+    ).format(date);
 
-    /*
-     * On choisit le marché le plus solide.
-     *
-     * Une seule recommandation finale.
-     */
-
-    candidates.sort(
-        (a, b) => b.probability - a.probability
-    );
-
-
-    const best = candidates[0];
-
-
-    /*
-     * On refuse les paris trop faibles.
-     */
-
-    if (best.probability < 60) {
-        return null;
-    }
-
-
-    return {
-        type: best.type,
-        option: best.option
-    };
 }
 
 
 /* =========================================================
-   SCORE DE SÉLECTION DU MATCH
-========================================================= */
+   SÉLECTION FINALE
+=========================================================
 
-function getMatchScore(a, bet) {
+   IMPORTANT :
 
-    const p = getWinnerProbabilities(a);
-    const over25 = getOver25(a);
-    const btts = getBTTS(a);
+   predictionEngine.js choisit déjà
+   UN seul pari pour chaque match.
 
-    let score = 0;
+   server.js ne doit PAS recalculer
+   le pari.
 
-    /*
-     * Solidité du pari sélectionné
-     */
-
-    if (bet) {
-
-        const probabilities = [];
-
-        if (p.home !== null)
-            probabilities.push(p.home);
-
-        if (p.draw !== null)
-            probabilities.push(p.draw);
-
-        if (p.away !== null)
-            probabilities.push(p.away);
-
-        if (over25 !== null) {
-            probabilities.push(over25);
-            probabilities.push(100 - over25);
-        }
-
-        if (btts !== null) {
-            probabilities.push(btts);
-            probabilities.push(100 - btts);
-        }
-
-        if (probabilities.length) {
-            score += Math.max(...probabilities);
-        }
-    }
-
-    /*
-     * Qualité minimale de l'analyse.
-     */
-
-    const confidence =
-        num(a?.predictions?.confidence) ??
-        num(a?.model?.confidence);
-
-    if (confidence !== null) {
-        score += confidence * 0.25;
-    }
-
-    return score;
-}
-
-
-/* =========================================================
-   SÉLECTION DES MATCHS
 ========================================================= */
 
 function selectDailyPicks(analyses) {
 
-    return analyses
-        .filter(a => a?.selectedBet)
-        .sort(
-            (a, b) =>
-                Number(b.qualityScore || 0) -
-                Number(a.qualityScore || 0)
-        )
+    if (!Array.isArray(analyses))
+        return [];
+
+
+    const valid = analyses
+        .filter(
+            analysis =>
+                analysis &&
+                analysis.match &&
+                analysis.selectedBet &&
+                analysis.selectedBet.option
+        );
+
+
+    console.log(
+        "🔎 ANALYSES VALIDES:",
+        valid.length,
+        "/",
+        analyses.length
+    );
+
+
+    /*
+     * Classement par qualité du match.
+     */
+
+    valid.sort(
+        (a, b) =>
+            Number(
+                b.qualityScore || 0
+            ) -
+            Number(
+                a.qualityScore || 0
+            )
+    );
+
+
+    /*
+     * Maximum 4 matchs.
+     */
+
+    return valid
         .slice(0, MAX_PICKS)
-        .map(a => ({
-            match: a.match,
-            selectedBet: a.selectedBet,
-            analysis: a.analysis,
-            qualityScore: a.qualityScore
+        .map(analysis => ({
+
+            match:
+                analysis.match,
+
+            selectedBet:
+                analysis.selectedBet,
+
+            analysis:
+                analysis.analysis,
+
+            qualityScore:
+                analysis.qualityScore
+
         }));
-}
 
-
-/* =========================================================
-   EXPLICATION SIMPLE
-========================================================= */
-
-function buildSimpleExplanation(a, bet) {
-
-    const p = getWinnerProbabilities(a);
-    const over25 = getOver25(a);
-    const btts = getBTTS(a);
-
-    if (bet.type === "BTTS") {
-
-        if (btts !== null && btts >= 70) {
-            return "L'analyse indique une forte tendance à voir les deux équipes marquer.";
-        }
-
-        return "Les données offensives et défensives favorisent ce scénario.";
-    }
-
-
-    if (bet.type === "TOTAL_GOALS") {
-
-        if (
-            bet.option === "Over 2.5" &&
-            over25 !== null &&
-            over25 >= 70
-        ) {
-            return "L'analyse indique une forte tendance vers un match avec plusieurs buts.";
-        }
-
-        return "Les indicateurs de buts favorisent cette sélection.";
-    }
-
-
-    if (bet.type === "DOUBLE_CHANCE") {
-        return "L'analyse globale réduit le risque sur le résultat du match.";
-    }
-
-
-    if (bet.type === "1X2") {
-        return "L'analyse globale favorise nettement ce résultat.";
-    }
-
-
-    return "L'analyse globale du match favorise cette sélection.";
 }
 
 
@@ -445,48 +237,79 @@ function buildSimpleExplanation(a, bet) {
 
 async function buildDailyAnalysis() {
 
-    const today = getToday();
+    const today =
+        getToday();
 
 
-    /* Nouveau jour */
+    /* -----------------------------------------------------
+       NOUVEAU JOUR
+    ----------------------------------------------------- */
 
     if (dailyDate !== today) {
 
         dailyDate = today;
 
         cache = [];
+
         cacheTime = 0;
 
-        lastStatus = "NEW_DAY";
+        lastStatus =
+            "NEW_DAY";
 
         console.log(
             "📅 NOUVEAU JOUR:",
             today
         );
+
     }
 
 
-    /* Cache */
+    /* -----------------------------------------------------
+       CACHE
+    ----------------------------------------------------- */
 
     if (
-        cache.length &&
-        Date.now() - cacheTime < CACHE_TTL
+        cache.length > 0 &&
+        Date.now() - cacheTime <
+            CACHE_TTL
     ) {
+
+        console.log(
+            "💾 CACHE DAILY:",
+            cache.length
+        );
+
         return cache;
+
     }
 
 
-    /* Analyse déjà en cours */
+    /* -----------------------------------------------------
+       ANALYSE DÉJÀ EN COURS
+    ----------------------------------------------------- */
 
     if (building) {
+
+        console.log(
+            "⏳ ANALYSE DÉJÀ EN COURS"
+        );
+
         return building;
+
     }
 
+
+    /* -----------------------------------------------------
+       CONSTRUCTION
+    ----------------------------------------------------- */
 
     building = (async () => {
 
-        lastStatus = "ANALYZING";
+        lastStatus =
+            "ANALYZING";
+
         lastError = null;
+
 
         try {
 
@@ -495,31 +318,45 @@ async function buildDailyAnalysis() {
                 today
             );
 
-            const matches = await getMatches();
+
+            /* ------------------------------------------------
+               RÉCUPÉRATION
+            ------------------------------------------------ */
+
+            const matches =
+                await getMatches();
 
 
             if (!Array.isArray(matches)) {
+
                 throw new Error(
                     "getMatches() doit retourner un tableau"
                 );
+
             }
 
 
-            /*
-             * Matchs du jour uniquement
-             */
+            /* ------------------------------------------------
+               MATCHS DU JOUR
+            ------------------------------------------------ */
 
-            const todayMatches = matches
-                .filter(match =>
-                    getMatchDate(
-                        match?.utcDate
-                    ) === today
-                )
-                .sort(
-                    (a, b) =>
-                        new Date(a.utcDate) -
-                        new Date(b.utcDate)
-                );
+            const todayMatches =
+                matches
+                    .filter(
+                        match =>
+                            getMatchDate(
+                                match?.utcDate
+                            ) === today
+                    )
+                    .sort(
+                        (a, b) =>
+                            new Date(
+                                a.utcDate
+                            ) -
+                            new Date(
+                                b.utcDate
+                            )
+                    );
 
 
             console.log(
@@ -528,49 +365,103 @@ async function buildDailyAnalysis() {
             );
 
 
-            if (!todayMatches.length) {
+            /* ------------------------------------------------
+               AUCUN MATCH
+            ------------------------------------------------ */
+
+            if (
+                todayMatches.length === 0
+            ) {
 
                 cache = [];
-                cacheTime = Date.now();
 
-                lastStatus = "NO_MATCHES";
+                cacheTime =
+                    Date.now();
+
+                lastStatus =
+                    "NO_MATCHES";
+
                 lastUpdate =
-                    new Date().toISOString();
+                    new Date()
+                        .toISOString();
 
                 return [];
+
             }
 
 
-            /*
-             * Analyse de chaque match
-             */
+            /* ------------------------------------------------
+               ANALYSE DES MATCHS
+            ------------------------------------------------ */
 
             const analyses = [];
 
-            for (const match of todayMatches) {
+
+            for (
+                const match
+                of todayMatches
+            ) {
 
                 try {
 
+                    console.log(
+                        `🔬 ANALYSE: ${match.homeTeam?.name} vs ${match.awayTeam?.name}`
+                    );
+
+
                     const result =
-                        await analyzeMatch(match);
+                        await analyzeMatch(
+                            match
+                        );
+
 
                     if (result) {
-                        analyses.push(result);
+
+                        analyses.push(
+                            result
+                        );
+
+
+                        console.log(
+                            `✅ ANALYSE OK: ${match.homeTeam?.name} vs ${match.awayTeam?.name}`,
+                            {
+                                bet:
+                                    result.selectedBet,
+
+                                quality:
+                                    result.qualityScore
+                            }
+                        );
+
+                    } else {
+
+                        console.log(
+                            `❌ ANALYSE REJETÉE: ${match.homeTeam?.name} vs ${match.awayTeam?.name}`
+                        );
+
                     }
 
                 } catch (error) {
 
                     console.error(
-                        "❌ ANALYSE:",
+                        `❌ ANALYSE ERROR: ${match.homeTeam?.name} vs ${match.awayTeam?.name}`,
                         error.message
                     );
+
                 }
+
             }
 
 
-            /*
-             * Sélection finale
-             */
+            console.log(
+                "📊 TOTAL ANALYSES:",
+                analyses.length
+            );
+
+
+            /* ------------------------------------------------
+               TOP PICKS
+            ------------------------------------------------ */
 
             const picks =
                 selectDailyPicks(
@@ -578,8 +469,15 @@ async function buildDailyAnalysis() {
                 );
 
 
-            cache = picks;
-            cacheTime = Date.now();
+            /* ------------------------------------------------
+               CACHE
+            ------------------------------------------------ */
+
+            cache =
+                picks;
+
+            cacheTime =
+                Date.now();
 
             lastStatus =
                 picks.length > 0
@@ -587,7 +485,8 @@ async function buildDailyAnalysis() {
                     : "NO_VALID_PICKS";
 
             lastUpdate =
-                new Date().toISOString();
+                new Date()
+                    .toISOString();
 
 
             console.log(
@@ -596,29 +495,59 @@ async function buildDailyAnalysis() {
             );
 
 
+            if (picks.length) {
+
+                picks.forEach(
+                    (pick, index) => {
+
+                        console.log(
+                            `👑 PICK #${index + 1}:`,
+                            `${pick.match.homeTeam.name} vs ${pick.match.awayTeam.name}`,
+                            "|",
+                            pick.selectedBet.option,
+                            "|",
+                            "QUALITY:",
+                            pick.qualityScore
+                        );
+
+                    }
+                );
+
+            }
+
+
             return picks;
+
 
         } catch (error) {
 
-            lastStatus = "ERROR";
-            lastError = error.message;
+            lastStatus =
+                "ERROR";
+
+            lastError =
+                error.message;
+
 
             console.error(
                 "❌ DAILY ERROR:",
                 error.message
             );
 
+
             return cache;
+
 
         } finally {
 
             building = null;
+
         }
 
     })();
 
 
     return building;
+
 }
 
 
@@ -626,91 +555,126 @@ async function buildDailyAnalysis() {
    API ANALYSIS
 ========================================================= */
 
-app.get("/analysis", async (req, res) => {
+app.get(
+    "/analysis",
+    async (req, res) => {
 
-    try {
+        try {
 
-        const analyses =
-            await buildDailyAnalysis();
+            const analyses =
+                await buildDailyAnalysis();
 
-        res.json({
 
-            version: VERSION,
+            res.json({
 
-            date: dailyDate,
+                version:
+                    VERSION,
 
-            count: analyses.length,
+                date:
+                    dailyDate,
 
-            analyses
+                count:
+                    analyses.length,
 
-        });
+                analyses
 
-    } catch (error) {
+            });
 
-        res.status(500).json({
-            error: error.message
-        });
+
+        } catch (error) {
+
+            res.status(500).json({
+
+                error:
+                    error.message
+
+            });
+
+        }
+
     }
-});
+);
 
 
 /* =========================================================
    STATUS
 ========================================================= */
 
-app.get("/status", (req, res) => {
+app.get(
+    "/status",
+    (req, res) => {
 
-    res.json({
+        res.json({
 
-        status: lastStatus,
+            status:
+                lastStatus,
 
-        ai: "ACTIVE",
+            ai:
+                "ACTIVE",
 
-        version: VERSION,
+            version:
+                VERSION,
 
-        date: dailyDate,
+            date:
+                dailyDate,
 
-        matches: cache.length,
+            matches:
+                cache.length,
 
-        analyzing: !!building,
+            analyzing:
+                !!building,
 
-        lastUpdate,
+            lastUpdate,
 
-        error: lastError
+            error:
+                lastError
 
-    });
-});
+        });
+
+    }
+);
 
 
 /* =========================================================
    HEALTH
 ========================================================= */
 
-app.get("/health", (req, res) => {
+app.get(
+    "/health",
+    (req, res) => {
 
-    res.json({
+        res.json({
 
-        status: "ok",
+            status:
+                "ok",
 
-        ai: "ACTIVE",
+            ai:
+                "ACTIVE",
 
-        version: VERSION,
+            version:
+                VERSION,
 
-        date: dailyDate,
+            date:
+                dailyDate,
 
-        picks: cache.length
+            picks:
+                cache.length
 
-    });
-});
+        });
+
+    }
+);
 
 
 /* =========================================================
-   SURVEILLANCE 24H/24
+   WATCHER 24/24
 ========================================================= */
 
 function startDailyWatcher() {
 
-    let currentDay = getToday();
+    let currentDay =
+        getToday();
+
 
     console.log(
         "🕐 WATCHER ACTIF:",
@@ -718,28 +682,42 @@ function startDailyWatcher() {
     );
 
 
-    setInterval(async () => {
+    setInterval(
+        async () => {
 
-        const today = getToday();
+            const today =
+                getToday();
 
-        if (today !== currentDay) {
 
-            console.log(
-                "🌅 NOUVEAU JOUR DÉTECTÉ:",
-                today
-            );
+            if (
+                today !== currentDay
+            ) {
 
-            currentDay = today;
+                console.log(
+                    "🌅 NOUVEAU JOUR DÉTECTÉ:",
+                    today
+                );
 
-            dailyDate = today;
 
-            cache = [];
-            cacheTime = 0;
+                currentDay =
+                    today;
 
-            await buildDailyAnalysis();
-        }
+                dailyDate =
+                    today;
 
-    }, 60 * 1000);
+                cache = [];
+
+                cacheTime = 0;
+
+
+                await buildDailyAnalysis();
+
+            }
+
+        },
+        60 * 1000
+    );
+
 }
 
 
@@ -766,9 +744,11 @@ app.listen(
             TIMEZONE
         );
 
+
         try {
 
             await initializeDatabase();
+
 
             console.log(
                 "✅ DATABASE READY"
@@ -777,6 +757,7 @@ app.listen(
 
             await buildDailyAnalysis();
 
+
             startDailyWatcher();
 
 
@@ -784,12 +765,15 @@ app.listen(
                 "🚀 KING V1 READY 24/24"
             );
 
+
         } catch (error) {
 
             console.error(
                 "❌ STARTUP ERROR:",
                 error.message
             );
+
         }
+
     }
 );
