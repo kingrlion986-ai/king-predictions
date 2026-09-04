@@ -58,6 +58,7 @@ let HISTORY = [];
 let UPCOMING = [];
 
 let INITIALIZING = null;
+let HISTORY_LOADING = null;
 
 /* ======================================================
    CACHE
@@ -526,12 +527,13 @@ async function loadUpcomingDatabase() {
 
 async function loadHistoryDatabase() {
 
+    /*
+     * CACHE VALIDE
+     */
     if (
         HISTORY.length > 0 &&
-        Date.now() - HISTORY_TIME <
-        HISTORY_TTL
+        Date.now() - HISTORY_TIME < HISTORY_TTL
     ) {
-
         console.log(
             "⚡ HISTORY CACHE:",
             HISTORY.length
@@ -540,116 +542,162 @@ async function loadHistoryDatabase() {
         return HISTORY;
     }
 
-    console.log(
-        "📚 LOADING HISTORY..."
-    );
+    /*
+     * Évite plusieurs chargements simultanés.
+     */
+    if (HISTORY_LOADING) {
 
-    const history = [];
+        console.log(
+            "⏳ HISTORY LOADING ALREADY RUNNING"
+        );
 
-    for (
-        const competition of COMPETITIONS
-    ) {
+        return HISTORY_LOADING;
+    }
 
+    HISTORY_LOADING = (async () => {
+
+        console.log(
+            "📚 LOADING HISTORY..."
+        );
+
+        const history = [];
+
+        for (const competition of COMPETITIONS) {
+
+            try {
+
+                const currentData =
+                    await apiGet(
+                        `/competitions/${competition}/matches?season=${CURRENT_SEASON}`
+                    );
+
+                const previousData =
+                    await apiGet(
+                        `/competitions/${competition}/matches?season=${PREVIOUS_SEASON}`
+                    );
+
+                const allMatches = [
+                    ...(currentData?.matches || []),
+                    ...(previousData?.matches || [])
+                ];
+
+                if (!allMatches.length) {
+
+                    console.warn(
+                        `⚠️ ${competition}: historique indisponible`
+                    );
+
+                    continue;
+                }
+
+                const matches =
+                    allMatches
+                        .filter(isFinished)
+                        .map(formatMatch)
+                        .filter(Boolean);
+
+                history.push(...matches);
+
+                console.log(
+                    `📚 ${competition}: ${matches.length}`
+                );
+
+            }
+            catch (error) {
+
+                console.error(
+                    `❌ HISTORY ${competition}:`,
+                    error.message
+                );
+            }
+        }
+
+        const newHistory =
+            unique(history);
+
+        newHistory.sort(
+            (a, b) =>
+                new Date(b.utcDate) -
+                new Date(a.utcDate)
+        );
+
+        /*
+         * IMPORTANT :
+         * On ne remplace jamais une bonne
+         * base historique par une base vide
+         * ou manifestement incomplète.
+         */
+        if (
+            newHistory.length === 0
+        ) {
+
+            console.warn(
+                "⚠️ HISTORIQUE VIDE → conservation de l'ancien historique"
+            );
+
+            return HISTORY;
+        }
+
+        if (
+            HISTORY.length > 0 &&
+            newHistory.length < HISTORY.length * 0.70
+        ) {
+
+            console.warn(
+                `⚠️ HISTORIQUE SUSPECT: ${newHistory.length} vs ${HISTORY.length} → conservation de l'ancien historique`
+            );
+
+            return HISTORY;
+        }
+
+        HISTORY = newHistory;
+
+        HISTORY_TIME = Date.now();
+
+        /*
+         * ELO
+         */
         try {
 
-            const currentData =
-    await apiGet(
-        `/competitions/${competition}/matches?season=${CURRENT_SEASON}`
-    );
+            const {
+                buildHistoricalElo
+            } = require("./eloEngine");
 
-const previousData =
-    await apiGet(
-        `/competitions/${competition}/matches?season=${PREVIOUS_SEASON}`
-    );
-
-const allMatches = [
-    ...(currentData?.matches || []),
-    ...(previousData?.matches || [])
-];
-
-            if (allMatches.length === 0) {
-
-    console.warn(
-        `⚠️ ${competition}: historique indisponible`
-    );
-
-    continue;
-            }
-
-            const matches =
-    allMatches
-        .filter(isFinished)
-        .map(formatMatch)
-        .filter(Boolean);
-
-            history.push(
-                ...matches
+            buildHistoricalElo(
+                HISTORY
             );
 
             console.log(
-                `📚 ${competition}: ${matches.length}`
+                "✅ HISTORICAL ELO BUILT"
             );
 
         }
         catch (error) {
 
-            console.error(
-                `❌ HISTORY ${competition}:`,
+            console.warn(
+                "⚠️ ELO ERROR:",
                 error.message
             );
         }
-    }
 
-    HISTORY =
-        unique(
-            history
+        console.log(
+            "📚 TOTAL HISTORY:",
+            HISTORY.length
         );
 
-    HISTORY.sort(
-        (a, b) =>
-            new Date(b.utcDate) -
-            new Date(a.utcDate)
-    );
+        return HISTORY;
 
-    HISTORY_TIME =
-        Date.now();
-
-    /*
-     * ELO
-     */
+    })();
 
     try {
 
-        const {
-            buildHistoricalElo
-        } =
-            require(
-                "./eloEngine"
-            );
-
-        buildHistoricalElo(
-            HISTORY
-        );
-
-        console.log(
-            "✅ HISTORICAL ELO BUILT"
-        );
+        return await HISTORY_LOADING;
 
     }
-    catch (error) {
+    finally {
 
-        console.warn(
-            "⚠️ ELO ERROR:",
-            error.message
-        );
+        HISTORY_LOADING = null;
     }
-
-    console.log(
-        "📚 TOTAL HISTORY:",
-        HISTORY.length
-    );
-
-    return HISTORY;
 }
 
 /* ======================================================
