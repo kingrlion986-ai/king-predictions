@@ -287,6 +287,58 @@ function selectDailyPicks(analyses) {
 
 }
 
+
+/* =========================================================
+   ANALYSE DU JOUR
+========================================================= */
+
+async function buildDailyAnalysis() {
+
+    const today =
+        getToday();
+
+
+    /* -----------------------------------------------------
+       NOUVEAU JOUR LOCAL
+    ----------------------------------------------------- */
+
+    if (dailyDate !== today) {
+
+        dailyDate = today;
+
+        cache = [];
+
+        cacheTime = 0;
+
+        lastStatus = "NEW_DAY";
+
+        console.log(
+            "📅 NOUVEAU JOUR:",
+            today
+        );
+
+    }
+
+
+    /* -----------------------------------------------------
+       CACHE
+    ----------------------------------------------------- */
+
+    if (
+        cache.length > 0 &&
+        Date.now() - cacheTime < CACHE_TTL
+    ) {
+
+        console.log(
+            "💾 CACHE DAILY:",
+            cache.length
+        );
+
+        return cache;
+
+    }
+
+
     /* -----------------------------------------------------
        ANALYSE DÉJÀ EN COURS
     ----------------------------------------------------- */
@@ -308,8 +360,7 @@ function selectDailyPicks(analyses) {
 
     building = (async () => {
 
-        lastStatus =
-            "ANALYZING";
+        lastStatus = "ANALYZING";
 
         lastError = null;
 
@@ -328,135 +379,137 @@ function selectDailyPicks(analyses) {
 
             let targetDate = today;
 
-let matches =
-    await getMatches(targetDate);
+            let matches =
+                await getMatches(targetDate);
 
 
-if (!Array.isArray(matches)) {
+            if (!Array.isArray(matches)) {
 
-    throw new Error(
-        "getMatches() doit retourner un tableau"
-    );
+                throw new Error(
+                    "getMatches() doit retourner un tableau"
+                );
 
-}
-
-
-/*
- * ------------------------------------------------
- * FALLBACK DEMAIN
- * ------------------------------------------------
- *
- * Si aucun match n'est disponible aujourd'hui,
- * on prépare automatiquement les matchs de demain.
- */
-
-if (matches.length === 0) {
-
-    const tomorrow =
-        getMatchDate(
-            new Date(
-                Date.now() + 24 * 60 * 60 * 1000
-            )
-        );
-
-    console.log(
-        "🔮 AUCUN MATCH AUJOURD'HUI"
-    );
-
-    console.log(
-        "➡️ PRÉPARATION DU:",
-        tomorrow
-    );
-
-
-    matches =
-        await getMatches(tomorrow);
-
-
-    if (!Array.isArray(matches)) {
-
-        throw new Error(
-            "getMatches() doit retourner un tableau"
-        );
-
-    }
-
-
-    targetDate =
-        tomorrow;
-
-
-    console.log(
-        `🔮 MATCHS DU ${tomorrow}:`,
-        matches.length
-    );
-
-    
-
-}
-
-            /*
- * ------------------------------------------------
- * GESTION DU VERROU PAR DATE
- * ------------------------------------------------
- */
-
-if (
-    lockedDate !== "" &&
-    lockedDate !== targetDate
-) {
-
-    console.log(
-        "🔓 NOUVEAU CYCLE:",
-        lockedDate,
-        "→",
-        targetDate
-    );
-
-    lockedPicks.clear();
-
-}
-
-lockedDate = targetDate;
-
-analysisDate = targetDate;
-
-console.log(
-    "📅 DATE ANALYSÉE:",
-    analysisDate
-);
-
-
-/*
- * Si les picks sont déjà verrouillés,
- * on les retourne sans refaire d'analyse.
- */
-
-if (lockedPicks.size > 0) {
-
-    cache =
-        Array.from(
-            lockedPicks.values()
-        );
-
-    cacheTime =
-        Date.now();
-
-    lastStatus =
-        "READY";
-
-    console.log(
-        "🔒 RETOUR PICKS VERROUILLÉS:",
-        lockedPicks.size
-    );
-
-    return cache;
-
-}
+            }
 
 
             /* ------------------------------------------------
-               MATCHS DU JOUR
+               FALLBACK DEMAIN
+            ------------------------------------------------ */
+
+            if (matches.length === 0) {
+
+                const tomorrow =
+                    getMatchDate(
+                        new Date(
+                            Date.now() +
+                            24 * 60 * 60 * 1000
+                        )
+                    );
+
+
+                console.log(
+                    "🔮 AUCUN MATCH AUJOURD'HUI"
+                );
+
+                console.log(
+                    "➡️ PRÉPARATION DU:",
+                    tomorrow
+                );
+
+
+                matches =
+                    await getMatches(tomorrow);
+
+
+                if (!Array.isArray(matches)) {
+
+                    throw new Error(
+                        "getMatches() doit retourner un tableau"
+                    );
+
+                }
+
+
+                targetDate =
+                    tomorrow;
+
+
+                console.log(
+                    `🔮 MATCHS DU ${tomorrow}:`,
+                    matches.length
+                );
+
+            }
+
+
+            /* ------------------------------------------------
+               GESTION DU VERROU PAR DATE
+            ------------------------------------------------ */
+
+            if (
+                lockedDate !== "" &&
+                lockedDate !== targetDate
+            ) {
+
+                console.log(
+                    "🔓 NOUVEAU CYCLE:",
+                    lockedDate,
+                    "→",
+                    targetDate
+                );
+
+
+                lockedPicks.clear();
+
+            }
+
+
+            lockedDate =
+                targetDate;
+
+            analysisDate =
+                targetDate;
+
+
+            console.log(
+                "📅 DATE ANALYSÉE:",
+                analysisDate
+            );
+
+
+            /* ------------------------------------------------
+               PICKS DÉJÀ VERROUILLÉS
+            ------------------------------------------------ */
+
+            if (lockedPicks.size > 0) {
+
+                cache =
+                    Array.from(
+                        lockedPicks.values()
+                    );
+
+
+                cacheTime =
+                    Date.now();
+
+
+                lastStatus =
+                    "READY";
+
+
+                console.log(
+                    "🔒 RETOUR PICKS VERROUILLÉS:",
+                    lockedPicks.size
+                );
+
+
+                return cache;
+
+            }
+
+
+            /* ------------------------------------------------
+               MATCHS DE LA DATE CIBLE
             ------------------------------------------------ */
 
             const todayMatches =
@@ -579,7 +632,7 @@ if (lockedPicks.size > 0) {
 
 
             /* ------------------------------------------------
-               TOP PICKS
+               SÉLECTION FINALE
             ------------------------------------------------ */
 
             const picks =
@@ -598,10 +651,12 @@ if (lockedPicks.size > 0) {
             cacheTime =
                 Date.now();
 
+
             lastStatus =
                 picks.length > 0
                     ? "READY"
                     : "NO_VALID_PICKS";
+
 
             lastUpdate =
                 new Date()
@@ -667,7 +722,9 @@ if (lockedPicks.size > 0) {
 
     return building;
 
-}
+                }
+
+    
 
 
 /* =========================================================
