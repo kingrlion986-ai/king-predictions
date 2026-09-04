@@ -522,6 +522,29 @@ async function analyzeMatch(match) {
                 confidence
             );
 
+        console.log(
+    `🎯 SELECTED BET ${match.homeTeam.name} vs ${match.awayTeam.name}:`,
+    selectedBet
+);
+
+        if (!selectedBet) {
+    console.log(
+        `🚫 NO BET: ${match.homeTeam.name} vs ${match.awayTeam.name}`,
+        {
+            confidence,
+            homeWin: poisson.probabilities.homeWin,
+            draw: poisson.probabilities.draw,
+            awayWin: poisson.probabilities.awayWin,
+            over25: poisson.over25,
+            btts: poisson.btts,
+            matchScore: poisson.matchScore,
+            risk: poisson.risk
+        }
+    );
+
+    return null;
+        }
+
         if (!selectedBet)
             return null;
 
