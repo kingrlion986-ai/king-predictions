@@ -582,39 +582,41 @@ async function analyzeMatch(match) {
                 ? "HIGH"
                 : "LIMITED";
 
-        /*
+       /*
 ============================================
 QUALITY SCORE
 ============================================
 
-La qualité dépend maintenant aussi
-de la quantité de données disponibles.
+Le Quality Score sert à CLASSER les matchs.
 
-8 matchs  → 100%
-7 matchs  → 97%
-6 matchs  → 94%
-5 matchs  → 90%
-4 matchs  → 82%
-3 matchs  → 72%
-2 matchs  → 60%
-1 match   → 45%
+Les données limitées pénalisent la qualité,
+mais ne détruisent pas complètement le score.
+
+8 matchs → 100%
+7 matchs → 98%
+6 matchs → 96%
+5 matchs → 94%
+4 matchs → 90%
+3 matchs → 85%
+2 matchs → 78%
+1 match  → 70%
 */
 
 const dataFactorMap = {
     8: 1.00,
-    7: 0.97,
-    6: 0.94,
-    5: 0.90,
-    4: 0.82,
-    3: 0.72,
-    2: 0.60,
-    1: 0.45
+    7: 0.98,
+    6: 0.96,
+    5: 0.94,
+    4: 0.90,
+    3: 0.85,
+    2: 0.78,
+    1: 0.70
 };
 
 const dataFactor =
     dataFactorMap[
         Math.min(played, 8)
-    ] || 0.40;
+    ] || 0.65;
 
 const baseQuality =
     selectedBet.probability * 0.55 +
@@ -630,7 +632,7 @@ const qualityScore =
             0,
             100
         )
-    );
+    ); 
         
         /*
         ============================================
