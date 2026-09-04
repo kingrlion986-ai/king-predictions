@@ -41,6 +41,8 @@ let cacheTime = 0;
 
 let dailyDate = "";
 
+let analysisDate = "";
+
 let building = null;
 
 let lastStatus = "STARTING";
@@ -444,6 +446,10 @@ if (matches.length === 0) {
         matches.length
     );
 
+    analysisDate = targetDate;
+
+console.log("📅 DATE ANALYSÉE:", analysisDate);
+
 }
 
 
@@ -681,8 +687,7 @@ app.get(
                 version:
                     VERSION,
 
-                date:
-                    dailyDate,
+                date:analysisDate || dailyDate
 
                 count:
                     analyses.length,
