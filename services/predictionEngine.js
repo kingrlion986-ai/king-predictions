@@ -131,34 +131,89 @@ function calculateBetScore(
     probability,
     confidence,
     matchScore,
-    risk
+    risk,
+    type,
+    option
 ) {
 
+    const p = clamp(probability, 0, 100);
+    const c = clamp(confidence, 0, 100);
+    const m = clamp(matchScore, 0, 100);
+
     /*
-    ================================================
-    BET SCORE V2
+    ==================================================
+    SCORE DE SOLIDITÉ
 
-    Ne privilégie plus automatiquement les marchés
-    ayant simplement la plus grosse probabilité.
+    On ne récompense plus aveuglément les probabilités
+    extrêmement élevées.
 
-    Le score combine :
+    60-70%  → très intéressant
+    70-80%  → excellent
+    80-90%  → excellent mais rendement marginal
+    90%+    → plafonné
+    ==================================================
+    */
 
-    - Probabilité        45%
-    - Confiance IA       30%
-    - Qualité du match   25%
+    let probabilityScore;
 
-    Ainsi, un Over 1.5 à 93% ne gagne plus
-    automatiquement contre un 1X2 solide.
-    ================================================
+    if (p <= 60) {
+
+        probabilityScore = p;
+
+    } else if (p <= 70) {
+
+        probabilityScore =
+            60 + (p - 60) * 0.80;
+
+    } else if (p <= 80) {
+
+        probabilityScore =
+            68 + (p - 70) * 0.60;
+
+    } else if (p <= 90) {
+
+        probabilityScore =
+            74 + (p - 80) * 0.35;
+
+    } else {
+
+        probabilityScore =
+            77.5 + Math.min(p - 90, 10) * 0.10;
+    }
+
+    /*
+    ==================================================
+    SCORE FINAL
+    ==================================================
     */
 
     let score =
-        probability * 0.45 +
-        confidence * 0.30 +
-        matchScore * 0.25;
+        probabilityScore * 0.50 +
+        c * 0.30 +
+        m * 0.20;
 
     /*
-    Risque
+    ==================================================
+    PÉNALITÉ SPÉCIFIQUE OVER 1.5
+
+    Over 1.5 est un marché très facile à atteindre.
+    On évite qu'il écrase automatiquement les autres
+    marchés uniquement grâce à sa probabilité.
+    ==================================================
+    */
+
+    if (
+        type === "OVER_UNDER" &&
+        option === "Over 1.5"
+    ) {
+
+        score -= 4;
+    }
+
+    /*
+    ==================================================
+    RISQUE
+    ==================================================
     */
 
     if (risk === "VERY HIGH")
@@ -238,11 +293,13 @@ function selectBestBet(poisson, confidence) {
             option: bestResult.option,
             probability: bestResult.probability,
             score: calculateBetScore(
-                bestResult.probability,
-                confidence,
-                matchScore,
-                risk
-            )
+    bestResult.probability,
+    confidence,
+    matchScore,
+    risk,
+    "RESULT",
+    bestResult.option
+)
         });
     }
 
@@ -263,11 +320,13 @@ function selectBestBet(poisson, confidence) {
             option: "1X",
             probability: oneX,
             score: calculateBetScore(
-                oneX,
-                confidence,
-                matchScore,
-                risk
-            )
+    oneX,
+    confidence,
+    matchScore,
+    risk,
+    "DOUBLE_CHANCE",
+    "1X"
+)
         });
     }
 
@@ -278,11 +337,13 @@ function selectBestBet(poisson, confidence) {
             option: "X2",
             probability: xTwo,
             score: calculateBetScore(
-                xTwo,
-                confidence,
-                matchScore,
-                risk
-            )
+    xTwo,
+    confidence,
+    matchScore,
+    risk,
+    "DOUBLE_CHANCE",
+    "X2"
+)
         });
     }
 
@@ -293,11 +354,13 @@ function selectBestBet(poisson, confidence) {
             option: "12",
             probability: oneTwo,
             score: calculateBetScore(
-                oneTwo,
-                confidence,
-                matchScore,
-                risk
-            )
+    oneTwo,
+    confidence,
+    matchScore,
+    risk,
+    "DOUBLE_CHANCE",
+    "12"
+)
         });
     }
 
@@ -324,11 +387,13 @@ for (const market of markets) {
         option: market.option,
         probability: market.probability,
         score: calculateBetScore(
-            market.probability,
-            confidence,
-            matchScore,
-            risk
-        )
+    market.probability,
+    confidence,
+    matchScore,
+    risk,
+    "OVER_UNDER",
+    market.option
+)
     });
 }
 
@@ -352,11 +417,13 @@ for (const market of markets) {
             option: bttsMarket.option,
             probability: bttsMarket.probability,
             score: calculateBetScore(
-                bttsMarket.probability,
-                confidence,
-                matchScore,
-                risk
-            )
+    bttsMarket.probability,
+    confidence,
+    matchScore,
+    risk,
+    "BTTS",
+    bttsMarket.option
+)
         });
     }
 
