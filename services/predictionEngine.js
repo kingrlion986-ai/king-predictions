@@ -279,10 +279,9 @@ function selectBestBet(poisson, confidence) {
         });
     }
 
-    /*
-    // ===============================
+    // ================================================
 // OVER / UNDER
-// ===============================
+// ================================================
 
 const over15 = clamp(poisson.over15, 0, 100);
 const over25 = clamp(poisson.over25, 0, 100);
@@ -296,7 +295,8 @@ const markets = [
 
 for (const market of markets) {
 
-    if (market.probability < 60) continue;
+    if (market.probability < 60)
+        continue;
 
     candidates.push({
         type: "OVER_UNDER",
