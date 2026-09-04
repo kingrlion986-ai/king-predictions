@@ -22,92 +22,121 @@ if(Array.isArray(data?.results))return data.results;
 return [];
 }
 
-function render(data){
-console.log("📦 ANALYSIS DATA:",data);
-const results=$("results");
-if(!results)return console.error("❌ #results introuvable");
+function render(data) {
 
-const list=getAnalyses(data);
+    console.log("📦 ANALYSIS DATA:", data);
 
-if($("matches"))$("matches").textContent=list.length;
-if($("predictions"))$("predictions").textContent=list.length;
-if($("lastUpdate")){
-$("lastUpdate").textContent=list.length
-?`📅 ${text(data?.date,"Aujourd'hui")} • ${list.length} analyse(s)`
-:"🔍 Aucune analyse disponible";
-}
+    const results = $("results");
 
-if(!list.length){
-results.innerHTML=`
-<div class="empty-card">
-<h3>🔍 Aucune analyse</h3>
-<p>Le serveur n'a retourné aucune analyse.</p>
-<button onclick="loadAnalysis()">🔄 Actualiser</button>
-</div>`;
-return;
-}
+    if (!results) {
+        return console.error("❌ #results introuvable");
+    }
 
-results.innerHTML=list.map((a,i)=>{
-const m=a?.match||{};
-const p=a?.predictions||{};
-const model=a?.model||{};
-const probs=p?.probabilities||{};
-const home=team(m?.homeTeam);
-const away=team(m?.awayTeam);
-const competition=text(m?.competition?.name||m?.competition?.code,"Compétition inconnue");
+    const list = getAnalyses(data);
 
-return `
-<article class="prediction-card">
-<div class="card-number">ANALYSE ${i+1}</div>
+    if ($("matches")) {
+        $("matches").textContent = list.length;
+    }
 
-<h2>⚽ ${home}</h2>
-<div class="vs">VS</div>
-<h2>${away}</h2>
+    if ($("predictions")) {
+        $("predictions").textContent = list.length;
+    }
 
-<p class="date">🕐 ${formatDate(m?.utcDate)}</p>
-<p>🏆 <strong>${competition}</strong></p>
+    if ($("lastUpdate")) {
+        $("lastUpdate").textContent = list.length
+            ? `📅 ${text(data?.date, "Aujourd'hui")} • ${list.length} analyse(s)`
+            : "🔍 Aucune analyse disponible";
+    }
 
-<div class="section">
-<h3>📊 Probabilités du modèle</h3>
-<div class="probabilities">
-<div>
-<span>🏠 Domicile</span>
-<strong>${pct(probs.homeWin)}</strong>
-</div>
-<div>
-<span>🤝 Nul</span>
-<strong>${pct(probs.draw)}</strong>
-</div>
-<div>
-<span>✈️ Extérieur</span>
-<strong>${pct(probs.awayWin)}</strong>
-</div>
-</div>
-</div>
+    if (!list.length) {
 
-<div class="section">
-<h3>⚽ Buts attendus</h3>
-<p>🏠 ${home} : <strong>${num(model.expectedHomeGoals).toFixed(2)}</strong></p>
-<p>✈️ ${away} : <strong>${num(model.expectedAwayGoals).toFixed(2)}</strong></p>
-<p>📈 Total xG : <strong>${num(model.expectedGoals).toFixed(2)}</strong></p>
-</div>
+        results.innerHTML = `
+        <div class="empty-card">
+            <h3>🔍 Aucune analyse</h3>
+            <p>Le serveur n'a retourné aucune analyse valide.</p>
+            <button onclick="loadAnalysis()">🔄 Actualiser</button>
+        </div>`;
 
-<div class="section">
-<h3>🧠 Analyse IA</h3>
-<p>🎯 Tendance : <strong>${text(p.winner)}</strong></p>
-<p>⚽ Over 2.5 : <strong>${pct(p.over25Confidence)}</strong></p>
-<p>🟠 BTTS : <strong>${text(p.btts)}</strong> — ${pct(p.bttsConfidence)}</p>
-<p>🎯 Score théorique : <strong>${text(p.correctScore)}</strong></p>
-</div>
+        return;
+    }
 
-<div class="quality">
-<p>🧠 Confiance du modèle : <strong>${pct(p.confidence)}</strong></p>
-<p>📚 Données utilisées : <strong>${num(p.matchesUsed)}</strong> matchs</p>
-<p>✅ Qualité des données : <strong>${text(p.dataQuality)}</strong></p>
-</div>
-</article>`;
-}).join("");
-}
+    results.innerHTML = list.map((a, i) => {
+
+        const m = a?.match || {};
+        const bet = a?.selectedBet || {};
+
+        const home = team(m?.homeTeam);
+        const away = team(m?.awayTeam);
+
+        const competition =
+            text(
+                m?.competition?.name ||
+                m?.competition?.code,
+                "Compétition inconnue"
+            );
+
+        const recommendedBet =
+            text(
+                bet?.option,
+                "Aucun pari recommandé"
+            );
+
+        const explanation =
+            text(
+                a?.analysis,
+                "L'analyse globale ne permet pas de dégager une sélection suffisamment claire."
+            );
+
+        return `
+        <article class="prediction-card">
+
+            <div class="card-number">
+                ANALYSE ${i + 1}
+            </div>
+
+            <h2>⚽ ${home}</h2>
+
+            <div class="vs">
+                VS
+            </div>
+
+            <h2>${away}</h2>
+
+            <p class="date">
+                🕐 ${formatDate(m?.utcDate)}
+            </p>
+
+            <p>
+                🏆 <strong>${competition}</strong>
+            </p>
+
+
+            <div class="section recommended-bet">
+
+                <h3>🎯 Pari recommandé</h3>
+
+                <div class="bet-option">
+                    ${recommendedBet}
+                </div>
+
+            </div>
+
+
+            <div class="section ai-analysis">
+
+                <h3>🧠 Analyse IA</h3>
+
+                <p>
+                    ${explanation}
+                </p>
+
+            </div>
+
+        </article>
+        `;
+
+    }).join("");
+                  }
 
 async function loadAnalysis(){
 const results=$("results");
