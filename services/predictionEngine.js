@@ -41,16 +41,29 @@ function buildAnalysis(bet, xg) {
 
     if (bet.type === "OVER_UNDER") {
 
-        if (bet.option === "Over 2.5") {
+    switch (bet.option) {
 
-            return xg >= 2.80
-                ? "Le modèle anticipe un match ouvert avec un volume de buts élevé."
-                : "Les données offensives et le modèle de buts favorisent un match avec plusieurs buts.";
-        }
+        case "Over 1.5":
+            return "Le modèle privilégie un scénario avec au moins deux buts dans le match.";
 
-        return xg <= 2.30
-            ? "Le modèle anticipe un volume de buts limité dans cette rencontre."
-            : "Les données du modèle favorisent un scénario avec moins de 3 buts.";
+        case "Under 1.5":
+            return "Le modèle privilégie un scénario avec au maximum un but dans le match.";
+
+        case "Over 2.5":
+            return "Le modèle prévoit un scénario offensif avec une forte probabilité d'au moins trois buts.";
+
+        case "Under 2.5":
+            return "Le modèle privilégie un scénario où le total de buts reste inférieur à 3.";
+
+        case "Over 3.5":
+            return "Le modèle détecte un potentiel élevé pour un match avec au moins quatre buts.";
+
+        case "Under 3.5":
+            return "Le modèle privilégie un scénario où le total de buts reste inférieur à 4.";
+
+        default:
+            return "Le modèle identifie une tendance intéressante sur le nombre de buts.";
+    }
     }
 
     if (bet.type === "BTTS") {
@@ -267,32 +280,36 @@ function selectBestBet(poisson, confidence) {
     }
 
     /*
-    ================================================
-    OVER / UNDER 2.5
-    ================================================
-    */
+    // ===============================
+// OVER / UNDER
+// ===============================
 
-    const overMarket =
-        getMarket(
-            over25,
-            "Over 2.5",
-            "Under 2.5"
-        );
+const over15 = clamp(poisson.over15, 0, 100);
+const over25 = clamp(poisson.over25, 0, 100);
+const over35 = clamp(poisson.over35, 0, 100);
 
-    if (overMarket.probability >= 60) {
+const markets = [
+    getMarket(over15, "Over 1.5", "Under 1.5"),
+    getMarket(over25, "Over 2.5", "Under 2.5"),
+    getMarket(over35, "Over 3.5", "Under 3.5")
+];
 
-        candidates.push({
-            type: "OVER_UNDER",
-            option: overMarket.option,
-            probability: overMarket.probability,
-            score: calculateBetScore(
-                overMarket.probability,
-                confidence,
-                matchScore,
-                risk
-            )
-        });
-    }
+for (const market of markets) {
+
+    if (market.probability < 60) continue;
+
+    candidates.push({
+        type: "OVER_UNDER",
+        option: market.option,
+        probability: market.probability,
+        score: calculateBetScore(
+            market.probability,
+            confidence,
+            matchScore,
+            risk
+        )
+    });
+}
 
     /*
     ================================================
