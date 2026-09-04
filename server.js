@@ -374,60 +374,19 @@ function getMatchScore(a, bet) {
 
 function selectDailyPicks(analyses) {
 
-    const candidates = [];
-
-    for (const analysis of analyses) {
-
-        if (
-            !analysis?.match?.homeTeam ||
-            !analysis?.match?.awayTeam
-        ) {
-            continue;
-        }
-
-        const bet = selectBestBet(analysis);
-
-        if (!bet) {
-            continue;
-        }
-
-        candidates.push({
-            analysis,
-            bet,
-            score: getMatchScore(
-                analysis,
-                bet
-            )
-        });
-    }
-
-
-    candidates.sort(
-        (a, b) => b.score - a.score
-    );
-
-
-    return candidates
+    return analyses
+        .filter(a => a?.selectedBet)
+        .sort(
+            (a, b) =>
+                Number(b.qualityScore || 0) -
+                Number(a.qualityScore || 0)
+        )
         .slice(0, MAX_PICKS)
-        .map(item => ({
-            match: item.analysis.match,
-
-            /*
-             * UNE SEULE OPTION DE PARI
-             */
-
-            selectedBet: item.bet,
-
-            /*
-             * Courte explication générée
-             * à partir du marché choisi.
-             */
-
-            analysis:
-                buildSimpleExplanation(
-                    item.analysis,
-                    item.bet
-                )
+        .map(a => ({
+            match: a.match,
+            selectedBet: a.selectedBet,
+            analysis: a.analysis,
+            qualityScore: a.qualityScore
         }));
 }
 
