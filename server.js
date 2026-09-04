@@ -37,6 +37,8 @@ let cache = [];
 
 let lockedPicks = new Map();
 
+let lockedDate = "";
+
 let cacheTime = 0;
 
 let dailyDate = "";
@@ -173,8 +175,27 @@ function getMatchDate(utcDate) {
 
 function selectDailyPicks(analyses) {
 
-    if (!Array.isArray(analyses))
+    if (!Array.isArray(analyses)) {
         analyses = [];
+    }
+
+    /*
+     * Si des picks sont déjà verrouillés
+     * pour cette date, on les retourne immédiatement.
+     */
+
+    if (lockedPicks.size > 0) {
+
+        console.log(
+            "🔒 PICKS DÉJÀ VERROUILLÉS:",
+            lockedPicks.size
+        );
+
+        return Array.from(
+            lockedPicks.values()
+        );
+
+    }
 
 
     const valid = analyses.filter(
@@ -196,151 +217,75 @@ function selectDailyPicks(analyses) {
 
 
     /*
-     * -------------------------------------------------------
-     * VERROUILLAGE
-     * -------------------------------------------------------
-     *
-     * Dès qu'un pari est sélectionné, il devient
-     * un pick officiel de la journée.
-     *
-     * Il ne disparaît plus lorsque le match passe
-     * IN_PLAY ou FINISHED.
+     * Classement par qualité
      */
 
-    for (const analysis of valid) {
+    valid.sort(
+        (a, b) =>
+            Number(b.qualityScore || 0) -
+            Number(a.qualityScore || 0)
+    );
+
+
+    /*
+     * Sélection des meilleurs picks
+     */
+
+    const selected =
+        valid.slice(
+            0,
+            MAX_PICKS
+        );
+
+
+    /*
+     * VERROUILLAGE
+     *
+     * On verrouille UNIQUEMENT les picks
+     * réellement sélectionnés.
+     */
+
+    for (const analysis of selected) {
 
         const matchId =
             String(analysis.match.id);
 
 
-        if (!lockedPicks.has(matchId)) {
+        lockedPicks.set(
+            matchId,
+            {
+                match:
+                    analysis.match,
 
-            lockedPicks.set(
-                matchId,
-                {
-                    match:
-                        analysis.match,
+                selectedBet:
+                    analysis.selectedBet,
 
-                    selectedBet:
-                        analysis.selectedBet,
+                analysis:
+                    analysis.analysis,
 
-                    analysis:
-                        analysis.analysis,
-
-                    qualityScore:
-                        analysis.qualityScore
-                }
-            );
+                qualityScore:
+                    analysis.qualityScore
+            }
+        );
 
 
-            console.log(
-                "🔒 PICK VERROUILLÉ:",
-                `${analysis.match.homeTeam?.name} vs ${analysis.match.awayTeam?.name}`,
-                "|",
-                analysis.selectedBet.option
-            );
-
-        }
+        console.log(
+            "🔒 PICK VERROUILLÉ:",
+            `${analysis.match.homeTeam?.name} vs ${analysis.match.awayTeam?.name}`,
+            "|",
+            analysis.selectedBet.option,
+            "| QUALITY:",
+            analysis.qualityScore
+        );
 
     }
 
 
-    /*
-     * -------------------------------------------------------
-     * PICKS VERROUILLÉS
-     * -------------------------------------------------------
-     */
-
-    const picks =
-        Array.from(
-            lockedPicks.values()
-        );
-
-
-    /*
-     * -------------------------------------------------------
-     * CLASSEMENT
-     * -------------------------------------------------------
-     */
-
-    picks.sort(
-        (a, b) =>
-            Number(
-                b.qualityScore || 0
-            ) -
-            Number(
-                a.qualityScore || 0
-            )
-    );
-
-
-    /*
-     * -------------------------------------------------------
-     * MAXIMUM 4
-     * -------------------------------------------------------
-     */
-
-    return picks.slice(
-        0,
-        MAX_PICKS
+    return Array.from(
+        lockedPicks.values()
     );
 
 }
-
-/* =========================================================
-   ANALYSE DU JOUR
-========================================================= */
-
-async function buildDailyAnalysis() {
-
-    const today =
-        getToday();
-
-
-    /* -----------------------------------------------------
-       NOUVEAU JOUR
-    ----------------------------------------------------- */
-
-    if (dailyDate !== today) {
-
-    dailyDate = today;
-
-    cache = [];
-
-    lockedPicks = new Map();
-
-    cacheTime = 0;
-
-        lastStatus =
-            "NEW_DAY";
-
-        console.log(
-            "📅 NOUVEAU JOUR:",
-            today
-        );
-
-    }
-
-
-    /* -----------------------------------------------------
-       CACHE
-    ----------------------------------------------------- */
-
-    if (
-        cache.length > 0 &&
-        Date.now() - cacheTime <
-            CACHE_TTL
-    ) {
-
-        console.log(
-            "💾 CACHE DAILY:",
-            cache.length
-        );
-
-        return cache;
-
-    }
-
 
     /* -----------------------------------------------------
        ANALYSE DÉJÀ EN COURS
@@ -446,9 +391,66 @@ if (matches.length === 0) {
         matches.length
     );
 
-    analysisDate = targetDate;
+    
 
-console.log("📅 DATE ANALYSÉE:", analysisDate);
+}
+
+            /*
+ * ------------------------------------------------
+ * GESTION DU VERROU PAR DATE
+ * ------------------------------------------------
+ */
+
+if (
+    lockedDate !== "" &&
+    lockedDate !== targetDate
+) {
+
+    console.log(
+        "🔓 NOUVEAU CYCLE:",
+        lockedDate,
+        "→",
+        targetDate
+    );
+
+    lockedPicks.clear();
+
+}
+
+lockedDate = targetDate;
+
+analysisDate = targetDate;
+
+console.log(
+    "📅 DATE ANALYSÉE:",
+    analysisDate
+);
+
+
+/*
+ * Si les picks sont déjà verrouillés,
+ * on les retourne sans refaire d'analyse.
+ */
+
+if (lockedPicks.size > 0) {
+
+    cache =
+        Array.from(
+            lockedPicks.values()
+        );
+
+    cacheTime =
+        Date.now();
+
+    lastStatus =
+        "READY";
+
+    console.log(
+        "🔒 RETOUR PICKS VERROUILLÉS:",
+        lockedPicks.size
+    );
+
+    return cache;
 
 }
 
