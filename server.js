@@ -379,17 +379,72 @@ async function buildDailyAnalysis() {
                RÉCUPÉRATION
             ------------------------------------------------ */
 
-            const matches =
-                await getMatches();
+            let targetDate = today;
+
+let matches =
+    await getMatches(targetDate);
 
 
-            if (!Array.isArray(matches)) {
+if (!Array.isArray(matches)) {
 
-                throw new Error(
-                    "getMatches() doit retourner un tableau"
-                );
+    throw new Error(
+        "getMatches() doit retourner un tableau"
+    );
 
-            }
+}
+
+
+/*
+ * ------------------------------------------------
+ * FALLBACK DEMAIN
+ * ------------------------------------------------
+ *
+ * Si aucun match n'est disponible aujourd'hui,
+ * on prépare automatiquement les matchs de demain.
+ */
+
+if (matches.length === 0) {
+
+    const tomorrow =
+        getMatchDate(
+            new Date(
+                Date.now() + 24 * 60 * 60 * 1000
+            )
+        );
+
+    console.log(
+        "🔮 AUCUN MATCH AUJOURD'HUI"
+    );
+
+    console.log(
+        "➡️ PRÉPARATION DU:",
+        tomorrow
+    );
+
+
+    matches =
+        await getMatches(tomorrow);
+
+
+    if (!Array.isArray(matches)) {
+
+        throw new Error(
+            "getMatches() doit retourner un tableau"
+        );
+
+    }
+
+
+    targetDate =
+        tomorrow;
+
+
+    console.log(
+        `🔮 MATCHS DU ${tomorrow}:`,
+        matches.length
+    );
+
+}
 
 
             /* ------------------------------------------------
@@ -402,7 +457,7 @@ async function buildDailyAnalysis() {
                         match =>
                             getMatchDate(
                                 match?.utcDate
-                            ) === today
+                            ) === targetDate
                     )
                     .sort(
                         (a, b) =>
