@@ -714,34 +714,42 @@ function getLocalDate(date) {
 }
 
 
-async function getMatches() {
+async function getMatches(targetDate = null) {
 
     await loadUpcomingDatabase();
 
-    const today =
+    const date =
+        targetDate ||
         getLocalDate(new Date());
 
     /*
-     * IMPORTANT :
-     * On sélectionne le calendrier du jour,
-     * même si certains matchs ont déjà commencé
-     * ou sont déjà terminés.
+     * Sélection du calendrier de la date demandée.
      */
 
-    const matches = UPCOMING.filter(match => {
+    const matches =
+        UPCOMING
+            .filter(match => {
 
-        if (!match?.utcDate)
-            return false;
+                if (!match?.utcDate)
+                    return false;
 
-        return (
-            getLocalDate(match.utcDate) === today
-        );
-    });
+                return (
+                    getLocalDate(match.utcDate) === date
+                );
+
+            })
+            .sort(
+                (a, b) =>
+                    new Date(a.utcDate) -
+                    new Date(b.utcDate)
+            );
+
 
     console.log(
-        `🇨🇬 MATCHS DU ${today}:`,
+        `🇨🇬 MATCHS DU ${date}:`,
         matches.length
     );
+
 
     return matches;
 }
