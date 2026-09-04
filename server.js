@@ -35,6 +35,8 @@ const MAX_PICKS = 4;
 
 let cache = [];
 
+let lockedPicks = new Map();
+
 let cacheTime = 0;
 
 let dailyDate = "";
@@ -170,17 +172,17 @@ function getMatchDate(utcDate) {
 function selectDailyPicks(analyses) {
 
     if (!Array.isArray(analyses))
-        return [];
+        analyses = [];
 
 
-    const valid = analyses
-        .filter(
-            analysis =>
-                analysis &&
-                analysis.match &&
-                analysis.selectedBet &&
-                analysis.selectedBet.option
-        );
+    const valid = analyses.filter(
+        analysis =>
+            analysis &&
+            analysis.match &&
+            analysis.match.id != null &&
+            analysis.selectedBet &&
+            analysis.selectedBet.option
+    );
 
 
     console.log(
@@ -192,10 +194,74 @@ function selectDailyPicks(analyses) {
 
 
     /*
-     * Classement par qualité du match.
+     * -------------------------------------------------------
+     * VERROUILLAGE
+     * -------------------------------------------------------
+     *
+     * Dès qu'un pari est sélectionné, il devient
+     * un pick officiel de la journée.
+     *
+     * Il ne disparaît plus lorsque le match passe
+     * IN_PLAY ou FINISHED.
      */
 
-    valid.sort(
+    for (const analysis of valid) {
+
+        const matchId =
+            String(analysis.match.id);
+
+
+        if (!lockedPicks.has(matchId)) {
+
+            lockedPicks.set(
+                matchId,
+                {
+                    match:
+                        analysis.match,
+
+                    selectedBet:
+                        analysis.selectedBet,
+
+                    analysis:
+                        analysis.analysis,
+
+                    qualityScore:
+                        analysis.qualityScore
+                }
+            );
+
+
+            console.log(
+                "🔒 PICK VERROUILLÉ:",
+                `${analysis.match.homeTeam?.name} vs ${analysis.match.awayTeam?.name}`,
+                "|",
+                analysis.selectedBet.option
+            );
+
+        }
+
+    }
+
+
+    /*
+     * -------------------------------------------------------
+     * PICKS VERROUILLÉS
+     * -------------------------------------------------------
+     */
+
+    const picks =
+        Array.from(
+            lockedPicks.values()
+        );
+
+
+    /*
+     * -------------------------------------------------------
+     * CLASSEMENT
+     * -------------------------------------------------------
+     */
+
+    picks.sort(
         (a, b) =>
             Number(
                 b.qualityScore || 0
@@ -207,29 +273,17 @@ function selectDailyPicks(analyses) {
 
 
     /*
-     * Maximum 4 matchs.
+     * -------------------------------------------------------
+     * MAXIMUM 4
+     * -------------------------------------------------------
      */
 
-    return valid
-        .slice(0, MAX_PICKS)
-        .map(analysis => ({
-
-            match:
-                analysis.match,
-
-            selectedBet:
-                analysis.selectedBet,
-
-            analysis:
-                analysis.analysis,
-
-            qualityScore:
-                analysis.qualityScore
-
-        }));
+    return picks.slice(
+        0,
+        MAX_PICKS
+    );
 
 }
-
 
 /* =========================================================
    ANALYSE DU JOUR
@@ -247,11 +301,13 @@ async function buildDailyAnalysis() {
 
     if (dailyDate !== today) {
 
-        dailyDate = today;
+    dailyDate = today;
 
-        cache = [];
+    cache = [];
 
-        cacheTime = 0;
+    lockedPicks = new Map();
+
+    cacheTime = 0;
 
         lastStatus =
             "NEW_DAY";
