@@ -134,19 +134,41 @@ function calculateBetScore(
     risk
 ) {
 
+    /*
+    ================================================
+    BET SCORE V2
+
+    Ne privilégie plus automatiquement les marchés
+    ayant simplement la plus grosse probabilité.
+
+    Le score combine :
+
+    - Probabilité        45%
+    - Confiance IA       30%
+    - Qualité du match   25%
+
+    Ainsi, un Over 1.5 à 93% ne gagne plus
+    automatiquement contre un 1X2 solide.
+    ================================================
+    */
+
     let score =
-        probability * 0.60 +
-        confidence * 0.20 +
-        matchScore * 0.20;
+        probability * 0.45 +
+        confidence * 0.30 +
+        matchScore * 0.25;
+
+    /*
+    Risque
+    */
 
     if (risk === "VERY HIGH")
-        score -= 10;
+        score -= 12;
 
     else if (risk === "HIGH")
-        score -= 5;
+        score -= 6;
 
     else if (risk === "MEDIUM")
-        score -= 2;
+        score -= 3;
 
     return score;
 }
@@ -294,7 +316,7 @@ const markets = [
 
 for (const market of markets) {
 
-    if (market.probability < 60)
+    if (market.probability < 62)
         continue;
 
     candidates.push({
