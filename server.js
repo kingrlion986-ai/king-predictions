@@ -687,7 +687,7 @@ app.get(
                 version:
                     VERSION,
 
-                date:analysisDate || dailyDate
+                date:analysisDate || dailyDate,
 
                 count:
                     analyses.length,
