@@ -583,24 +583,55 @@ async function analyzeMatch(match) {
                 : "LIMITED";
 
         /*
-        ============================================
-        QUALITY SCORE
-        ============================================
-        */
+============================================
+QUALITY SCORE
+============================================
 
-        const qualityScore =
-            Math.round(
-                clamp(
-                    selectedBet.probability * 0.55 +
-                    selectedBet.score * 0.25 +
-                    Number(
-                        poisson.matchScore || 0
-                    ) * 0.20,
-                    0,
-                    100
-                )
-            );
+La qualité dépend maintenant aussi
+de la quantité de données disponibles.
 
+8 matchs  → 100%
+7 matchs  → 97%
+6 matchs  → 94%
+5 matchs  → 90%
+4 matchs  → 82%
+3 matchs  → 72%
+2 matchs  → 60%
+1 match   → 45%
+*/
+
+const dataFactorMap = {
+    8: 1.00,
+    7: 0.97,
+    6: 0.94,
+    5: 0.90,
+    4: 0.82,
+    3: 0.72,
+    2: 0.60,
+    1: 0.45
+};
+
+const dataFactor =
+    dataFactorMap[
+        Math.min(played, 8)
+    ] || 0.40;
+
+const baseQuality =
+    selectedBet.probability * 0.55 +
+    selectedBet.score * 0.25 +
+    Number(
+        poisson.matchScore || 0
+    ) * 0.20;
+
+const qualityScore =
+    Math.round(
+        clamp(
+            baseQuality * dataFactor,
+            0,
+            100
+        )
+    );
+        
         /*
         ============================================
         RESULT
