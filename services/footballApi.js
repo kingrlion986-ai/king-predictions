@@ -428,123 +428,71 @@ function unique(matches) {
 
 async function loadUpcomingDatabase() {
 
-    /*
-     * Cache positif
-     */
-
     if (
         UPCOMING.length > 0 &&
-        Date.now() - UPCOMING_TIME <
-        UPCOMING_TTL
+        Date.now() - UPCOMING_TIME < UPCOMING_TTL
     ) {
-
-        console.log(
-            "⚡ UPCOMING CACHE:",
-            UPCOMING.length
-        );
-
         return UPCOMING;
     }
-
-    /*
-     * Cache vide temporaire
-     */
 
     if (
         UPCOMING.length === 0 &&
         UPCOMING_TIME > 0 &&
-        Date.now() - UPCOMING_TIME <
-        EMPTY_CACHE_TTL
+        Date.now() - UPCOMING_TIME < EMPTY_CACHE_TTL
     ) {
-
-        console.log(
-            "⚡ EMPTY UPCOMING CACHE"
-        );
-
         return UPCOMING;
     }
 
-    console.log(
-        "🔮 LOADING UPCOMING..."
+    console.log("🔮 LOADING UPCOMING...");
+
+    /*
+     * On récupère une marge de dates autour
+     * du jour local afin de gérer correctement
+     * Africa/Brazzaville.
+     */
+
+    const now = new Date();
+
+    const fromDate = new Date(
+        now.getTime() - 24 * 60 * 60 * 1000
     );
 
-    const today =
-        new Date();
+    const toDate = new Date(
+        now.getTime() +
+        (UPCOMING_DAYS + 1) * 24 * 60 * 60 * 1000
+    );
 
-    const future =
-        new Date(
-            today.getTime() +
-            UPCOMING_DAYS *
-            24 *
-            60 *
-            60 *
-            1000
-        );
-
-    const from =
-        today
-            .toISOString()
-            .slice(0, 10);
-
-    const to =
-        future
-            .toISOString()
-            .slice(0, 10);
+    const from = fromDate.toISOString().slice(0, 10);
+    const to = toDate.toISOString().slice(0, 10);
 
     const upcoming = [];
 
-    /*
-     * On traite les compétitions
-     * une par une pour respecter l'API.
-     */
-
-    for (
-        const competition of COMPETITIONS
-    ) {
+    for (const competition of COMPETITIONS) {
 
         try {
 
             const endpoint =
                 `/competitions/${competition}/matches?dateFrom=${from}&dateTo=${to}`;
 
-            const data =
-                await apiGet(
-                    endpoint
-                );
+            const data = await apiGet(endpoint);
 
-            if (
-                !data?.matches
-            ) {
-
-                console.warn(
-                    `⚠️ ${competition}: aucune réponse`
-                );
-
+            if (!data?.matches) {
+                console.warn(`⚠️ ${competition}: aucune réponse`);
                 continue;
             }
 
-            const matches =
-                data.matches
-                    .filter(
-                        isUpcoming
-                    )
-                    .map(
-                        formatMatch
-                    )
-                    .filter(
-                        Boolean
-                    );
+            const matches = data.matches
+                .filter(isUpcoming)
+                .map(formatMatch)
+                .filter(Boolean);
 
-            upcoming.push(
-                ...matches
-            );
+            upcoming.push(...matches);
 
             console.log(
                 `🔮 ${competition}: ${matches.length}`
             );
 
-        }
-        catch (error) {
+        } catch (error) {
 
             console.error(
                 `❌ UPCOMING ${competition}:`,
@@ -553,10 +501,7 @@ async function loadUpcomingDatabase() {
         }
     }
 
-    UPCOMING =
-        unique(
-            upcoming
-        );
+    UPCOMING = unique(upcoming);
 
     UPCOMING.sort(
         (a, b) =>
@@ -564,8 +509,7 @@ async function loadUpcomingDatabase() {
             new Date(b.utcDate)
     );
 
-    UPCOMING_TIME =
-        Date.now();
+    UPCOMING_TIME = Date.now();
 
     console.log(
         "🔮 TOTAL UPCOMING:",
@@ -574,6 +518,7 @@ async function loadUpcomingDatabase() {
 
     return UPCOMING;
 }
+                    
 
 /* ======================================================
    LOAD HISTORY
@@ -708,52 +653,43 @@ async function loadHistoryDatabase() {
 /* ======================================================
    GET MATCHES
 ====================================================== */
+function getLocalDate(date) {
+
+    return new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Africa/Brazzaville",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+    }).format(new Date(date));
+}
+
 
 async function getMatches() {
 
+    await loadUpcomingDatabase();
+
+    const today =
+        getLocalDate(new Date());
+
     /*
      * IMPORTANT :
-     * Pour le frontend, on veut les matchs
-     * le plus rapidement possible.
+     * On sélectionne le calendrier du jour,
+     * même si certains matchs ont déjà commencé
+     * ou sont déjà terminés.
      */
 
-    if (
-        UPCOMING.length === 0
-    ) {
+    const matches = UPCOMING.filter(match => {
 
-        await loadUpcomingDatabase();
-    }
+        if (!match?.utcDate)
+            return false;
 
-    const now =
-        Date.now();
-
-    const max =
-        now +
-        UPCOMING_DAYS *
-        24 *
-        60 *
-        60 *
-        1000;
-
-    const matches =
-        UPCOMING.filter(
-            match => {
-
-                const time =
-                    new Date(
-                        match.utcDate
-                    ).getTime();
-
-                return (
-                    Number.isFinite(time) &&
-                    time >= now &&
-                    time <= max
-                );
-            }
+        return (
+            getLocalDate(match.utcDate) === today
         );
+    });
 
     console.log(
-        "🔥 MATCHES READY:",
+        `🇨🇬 MATCHS DU ${today}:`,
         matches.length
     );
 
