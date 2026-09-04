@@ -552,33 +552,35 @@ async function loadHistoryDatabase() {
 
         try {
 
-            const data =
-                await apiGet(
-                    `/competitions/${competition}/matches?season=${PREVIOUS_SEASON}`
-                );
+            const currentData =
+    await apiGet(
+        `/competitions/${competition}/matches?season=${CURRENT_SEASON}`
+    );
 
-            if (
-                !data?.matches
-            ) {
+const previousData =
+    await apiGet(
+        `/competitions/${competition}/matches?season=${PREVIOUS_SEASON}`
+    );
 
-                console.warn(
-                    `⚠️ ${competition}: historique indisponible`
-                );
+const allMatches = [
+    ...(currentData?.matches || []),
+    ...(previousData?.matches || [])
+];
 
-                continue;
+            if (allMatches.length === 0) {
+
+    console.warn(
+        `⚠️ ${competition}: historique indisponible`
+    );
+
+    continue;
             }
 
             const matches =
-                data.matches
-                    .filter(
-                        isFinished
-                    )
-                    .map(
-                        formatMatch
-                    )
-                    .filter(
-                        Boolean
-                    );
+    allMatches
+        .filter(isFinished)
+        .map(formatMatch)
+        .filter(Boolean);
 
             history.push(
                 ...matches
