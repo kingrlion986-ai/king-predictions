@@ -303,26 +303,6 @@ async function buildDailyAnalysis() {
     const today =
         getToday();
 
-    const persistedPicks =
-    await getLockedPicks(today);
-
-if (persistedPicks) {
-    console.log(
-        "🔒 VERROU PERSISTANT DU JOUR:",
-        today,
-        "| PICKS:",
-        persistedPicks.length
-    );
-
-    cache = persistedPicks;
-    cacheTime = Date.now();
-    analysisDate = today;
-    dailyDate = today;
-    lastStatus = "READY";
-
-    return cache;
-}
-
 
     /* -----------------------------------------------------
        NOUVEAU JOUR LOCAL
@@ -475,6 +455,41 @@ if (persistedPicks) {
                 );
 
             }
+
+            /* ------------------------------------------------
+   VERROU PERSISTANT
+------------------------------------------------ */
+
+const persistedPicks =
+    await getLockedPicks(targetDate);
+
+if (persistedPicks) {
+
+    console.log(
+        "🔒 VERROU PERSISTANT:",
+        targetDate,
+        "| PICKS:",
+        persistedPicks.length
+    );
+
+    cache =
+        persistedPicks;
+
+    cacheTime =
+        Date.now();
+
+    analysisDate =
+        targetDate;
+
+    lockedDate =
+        targetDate;
+
+    lastStatus =
+        "READY";
+
+    return cache;
+
+}
 
 
             /* ------------------------------------------------
