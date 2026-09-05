@@ -304,18 +304,27 @@ async function buildDailyAnalysis() {
 
     if (dailyDate !== today) {
 
-        dailyDate = today;
+    console.log(
+        "🌅 NOUVEAU CYCLE:",
+        dailyDate || "AUCUN",
+        "→",
+        today
+    );
 
-        cache = [];
+    dailyDate = today;
 
-        cacheTime = 0;
+    /* 🔓 NOUVELLE DATE = NOUVEAUX PICKS */
+    lockedPicks.clear();
 
-        lastStatus = "NEW_DAY";
+    lockedDate = "";
 
-        console.log(
-            "📅 NOUVEAU JOUR:",
-            today
-        );
+    cache = [];
+
+    cacheTime = 0;
+
+    analysisDate = "";
+
+    lastStatus = "NEW_DAY";
 
     }
 
@@ -875,18 +884,19 @@ function startDailyWatcher() {
 
 
                 currentDay =
-                    today;
+    today;
 
-                dailyDate =
-                    today;
+cache = [];
 
-                cache = [];
+cacheTime = 0;
 
-                cacheTime = 0;
+/*
+ * Ne pas modifier dailyDate ici.
+ * buildDailyAnalysis() doit détecter
+ * lui-même le nouveau jour.
+ */
 
-
-                await buildDailyAnalysis();
-
+await buildDailyAnalysis();
             }
 
         },
