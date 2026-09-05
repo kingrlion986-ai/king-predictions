@@ -11,6 +11,12 @@ const {
     analyzeMatch
 } = require("./services/predictionEngine");
 
+const {
+    initDailyLock,
+    getLockedPicks,
+    lockDailyPicks
+} = require("./services/dailyLock");
+
 
 /* =========================================================
    CONFIGURATION
@@ -296,6 +302,26 @@ async function buildDailyAnalysis() {
 
     const today =
         getToday();
+
+    const persistedPicks =
+    await getLockedPicks(today);
+
+if (persistedPicks) {
+    console.log(
+        "🔒 VERROU PERSISTANT DU JOUR:",
+        today,
+        "| PICKS:",
+        persistedPicks.length
+    );
+
+    cache = persistedPicks;
+    cacheTime = Date.now();
+    analysisDate = today;
+    dailyDate = today;
+    lastStatus = "READY";
+
+    return cache;
+}
 
 
     /* -----------------------------------------------------
@@ -649,57 +675,32 @@ async function buildDailyAnalysis() {
                     analyses
                 );
 
+            const locked =
+    await lockDailyPicks(
+        targetDate,
+        picks
+    );
 
-            /* ------------------------------------------------
-               CACHE
-            ------------------------------------------------ */
+cache = locked;
+cacheTime = Date.now();
 
-            cache =
-                picks;
+lastStatus =
+    locked.length > 0
+        ? "READY"
+        : "NO_VALID_PICKS";
 
-            cacheTime =
-                Date.now();
+lastUpdate =
+    new Date().toISOString();
 
+console.log(
+    "👑 PICKS FINAUX PERSISTANTS:",
+    locked.length
+);
 
-            lastStatus =
-                picks.length > 0
-                    ? "READY"
-                    : "NO_VALID_PICKS";
-
-
-            lastUpdate =
-                new Date()
-                    .toISOString();
-
-
-            console.log(
-                "👑 PICKS:",
-                picks.length
-            );
+return locked;
 
 
-            if (picks.length) {
-
-                picks.forEach(
-                    (pick, index) => {
-
-                        console.log(
-                            `👑 PICK #${index + 1}:`,
-                            `${pick.match.homeTeam.name} vs ${pick.match.awayTeam.name}`,
-                            "|",
-                            pick.selectedBet.option,
-                            "|",
-                            "QUALITY:",
-                            pick.qualityScore
-                        );
-
-                    }
-                );
-
-            }
-
-
-            return picks;
+            
 
 
         } catch (error) {
