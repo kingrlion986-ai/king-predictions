@@ -392,20 +392,60 @@ async function buildDailyAnalysis() {
                RÉCUPÉRATION
             ------------------------------------------------ */
 
-            let targetDate = today;
-
-            let matches =
-                await getMatches(targetDate);
+         let targetDate = today;
 
 
-            if (!Array.isArray(matches)) {
+/* ------------------------------------------------
+   🔒 PRIORITÉ ABSOLUE AU VERROU DU JOUR
+------------------------------------------------ */
 
-                throw new Error(
-                    "getMatches() doit retourner un tableau"
-                );
+const persistedToday =
+    await getLockedPicks(today);
 
-            }
+if (persistedToday) {
 
+    console.log(
+        "🔒 VERROU PERSISTANT DU JOUR:",
+        today,
+        "| PICKS:",
+        persistedToday.length
+    );
+
+    cache =
+        persistedToday;
+
+    cacheTime =
+        Date.now();
+
+    analysisDate =
+        today;
+
+    lockedDate =
+        today;
+
+    lastStatus =
+        "READY";
+
+    return cache;
+
+}
+
+
+/* ------------------------------------------------
+   RÉCUPÉRATION DES MATCHS DU JOUR
+------------------------------------------------ */
+
+let matches =
+    await getMatches(targetDate);
+
+
+if (!Array.isArray(matches)) {
+
+    throw new Error(
+        "getMatches() doit retourner un tableau"
+    );
+
+}
 
             /* ------------------------------------------------
                FALLBACK DEMAIN
@@ -447,6 +487,41 @@ async function buildDailyAnalysis() {
 
                 targetDate =
                     tomorrow;
+
+                /* ------------------------------------------------
+   🔒 VÉRIFICATION DU VERROU DE DEMAIN
+------------------------------------------------ */
+
+const persistedTomorrow =
+    await getLockedPicks(tomorrow);
+
+if (persistedTomorrow) {
+
+    console.log(
+        "🔒 VERROU PERSISTANT DEMAIN:",
+        tomorrow,
+        "| PICKS:",
+        persistedTomorrow.length
+    );
+
+    cache =
+        persistedTomorrow;
+
+    cacheTime =
+        Date.now();
+
+    analysisDate =
+        tomorrow;
+
+    lockedDate =
+        tomorrow;
+
+    lastStatus =
+        "READY";
+
+    return cache;
+
+}
 
 
                 console.log(
