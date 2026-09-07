@@ -25,7 +25,12 @@ const COMPETITIONS = [
     "PD",
     "SA",
     "BL1",
-    "FL1"
+    "FL1",
+    "CL",
+    "DED",
+    "BSA",
+    "ELC",
+    "PPL"
 ];
 
 const COMPETITION_WEIGHTS = {
@@ -33,7 +38,13 @@ const COMPETITION_WEIGHTS = {
     PD: 1.20,
     SA: 1.15,
     BL1: 1.15,
-    FL1: 1.10
+    FL1: 1.10,
+
+    CL: 1.25,
+    DED: 1.05,
+    BSA: 1.05,
+    ELC: 1.00,
+    PPL: 1.00
 };
 
 /*
