@@ -41,35 +41,34 @@ function buildAnalysis(bet, xg) {
 
     if (bet.type === "OVER_UNDER") {
 
-    switch (bet.option) {
+        switch (bet.option) {
 
-        case "Over 1.5":
-            return "Le modèle privilégie un scénario avec au moins deux buts dans le match.";
+            case "Over 1.5":
+                return "Le modèle privilégie un scénario avec au moins deux buts dans le match.";
 
-        case "Under 1.5":
-            return "Le modèle privilégie un scénario avec au maximum un but dans le match.";
+            case "Under 1.5":
+                return "Le modèle privilégie un scénario avec au maximum un but dans le match.";
 
-        case "Over 2.5":
-            return "Le modèle prévoit un scénario offensif avec une forte probabilité d'au moins trois buts.";
+            case "Over 2.5":
+                return "Le modèle prévoit un scénario offensif avec une forte probabilité d'au moins trois buts.";
 
-        case "Under 2.5":
-            return "Le modèle privilégie un scénario où le total de buts reste inférieur à 3.";
+            case "Under 2.5":
+                return "Le modèle privilégie un scénario où le total de buts reste inférieur à 3.";
 
-        case "Over 3.5":
-            return "Le modèle détecte un potentiel élevé pour un match avec au moins quatre buts.";
+            case "Over 3.5":
+                return "Le modèle détecte un potentiel élevé pour un match avec au moins quatre buts.";
 
-        case "Under 3.5":
-            return "Le modèle privilégie un scénario où le total de buts reste inférieur à 4.";
+            case "Under 3.5":
+                return "Le modèle privilégie un scénario où le total de buts reste inférieur à 4.";
 
-        default:
-            return "Le modèle identifie une tendance intéressante sur le nombre de buts.";
-    }
+            default:
+                return "Le modèle identifie une tendance intéressante sur le nombre de buts.";
+        }
     }
 
     if (bet.type === "BTTS") {
 
         if (bet.option === "BTTS Oui") {
-
             return "Les profils offensifs des deux équipes favorisent un scénario où chacune peut marquer.";
         }
 
@@ -79,12 +78,10 @@ function buildAnalysis(bet, xg) {
     if (bet.type === "DOUBLE_CHANCE") {
 
         if (bet.option === "1X") {
-
             return "Les probabilités combinées favorisent une protection du résultat en faveur de l'équipe locale.";
         }
 
         if (bet.option === "X2") {
-
             return "Les probabilités combinées favorisent une protection du résultat en faveur de l'équipe extérieure.";
         }
 
@@ -94,12 +91,10 @@ function buildAnalysis(bet, xg) {
     if (bet.type === "RESULT") {
 
         if (bet.option === "Victoire domicile") {
-
             return "L'analyse combinée de l'Elo, des forces d'équipe et du modèle Poisson favorise la victoire locale.";
         }
 
         if (bet.option === "Victoire extérieure") {
-
             return "L'analyse combinée de l'Elo, des forces d'équipe et du modèle Poisson favorise la victoire extérieure.";
         }
 
@@ -114,16 +109,35 @@ function buildAnalysis(bet, xg) {
 BET QUALITY
 ====================================================
 
-Le but n'est PAS de prendre simplement
-la probabilité la plus élevée.
+IMPORTANT V1
 
-On tient compte de :
+Les marchés n'ont pas tous la même structure.
 
-- probabilité
-- confiance
-- stabilité du modèle
-- risque
-- matchScore
+Un résultat simple :
+    Victoire domicile = homeWin
+
+Une Double Chance :
+    1X = homeWin + draw
+
+La Double Chance possède donc mécaniquement
+une probabilité supérieure puisqu'elle couvre
+deux scénarios.
+
+On ne doit PAS comparer ces probabilités
+comme si elles représentaient exactement
+la même chose.
+
+La correction V1 applique donc une pénalité
+structurelle aux Double Chance lorsque le
+résultat simple est suffisamment dominant.
+
+Ainsi :
+
+- match équilibré → Double Chance reste favorisée
+- favori modéré → Double Chance reste compétitive
+- favori clair → résultat simple peut gagner
+- favori très clair → résultat simple est privilégié
+
 ====================================================
 */
 
@@ -142,15 +156,7 @@ function calculateBetScore(
 
     /*
     ==================================================
-    SCORE DE SOLIDITÉ
-
-    On ne récompense plus aveuglément les probabilités
-    extrêmement élevées.
-
-    60-70%  → très intéressant
-    70-80%  → excellent
-    80-90%  → excellent mais rendement marginal
-    90%+    → plafonné
+    SCORE DE PROBABILITÉ
     ==================================================
     */
 
@@ -183,7 +189,7 @@ function calculateBetScore(
 
     /*
     ==================================================
-    SCORE FINAL
+    SCORE FINAL DE BASE
     ==================================================
     */
 
@@ -194,11 +200,106 @@ function calculateBetScore(
 
     /*
     ==================================================
-    PÉNALITÉ SPÉCIFIQUE OVER 1.5
+    CORRECTION DOUBLE CHANCE
+    ==================================================
 
-    Over 1.5 est un marché très facile à atteindre.
-    On évite qu'il écrase automatiquement les autres
-    marchés uniquement grâce à sa probabilité.
+    Une Double Chance additionne deux résultats.
+
+    Exemple :
+
+    HOME 72%
+    DRAW 16%
+    AWAY 12%
+
+    1X = 88%
+
+    Le 88% ne signifie donc pas que 1X est
+    "meilleur" qu'une victoire domicile à 72%.
+
+    On réduit progressivement l'avantage artificiel
+    lorsque la probabilité du résultat principal
+    devient élevée.
+
+    Plus le favori est clair, plus la protection
+    supplémentaire de la Double Chance apporte
+    peu de valeur pour la sélection V1.
+
+    La pénalité reste faible sur les matchs équilibrés.
+    ==================================================
+    */
+
+    if (type === "DOUBLE_CHANCE") {
+
+        /*
+        La pénalité de base protège les matchs équilibrés.
+        */
+
+        let doubleChancePenalty = 4;
+
+        /*
+        Plus la probabilité du scénario dominant
+        dépasse 60%, plus la Double Chance reçoit
+        une correction.
+
+        Maximum : 10 points.
+        */
+
+        const favoriteProbability =
+            Math.max(
+                0,
+                Math.min(
+                    100,
+                    p
+                )
+            );
+
+        doubleChancePenalty +=
+            Math.max(
+                0,
+                favoriteProbability - 60
+            ) * 0.40;
+
+        doubleChancePenalty =
+            Math.min(
+                doubleChancePenalty,
+                10
+            );
+
+        score -= doubleChancePenalty;
+    }
+
+    /*
+    ==================================================
+    BONUS RESULTAT SIMPLE
+    ==================================================
+
+    Lorsqu'un résultat simple devient clairement
+    dominant, on lui donne un léger avantage de
+    sélection.
+
+    Ce bonus ne force jamais un résultat simple.
+    ==================================================
+    */
+
+    if (type === "RESULT") {
+
+        if (p >= 65)
+            score += 2;
+
+        if (p >= 70)
+            score += 2;
+
+        if (p >= 75)
+            score += 1;
+
+        /*
+        Maximum bonus RESULT = +5
+        */
+    }
+
+    /*
+    ==================================================
+    OVER 1.5
     ==================================================
     */
 
@@ -245,8 +346,11 @@ function selectBestBet(poisson, confidence) {
     const draw = clamp(p.draw, 0, 100);
     const away = clamp(p.awayWin, 0, 100);
 
-    const over25 = clamp(poisson.over25, 0, 100);
-    const btts = clamp(poisson.btts, 0, 100);
+    const over25 =
+        clamp(poisson.over25, 0, 100);
+
+    const btts =
+        clamp(poisson.btts, 0, 100);
 
     const matchScore =
         clamp(poisson.matchScore, 0, 100);
@@ -279,27 +383,35 @@ function selectBestBet(poisson, confidence) {
 
     const bestResult =
         resultCandidates.sort(
-            (a, b) => b.probability - a.probability
+            (a, b) =>
+                b.probability - a.probability
         )[0];
 
     /*
-    On évite les victoires trop incertaines.
+    On garde la règle V1 :
+    un résultat simple doit atteindre au moins 55%.
     */
 
     if (bestResult.probability >= 55) {
 
         candidates.push({
             type: "RESULT",
-            option: bestResult.option,
-            probability: bestResult.probability,
-            score: calculateBetScore(
-    bestResult.probability,
-    confidence,
-    matchScore,
-    risk,
-    "RESULT",
-    bestResult.option
-)
+
+            option:
+                bestResult.option,
+
+            probability:
+                bestResult.probability,
+
+            score:
+                calculateBetScore(
+                    bestResult.probability,
+                    confidence,
+                    matchScore,
+                    risk,
+                    "RESULT",
+                    bestResult.option
+                )
         });
     }
 
@@ -309,24 +421,33 @@ function selectBestBet(poisson, confidence) {
     ================================================
     */
 
-    const oneX = home + draw;
-    const xTwo = away + draw;
-    const oneTwo = home + away;
+    const oneX =
+        home + draw;
+
+    const xTwo =
+        away + draw;
+
+    const oneTwo =
+        home + away;
 
     if (oneX >= 65) {
 
         candidates.push({
             type: "DOUBLE_CHANCE",
+
             option: "1X",
+
             probability: oneX,
-            score: calculateBetScore(
-    oneX,
-    confidence,
-    matchScore,
-    risk,
-    "DOUBLE_CHANCE",
-    "1X"
-)
+
+            score:
+                calculateBetScore(
+                    oneX,
+                    confidence,
+                    matchScore,
+                    risk,
+                    "DOUBLE_CHANCE",
+                    "1X"
+                )
         });
     }
 
@@ -334,16 +455,20 @@ function selectBestBet(poisson, confidence) {
 
         candidates.push({
             type: "DOUBLE_CHANCE",
+
             option: "X2",
+
             probability: xTwo,
-            score: calculateBetScore(
-    xTwo,
-    confidence,
-    matchScore,
-    risk,
-    "DOUBLE_CHANCE",
-    "X2"
-)
+
+            score:
+                calculateBetScore(
+                    xTwo,
+                    confidence,
+                    matchScore,
+                    risk,
+                    "DOUBLE_CHANCE",
+                    "X2"
+                )
         });
     }
 
@@ -351,51 +476,83 @@ function selectBestBet(poisson, confidence) {
 
         candidates.push({
             type: "DOUBLE_CHANCE",
+
             option: "12",
+
             probability: oneTwo,
-            score: calculateBetScore(
-    oneTwo,
-    confidence,
-    matchScore,
-    risk,
-    "DOUBLE_CHANCE",
-    "12"
-)
+
+            score:
+                calculateBetScore(
+                    oneTwo,
+                    confidence,
+                    matchScore,
+                    risk,
+                    "DOUBLE_CHANCE",
+                    "12"
+                )
         });
     }
 
-// ================================================
-// OVER / UNDER
-// ================================================
+    /*
+    ================================================
+    OVER / UNDER
+    ================================================
+    */
 
-const over15 = clamp(poisson.over15, 0, 100);
-const over35 = clamp(poisson.over35, 0, 100);
+    const over15 =
+        clamp(poisson.over15, 0, 100);
 
-const markets = [
-    getMarket(over15, "Over 1.5", "Under 1.5"),
-    getMarket(over25, "Over 2.5", "Under 2.5"),
-    getMarket(over35, "Over 3.5", "Under 3.5")
-];
+    const over35 =
+        clamp(poisson.over35, 0, 100);
 
-for (const market of markets) {
+    const markets = [
 
-    if (market.probability < 62)
-        continue;
+        getMarket(
+            over15,
+            "Over 1.5",
+            "Under 1.5"
+        ),
 
-    candidates.push({
-        type: "OVER_UNDER",
-        option: market.option,
-        probability: market.probability,
-        score: calculateBetScore(
-    market.probability,
-    confidence,
-    matchScore,
-    risk,
-    "OVER_UNDER",
-    market.option
-)
-    });
-}
+        getMarket(
+            over25,
+            "Over 2.5",
+            "Under 2.5"
+        ),
+
+        getMarket(
+            over35,
+            "Over 3.5",
+            "Under 3.5"
+        )
+
+    ];
+
+    for (const market of markets) {
+
+        if (market.probability < 62)
+            continue;
+
+        candidates.push({
+
+            type: "OVER_UNDER",
+
+            option:
+                market.option,
+
+            probability:
+                market.probability,
+
+            score:
+                calculateBetScore(
+                    market.probability,
+                    confidence,
+                    matchScore,
+                    risk,
+                    "OVER_UNDER",
+                    market.option
+                )
+        });
+    }
 
     /*
     ================================================
@@ -413,17 +570,24 @@ for (const market of markets) {
     if (bttsMarket.probability >= 60) {
 
         candidates.push({
+
             type: "BTTS",
-            option: bttsMarket.option,
-            probability: bttsMarket.probability,
-            score: calculateBetScore(
-    bttsMarket.probability,
-    confidence,
-    matchScore,
-    risk,
-    "BTTS",
-    bttsMarket.option
-)
+
+            option:
+                bttsMarket.option,
+
+            probability:
+                bttsMarket.probability,
+
+            score:
+                calculateBetScore(
+                    bttsMarket.probability,
+                    confidence,
+                    matchScore,
+                    risk,
+                    "BTTS",
+                    bttsMarket.option
+                )
         });
     }
 
@@ -446,17 +610,12 @@ for (const market of markets) {
         (a, b) => b.score - a.score
     );
 
-    const best = candidates[0];
+    const best =
+        candidates[0];
 
     /*
     ================================================
     FILTRE FINAL
-    ================================================
-    
-    On ne force jamais un pari très faible.
-
-    Même si une option existe, elle doit avoir
-    une qualité minimale.
     ================================================
     */
 
@@ -466,11 +625,40 @@ for (const market of markets) {
     if (best.score < 55)
         return null;
 
+    /*
+    ================================================
+    LOG DE CONTRÔLE V1
+    ================================================
+
+    Permet de voir pourquoi le moteur a choisi
+    le marché gagnant.
+
+    ================================================
+    */
+
+    console.log(
+        "👑 BEST BET CANDIDATE:",
+        {
+            type: best.type,
+            option: best.option,
+            probability: Math.round(best.probability),
+            score: Math.round(best.score)
+        }
+    );
+
     return {
-        type: best.type,
-        option: best.option,
-        probability: Math.round(best.probability),
-        score: Math.round(best.score)
+
+        type:
+            best.type,
+
+        option:
+            best.option,
+
+        probability:
+            Math.round(best.probability),
+
+        score:
+            Math.round(best.score)
     };
 }
 
@@ -482,16 +670,23 @@ ANALYZE MATCH
 
 async function analyzeMatch(match) {
 
-    if (!match?.homeTeam?.id || !match?.awayTeam?.id)
+    if (
+        !match?.homeTeam?.id ||
+        !match?.awayTeam?.id
+    )
         return null;
 
-    if (!["SCHEDULED", "TIMED"].includes(match.status))
+    if (
+        !["SCHEDULED", "TIMED"]
+            .includes(match.status)
+    )
         return null;
 
     const key =
         `${match.id}_${match.utcDate}`;
 
-    const cached = CACHE.get(key);
+    const cached =
+        CACHE.get(key);
 
     if (
         cached &&
@@ -513,13 +708,20 @@ async function analyzeMatch(match) {
             awayStats
         ] = await Promise.all([
 
-            analyzeTeam(match.homeTeam),
+            analyzeTeam(
+                match.homeTeam
+            ),
 
-            analyzeTeam(match.awayTeam)
+            analyzeTeam(
+                match.awayTeam
+            )
 
         ]);
 
-        if (!homeStats || !awayStats)
+        if (
+            !homeStats ||
+            !awayStats
+        )
             return null;
 
         /*
@@ -530,12 +732,16 @@ async function analyzeMatch(match) {
 
         const homeElo =
             Number(
-                getTeamElo(match.homeTeam.id)
+                getTeamElo(
+                    match.homeTeam.id
+                )
             ) || 1500;
 
         const awayElo =
             Number(
-                getTeamElo(match.awayTeam.id)
+                getTeamElo(
+                    match.awayTeam.id
+                )
             ) || 1500;
 
         const eloProbability =
@@ -567,10 +773,14 @@ async function analyzeMatch(match) {
         if (
             !xg ||
             !Number.isFinite(
-                Number(xg.expectedHomeGoals)
+                Number(
+                    xg.expectedHomeGoals
+                )
             ) ||
             !Number.isFinite(
-                Number(xg.expectedAwayGoals)
+                Number(
+                    xg.expectedAwayGoals
+                )
             )
         ) {
             return null;
@@ -588,7 +798,9 @@ async function analyzeMatch(match) {
                 xg.expectedAwayGoals
             );
 
-        if (!poisson?.probabilities)
+        if (
+            !poisson?.probabilities
+        )
             return null;
 
         /*
@@ -600,6 +812,7 @@ async function analyzeMatch(match) {
         const confidence =
             clamp(
                 calculateConfidence({
+
                     probabilities:
                         poisson.probabilities,
 
@@ -610,6 +823,7 @@ async function analyzeMatch(match) {
                     eloProbability,
 
                     poisson
+
                 }),
                 0,
                 100
@@ -628,30 +842,42 @@ async function analyzeMatch(match) {
             );
 
         console.log(
-    `🎯 SELECTED BET ${match.homeTeam.name} vs ${match.awayTeam.name}:`,
-    selectedBet
-);
+            `🎯 SELECTED BET ${match.homeTeam.name} vs ${match.awayTeam.name}:`,
+            selectedBet
+        );
 
         if (!selectedBet) {
-    console.log(
-        `🚫 NO BET: ${match.homeTeam.name} vs ${match.awayTeam.name}`,
-        {
-            confidence,
-            homeWin: poisson.probabilities.homeWin,
-            draw: poisson.probabilities.draw,
-            awayWin: poisson.probabilities.awayWin,
-            over25: poisson.over25,
-            btts: poisson.btts,
-            matchScore: poisson.matchScore,
-            risk: poisson.risk
-        }
-    );
 
-    return null;
-        }
+            console.log(
+                `🚫 NO BET: ${match.homeTeam.name} vs ${match.awayTeam.name}`,
+                {
+                    confidence,
 
-        if (!selectedBet)
+                    homeWin:
+                        poisson.probabilities.homeWin,
+
+                    draw:
+                        poisson.probabilities.draw,
+
+                    awayWin:
+                        poisson.probabilities.awayWin,
+
+                    over25:
+                        poisson.over25,
+
+                    btts:
+                        poisson.btts,
+
+                    matchScore:
+                        poisson.matchScore,
+
+                    risk:
+                        poisson.risk
+                }
+            );
+
             return null;
+        }
 
         /*
         ============================================
@@ -661,8 +887,12 @@ async function analyzeMatch(match) {
 
         const played =
             Math.min(
-                Number(homeStats.played || 0),
-                Number(awayStats.played || 0)
+                Number(
+                    homeStats.played || 0
+                ),
+                Number(
+                    awayStats.played || 0
+                )
             );
 
         const dataQuality =
@@ -670,58 +900,50 @@ async function analyzeMatch(match) {
                 ? "HIGH"
                 : "LIMITED";
 
-       /*
-============================================
-QUALITY SCORE
-============================================
+        /*
+        ============================================
+        QUALITY SCORE
+        ============================================
+        */
 
-Le Quality Score sert à CLASSER les matchs.
+        const dataFactorMap = {
 
-Les données limitées pénalisent la qualité,
-mais ne détruisent pas complètement le score.
+            8: 1.00,
+            7: 0.98,
+            6: 0.96,
+            5: 0.94,
+            4: 0.90,
+            3: 0.85,
+            2: 0.78,
+            1: 0.70
 
-8 matchs → 100%
-7 matchs → 98%
-6 matchs → 96%
-5 matchs → 94%
-4 matchs → 90%
-3 matchs → 85%
-2 matchs → 78%
-1 match  → 70%
-*/
+        };
 
-const dataFactorMap = {
-    8: 1.00,
-    7: 0.98,
-    6: 0.96,
-    5: 0.94,
-    4: 0.90,
-    3: 0.85,
-    2: 0.78,
-    1: 0.70
-};
+        const dataFactor =
+            dataFactorMap[
+                Math.min(
+                    played,
+                    8
+                )
+            ] || 0.65;
 
-const dataFactor =
-    dataFactorMap[
-        Math.min(played, 8)
-    ] || 0.65;
+        const baseQuality =
+            selectedBet.probability * 0.55 +
+            selectedBet.score * 0.25 +
+            Number(
+                poisson.matchScore || 0
+            ) * 0.20;
 
-const baseQuality =
-    selectedBet.probability * 0.55 +
-    selectedBet.score * 0.25 +
-    Number(
-        poisson.matchScore || 0
-    ) * 0.20;
+        const qualityScore =
+            Math.round(
+                clamp(
+                    baseQuality *
+                    dataFactor,
+                    0,
+                    100
+                )
+            );
 
-const qualityScore =
-    Math.round(
-        clamp(
-            baseQuality * dataFactor,
-            0,
-            100
-        )
-    ); 
-        
         /*
         ============================================
         RESULT
@@ -732,7 +954,8 @@ const qualityScore =
 
             match: {
 
-                id: match.id,
+                id:
+                    match.id,
 
                 utcDate:
                     match.utcDate,
@@ -798,8 +1021,11 @@ const qualityScore =
         CACHE.set(
             key,
             {
-                time: Date.now(),
-                data: result
+                time:
+                    Date.now(),
+
+                data:
+                    result
             }
         );
 
