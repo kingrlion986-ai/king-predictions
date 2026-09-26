@@ -30,7 +30,9 @@ const COMPETITIONS = [
     "DED",
     "BSA",
     "ELC",
-    "PPL"
+    "PPL",
+    "EC",
+    "WC"
 ];
 
 const COMPETITION_WEIGHTS = {
@@ -44,7 +46,10 @@ const COMPETITION_WEIGHTS = {
     DED: 1.05,
     BSA: 1.05,
     ELC: 1.00,
-    PPL: 1.00
+    PPL: 1.00,
+
+    EC: 1.15,
+    WC: 1.25
 };
 
 /*
