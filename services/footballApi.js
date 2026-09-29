@@ -578,6 +578,27 @@ async function loadUpcomingDatabase() {
             UPCOMING.length
         );
 
+                        const dateCounts = {};
+
+for (const match of UPCOMING) {
+
+    if (!match?.utcDate) continue;
+
+    const date = getLocalDate(match.utcDate);
+
+    dateCounts[date] =
+        (dateCounts[date] || 0) + 1;
+}
+
+console.log("📅 UPCOMING PAR DATE:");
+
+for (const [date, count] of Object.entries(dateCounts)) {
+
+    console.log(
+        `📅 ${date}: ${count} matchs`
+    );
+}
+
         return UPCOMING;
 
     })();
