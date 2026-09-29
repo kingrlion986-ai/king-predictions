@@ -75,6 +75,7 @@ let UPCOMING = [];
 
 let INITIALIZING = null;
 let HISTORY_LOADING = null;
+let UPCOMING_LOADING = null;
 
 /* ======================================================
    CACHE
@@ -445,6 +446,9 @@ function unique(matches) {
 
 async function loadUpcomingDatabase() {
 
+    /*
+     * CACHE VALIDE
+     */
     if (
         UPCOMING.length > 0 &&
         Date.now() - UPCOMING_TIME < UPCOMING_TTL
@@ -452,6 +456,9 @@ async function loadUpcomingDatabase() {
         return UPCOMING;
     }
 
+    /*
+     * CACHE VIDE TEMPORAIRE
+     */
     if (
         UPCOMING.length === 0 &&
         UPCOMING_TIME > 0 &&
@@ -460,82 +467,135 @@ async function loadUpcomingDatabase() {
         return UPCOMING;
     }
 
-    console.log("🔮 LOADING UPCOMING...");
-
     /*
-     * On récupère une marge de dates autour
-     * du jour local afin de gérer correctement
-     * Africa/Brazzaville.
+     * IMPORTANT :
+     * Si un chargement UPCOMING est déjà en cours,
+     * on attend celui-ci au lieu de relancer
+     * toutes les requêtes API.
      */
+    if (UPCOMING_LOADING) {
 
-    const now = new Date();
+        console.log(
+            "⏳ UPCOMING LOADING ALREADY RUNNING"
+        );
 
-    const fromDate = new Date(
-        now.getTime() - 24 * 60 * 60 * 1000
-    );
-
-    const toDate = new Date(
-        now.getTime() +
-        (UPCOMING_DAYS + 1) * 24 * 60 * 60 * 1000
-    );
-
-    const from = fromDate.toISOString().slice(0, 10);
-    const to = toDate.toISOString().slice(0, 10);
-
-    const upcoming = [];
-
-    for (const competition of COMPETITIONS) {
-
-        try {
-
-            const endpoint =
-                `/competitions/${competition}/matches?dateFrom=${from}&dateTo=${to}`;
-
-            const data = await apiGet(endpoint);
-
-            if (!data?.matches) {
-                console.warn(`⚠️ ${competition}: aucune réponse`);
-                continue;
-            }
-
-            const matches = data.matches
-                .filter(isUpcoming)
-                .map(formatMatch)
-                .filter(Boolean);
-
-            upcoming.push(...matches);
-
-            console.log(
-                `🔮 ${competition}: ${matches.length}`
-            );
-
-        } catch (error) {
-
-            console.error(
-                `❌ UPCOMING ${competition}:`,
-                error.message
-            );
-        }
+        return UPCOMING_LOADING;
     }
 
-    UPCOMING = unique(upcoming);
+    UPCOMING_LOADING = (async () => {
 
-    UPCOMING.sort(
-        (a, b) =>
-            new Date(a.utcDate) -
-            new Date(b.utcDate)
-    );
+        console.log(
+            "🔮 LOADING UPCOMING..."
+        );
 
-    UPCOMING_TIME = Date.now();
+        /*
+         * Marge autour du jour local
+         * pour Africa/Brazzaville.
+         */
+        const now = new Date();
 
-    console.log(
-        "🔮 TOTAL UPCOMING:",
-        UPCOMING.length
-    );
+        const fromDate = new Date(
+            now.getTime() -
+            24 * 60 * 60 * 1000
+        );
 
-    return UPCOMING;
-}
-                    
+        const toDate = new Date(
+            now.getTime() +
+            (UPCOMING_DAYS + 1) *
+            24 * 60 * 60 * 1000
+        );
+
+        const from =
+            fromDate.toISOString().slice(0, 10);
+
+        const to =
+            toDate.toISOString().slice(0, 10);
+
+        const upcoming = [];
+
+        for (const competition of COMPETITIONS) {
+
+            try {
+
+                const endpoint =
+                    `/competitions/${competition}/matches?dateFrom=${from}&dateTo=${to}`;
+
+                const data =
+                    await apiGet(endpoint);
+
+                if (!data?.matches) {
+
+                    console.warn(
+                        `⚠️ ${competition}: aucune réponse`
+                    );
+
+                    continue;
+                }
+
+                const matches =
+                    data.matches
+                        .filter(isUpcoming)
+                        .map(formatMatch)
+                        .filter(Boolean);
+
+                upcoming.push(...matches);
+
+                console.log(
+                    `🔮 ${competition}: ${matches.length}`
+                );
+
+            }
+            catch (error) {
+
+                console.error(
+                    `❌ UPCOMING ${competition}:`,
+                    error.message
+                );
+            }
+        }
+
+        const newUpcoming =
+            unique(upcoming);
+
+        newUpcoming.sort(
+            (a, b) =>
+                new Date(a.utcDate) -
+                new Date(b.utcDate)
+        );
+
+        /*
+         * On remplace le cache seulement
+         * avec les nouvelles données obtenues.
+         */
+        UPCOMING =
+            newUpcoming;
+
+        UPCOMING_TIME =
+            Date.now();
+
+        console.log(
+            "🔮 TOTAL UPCOMING:",
+            UPCOMING.length
+        );
+
+        return UPCOMING;
+
+    })();
+
+    try {
+
+        return await UPCOMING_LOADING;
+
+    }
+    finally {
+
+        /*
+         * Le verrou est toujours libéré,
+         * même si une erreur survient.
+         */
+        UPCOMING_LOADING = null;
+    }
+}                 
 
 /* ======================================================
    LOAD HISTORY
