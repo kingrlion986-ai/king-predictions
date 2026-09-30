@@ -1156,6 +1156,164 @@ async function loadHistoryDatabase() {
 }
 
 /* ======================================================
+   NORMALISATION DES NOMS D'ÉQUIPES
+====================================================== */
+
+function normalizeTeamName(name) {
+
+    if (!name) {
+        return "";
+    }
+
+    return String(name)
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/\b(fc|cf|sc|afc|fk|sv|vfb|rb|ac|as|club)\b/g, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim()
+        .replace(/\s+/g, " ");
+}
+
+
+/* ======================================================
+   RÉSOLUTION DES IDS SPORT SCORE
+====================================================== */
+
+async function resolveSportScoreTeamIds(matches) {
+
+    if (
+        !Array.isArray(matches) ||
+        matches.length === 0
+    ) {
+        return [];
+    }
+
+    /*
+     * On s'assure que l'historique est chargé
+     */
+
+    if (
+        HISTORY.length === 0
+    ) {
+        await loadHistoryDatabase();
+    }
+
+    /*
+     * Construction de la table :
+     *
+     * nom équipe → ID football-data
+     */
+
+    const teamMap =
+        new Map();
+
+    for (
+        const match of HISTORY
+    ) {
+
+        if (
+            match.homeTeam?.id &&
+            match.homeTeam?.name
+        ) {
+
+            teamMap.set(
+                normalizeTeamName(
+                    match.homeTeam.name
+                ),
+                match.homeTeam.id
+            );
+        }
+
+        if (
+            match.awayTeam?.id &&
+            match.awayTeam?.name
+        ) {
+
+            teamMap.set(
+                normalizeTeamName(
+                    match.awayTeam.name
+                ),
+                match.awayTeam.id
+            );
+        }
+    }
+
+    const resolved = [];
+
+    for (
+        const match of matches
+    ) {
+
+        const homeName =
+            normalizeTeamName(
+                match.homeTeam?.name
+            );
+
+        const awayName =
+            normalizeTeamName(
+                match.awayTeam?.name
+            );
+
+        const homeId =
+            teamMap.get(
+                homeName
+            );
+
+        const awayId =
+            teamMap.get(
+                awayName
+            );
+
+        /*
+         * Si une seule équipe est inconnue,
+         * on ne laisse pas passer le match.
+         */
+
+        if (
+            !homeId ||
+            !awayId
+        ) {
+
+            console.warn(
+                `⚠️ SPORT SCORE NON RÉSOLU: ` +
+                `${match.homeTeam?.name} - ${match.awayTeam?.name}`
+            );
+
+            continue;
+        }
+
+        resolved.push({
+
+            ...match,
+
+            homeTeam: {
+
+                ...match.homeTeam,
+
+                id:
+                    homeId
+            },
+
+            awayTeam: {
+
+                ...match.awayTeam,
+
+                id:
+                    awayId
+            }
+
+        });
+    }
+
+    console.log(
+        `🔗 SPORT SCORE IDS RÉSOLUS: ${resolved.length}/${matches.length}`
+    );
+
+    return resolved;
+}
+
+/* ======================================================
    GET MATCHES
    FOOTBALL-DATA.ORG → SPORT SCORE FALLBACK
 ====================================================== */
@@ -1297,23 +1455,47 @@ async function getMatches(
      */
 
     if (
-        validFallbackMatches.length > 0
+    validFallbackMatches.length > 0
+) {
+
+    console.log(
+        "🔗 RÉSOLUTION DES IDS DES ÉQUIPES..."
+    );
+
+    const resolvedMatches =
+        await resolveSportScoreTeamIds(
+            validFallbackMatches
+        );
+
+    console.log(
+        `🆘 SPORT SCORE ANALYSABLES: ${resolvedMatches.length}/${validFallbackMatches.length}`
+    );
+
+    resolvedMatches
+        .forEach(match => {
+
+            console.log(
+                `🆘 ${date} | ` +
+                `${match.homeTeam.name} (${match.homeTeam.id}) - ` +
+                `${match.awayTeam.name} (${match.awayTeam.id})`
+            );
+
+        });
+
+    if (
+        resolvedMatches.length > 0
     ) {
 
         console.log(
             "✅ FALLBACK SPORT SCORE ACTIVÉ"
         );
 
-        validFallbackMatches
-            .forEach(match => {
+        return resolvedMatches;
+    }
 
-                console.log(
-                    `🆘 ${date} | ${match.homeTeam.name} - ${match.awayTeam.name}`
-                );
-
-            });
-
-        return validFallbackMatches;
+    console.warn(
+        "⚠️ SPORT SCORE: aucun match avec IDs d'équipes résolus"
+    );
     }
 
     /*
