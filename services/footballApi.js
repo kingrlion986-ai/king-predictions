@@ -13,6 +13,9 @@ const API_KEY = process.env.API_KEY;
 const BASE_URL =
     "https://api.football-data.org/v4";
 
+const SPORT_SCORE_BASE_URL =
+    "https://sportscore.com/api/v1/fixtures/";
+
 /* ======================================================
    CONFIGURATION
 ====================================================== */
@@ -324,6 +327,192 @@ async function apiGet(endpoint) {
     }
 
     return null;
+}
+
+
+}/* ======================================================
+   SPORT SCORE FALLBACK
+   SOURCE DE SECOURS POUR LES MATCHS DU JOUR
+====================================================== */
+
+async function getSportScoreMatches(targetDate) {
+
+    try {
+
+        console.log(
+            `🆘 SPORT SCORE: recherche du ${targetDate}`
+        );
+
+        const url =
+            `${SPORT_SCORE_BASE_URL}?sport=football&date=${encodeURIComponent(targetDate)}&limit=200`;
+
+        const response =
+            await fetch(
+                url,
+                {
+                    method: "GET",
+                    headers: {
+                        "Accept":
+                            "application/json",
+                        "User-Agent":
+                            "KING-PREDICTIONS-AI"
+                    }
+                }
+            );
+
+        console.log(
+            "🆘 SPORT SCORE STATUS:",
+            response.status
+        );
+
+        if (!response.ok) {
+
+            console.warn(
+                `⚠️ SPORT SCORE HTTP ${response.status}`
+            );
+
+            return [];
+        }
+
+        const data =
+            await response.json();
+
+        const rawMatches =
+            Array.isArray(data?.matches)
+                ? data.matches
+                : [];
+
+        console.log(
+            `🆘 SPORT SCORE MATCHS BRUTS: ${rawMatches.length}`
+        );
+
+        const matches =
+            rawMatches
+                .map(match => {
+
+                    if (
+                        !match?.home ||
+                        !match?.away ||
+                        !match?.time
+                    ) {
+
+                        return null;
+                    }
+
+                    return {
+
+                        id:
+                            `ss-${match.slug || match.time}-${match.home}-${match.away}`,
+
+                        utcDate:
+                            match.time,
+
+                        status:
+                            mapSportScoreStatus(
+                                match.status
+                            ),
+
+                        competition: {
+
+                            code:
+                                "SPORTSCORE",
+
+                            name:
+                                "SportScore",
+
+                            weight:
+                                0.80
+                        },
+
+                        homeTeam: {
+
+                            id:
+                                null,
+
+                            name:
+                                match.home
+                        },
+
+                        awayTeam: {
+
+                            id:
+                                null,
+
+                            name:
+                                match.away
+                        },
+
+                        score:
+                            Number.isFinite(
+                                Number(
+                                    match.home_score
+                                )
+                            ) &&
+                            Number.isFinite(
+                                Number(
+                                    match.away_score
+                                )
+                            )
+                                ? {
+                                    fullTime: {
+                                        home:
+                                            Number(
+                                                match.home_score
+                                            ),
+                                        away:
+                                            Number(
+                                                match.away_score
+                                            )
+                                    }
+                                }
+                                : null,
+
+                        source:
+                            "SPORTSCORE"
+                    };
+                })
+                .filter(Boolean);
+
+        console.log(
+            `🆘 SPORT SCORE MATCHS VALIDES: ${matches.length}`
+        );
+
+        return matches;
+
+    }
+    catch (error) {
+
+        console.error(
+            "❌ SPORT SCORE ERROR:",
+            error.message
+        );
+
+        return [];
+    }
+}
+
+function mapSportScoreStatus(status) {
+
+    const value =
+        String(
+            status || ""
+        ).toLowerCase();
+
+    if (
+        value === "finished"
+    ) {
+
+        return "FINISHED";
+    }
+
+    if (
+        value === "live"
+    ) {
+
+        return "IN_PLAY";
+    }
+
+    return "SCHEDULED";
 }
 
 /* ======================================================
@@ -969,6 +1158,7 @@ async function loadHistoryDatabase() {
 
 /* ======================================================
    GET MATCHES
+   FOOTBALL-DATA.ORG → SPORT SCORE FALLBACK
 ====================================================== */
 
 async function getMatches(
@@ -989,16 +1179,20 @@ async function getMatches(
     );
 
     /*
-     * Sélection stricte de la date locale
+     * ==================================================
+     * 1️⃣ SOURCE PRINCIPALE
+     * FOOTBALL-DATA.ORG
+     * ==================================================
      */
 
-    const matches =
+    const primaryMatches =
         UPCOMING
             .filter(match => {
 
                 if (
                     !match?.utcDate
                 ) {
+
                     return false;
                 }
 
@@ -1019,51 +1213,121 @@ async function getMatches(
             );
 
     console.log(
-        `🇨🇬 MATCHS DU ${date}:`,
-        matches.length
+        `🇨🇬 FOOTBALL-DATA: ${primaryMatches.length} match(s) pour ${date}`
     );
 
     /*
-     * DIAGNOSTIC SI AUCUN MATCH
+     * ==================================================
+     * 2️⃣ SI FOOTBALL-DATA A DES MATCHS
+     * ON NE TOUCHE À RIEN
+     * ==================================================
      */
 
     if (
-        matches.length === 0
+        primaryMatches.length > 0
     ) {
 
-        console.warn(
-            `⚠️ AUCUN MATCH POUR ${date}`
+        console.log(
+            "✅ SOURCE PRINCIPALE UTILISÉE: FOOTBALL-DATA.ORG"
         );
 
-        const counts =
-            getUpcomingDateCounts();
+        return primaryMatches;
+    }
 
-        const availableDates =
-            Object.keys(counts)
-                .sort();
+    /*
+     * ==================================================
+     * 3️⃣ FOOTBALL-DATA VIDE
+     * ACTIVATION DU FALLBACK
+     * ==================================================
+     */
 
-        console.warn(
-            "📅 DATES DISPONIBLES DANS UPCOMING:",
-            availableDates.join(", ")
+    console.warn(
+        `🆘 FOOTBALL-DATA VIDE POUR ${date}`
+    );
+
+    console.log(
+        "🆘 ACTIVATION DU FALLBACK SPORT SCORE..."
+    );
+
+    const fallbackMatches =
+        await getSportScoreMatches(
+            date
         );
 
-        /*
-         * Affiche uniquement les 10 premiers
-         * pour éviter de polluer les logs.
-         */
+    /*
+     * ==================================================
+     * 4️⃣ VÉRIFICATION STRICTE DE LA DATE
+     * ==================================================
+     */
 
-        UPCOMING
-            .slice(0, 10)
+    const validFallbackMatches =
+        fallbackMatches
+            .filter(match => {
+
+                if (
+                    !match?.utcDate
+                ) {
+
+                    return false;
+                }
+
+                return (
+                    getLocalDate(
+                        match.utcDate
+                    ) === date
+                );
+            })
+            .sort(
+                (a, b) =>
+                    new Date(
+                        a.utcDate
+                    ) -
+                    new Date(
+                        b.utcDate
+                    )
+            );
+
+    console.log(
+        `🆘 SPORT SCORE: ${validFallbackMatches.length} match(s) valides pour ${date}`
+    );
+
+    /*
+     * ==================================================
+     * 5️⃣ RESULTAT FINAL
+     * ==================================================
+     */
+
+    if (
+        validFallbackMatches.length > 0
+    ) {
+
+        console.log(
+            "✅ FALLBACK SPORT SCORE ACTIVÉ"
+        );
+
+        validFallbackMatches
             .forEach(match => {
 
-                console.warn(
-                    `🔎 DISPONIBLE: ${getLocalDate(match.utcDate)} | ${match.competition?.code} | ${match.homeTeam?.name} - ${match.awayTeam?.name}`
+                console.log(
+                    `🆘 ${date} | ${match.homeTeam.name} - ${match.awayTeam.name}`
                 );
 
             });
+
+        return validFallbackMatches;
     }
 
-    return matches;
+    /*
+     * ==================================================
+     * 6️⃣ AUCUNE SOURCE
+     * ==================================================
+     */
+
+    console.warn(
+        `⚠️ AUCUN MATCH TROUVÉ POUR ${date}`
+    );
+
+    return [];
 }
 
 /* ======================================================
@@ -1264,6 +1528,8 @@ module.exports = {
     apiGet,
 
     getMatches,
+
+ getSportScoreMatches,
 
     getTeamMatches,
 
