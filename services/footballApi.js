@@ -329,8 +329,7 @@ async function apiGet(endpoint) {
     return null;
 }
 
-
-}/* ======================================================
+/* ======================================================
    SPORT SCORE FALLBACK
    SOURCE DE SECOURS POUR LES MATCHS DU JOUR
 ====================================================== */
