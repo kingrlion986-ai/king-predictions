@@ -402,7 +402,10 @@ async function buildDailyAnalysis() {
 const persistedToday =
     await getLockedPicks(today);
 
-if (persistedToday) {
+if (
+    Array.isArray(persistedToday) &&
+    persistedToday.length > 0
+) {
 
     console.log(
         "🔒 VERROU PERSISTANT DU JOUR:",
@@ -495,7 +498,10 @@ if (!Array.isArray(matches)) {
 const persistedTomorrow =
     await getLockedPicks(tomorrow);
 
-if (persistedTomorrow) {
+if (
+    Array.isArray(persistedTomorrow) &&
+    persistedTomorrow.length > 0
+) {
 
     console.log(
         "🔒 VERROU PERSISTANT DEMAIN:",
@@ -538,7 +544,10 @@ if (persistedTomorrow) {
 const persistedPicks =
     await getLockedPicks(targetDate);
 
-if (persistedPicks) {
+if (
+    Array.isArray(persistedPicks) &&
+    persistedPicks.length > 0
+) {
 
     console.log(
         "🔒 VERROU PERSISTANT:",
