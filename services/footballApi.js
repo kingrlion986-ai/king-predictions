@@ -1160,16 +1160,19 @@ async function loadHistoryDatabase() {
 ====================================================== */
 
 function normalizeTeamName(name) {
-
-    if (!name) {
-        return "";
-    }
+    if (!name) return "";
 
     return String(name)
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
         .toLowerCase()
         .replace(/\b(fc|cf|sc|afc|fk|sv|vfb|rb|ac|as|club)\b/g, "")
+        .replace(/\bfootball club\b/g, "")
+        .replace(/\bfootball team\b/g, "")
+        .replace(/\bnational team\b/g, "")
+        .replace(/\bnational football team\b/g, "")
+        .replace(/\bmen\b/g, "")
+        .replace(/\bmens\b/g, "")
         .replace(/[^a-z0-9]+/g, " ")
         .trim()
         .replace(/\s+/g, " ");
